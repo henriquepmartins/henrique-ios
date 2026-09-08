@@ -56,8 +56,10 @@ private struct WorkoutTile: View {
   let onStart: () -> Void
 
   private var tone: WorkoutTone { .at(index) }
-  private var nameFont: Font { .system(.title3, weight: .medium) }
-  private var footerFont: Font { .caption }
+  private var nameFont: Font { .system(.headline, weight: .semibold) }
+  /// O recuo do bloco colorido. Os três pontos leem o mesmo valor para cair na
+  /// linha do nome.
+  private let blockPad: CGFloat = 12
   /// A folga que leva a área de toque dos três pontos aos 44 pontos. Sai de
   /// novo do recuo de baixo, senão o glifo desce e desalinha do nome.
   private let menuTapPad: CGFloat = 10
@@ -75,50 +77,48 @@ private struct WorkoutTile: View {
     VStack(spacing: 0) {
       ZStack(alignment: .top) {
         sheet(inset: 22, opacity: 0.3)
-        sheet(inset: 10, opacity: 0.52).padding(.top, 7)
-        block.padding(.top, 15)
+        sheet(inset: 10, opacity: 0.52).padding(.top, 6)
+        block.padding(.top, 13)
       }
       .padding(.horizontal, 12)
-      Text("iniciar treino")
-        .font(footerFont)
-        .foregroundStyle(Color.mutedInk)
-        .padding(.vertical, 12)
+      footer
     }
-    .padding(.top, 10)
-    .paperCard(radius: 22)
+    .padding(.top, 9)
+    .paperCard(radius: 20)
     .shadow(color: Color.ink.opacity(0.1), radius: 14, y: 8)
+  }
+
+  private var footer: some View {
+    Image(systemName: "play.fill")
+      .font(.system(size: 11, weight: .semibold))
+      .foregroundStyle(Color.mutedInk)
+      .padding(.vertical, 11)
   }
 
   private func sheet(inset: CGFloat, opacity: Double) -> some View {
     RoundedRectangle(cornerRadius: 8)
       .fill(tone.top.opacity(opacity))
-      .frame(height: 30)
+      .frame(height: 26)
       .padding(.horizontal, inset)
   }
 
   private var block: some View {
-    VStack(alignment: .leading, spacing: 3) {
-      Spacer(minLength: 0)
-      Text(planWeekdays[item.weekday])
-        .font(.caption2)
-        .foregroundStyle(tone.ink.opacity(0.7))
-      Text(item.name)
-        .font(nameFont)
-        .tracking(-0.4)
-        .foregroundStyle(tone.ink)
-        .lineLimit(2)
-        .padding(.trailing, 30)
-    }
-    .frame(maxWidth: .infinity, minHeight: 118, alignment: .bottomLeading)
-    .padding(14)
-    .background {
-      ZStack {
-        LinearGradient(colors: [tone.top, tone.bottom], startPoint: .top, endPoint: .bottom)
-        WorkoutWave(closed: true).fill(.white.opacity(0.12))
-        WorkoutWave().stroke(.white.opacity(0.45), lineWidth: 1.5)
+    Text(item.name)
+      .font(nameFont)
+      .tracking(-0.3)
+      .foregroundStyle(tone.ink)
+      .lineLimit(2)
+      .padding(.trailing, 30)
+      .frame(maxWidth: .infinity, minHeight: 62, alignment: .bottomLeading)
+      .padding(blockPad)
+      .background {
+        ZStack {
+          LinearGradient(colors: [tone.top, tone.bottom], startPoint: .top, endPoint: .bottom)
+          WorkoutWave(closed: true).fill(.white.opacity(0.12))
+          WorkoutWave().stroke(.white.opacity(0.45), lineWidth: 1.5)
+        }
       }
-    }
-    .clipShape(.rect(cornerRadius: 18))
+      .clipShape(.rect(cornerRadius: 16))
   }
 
   private var menuLayer: some View {
@@ -142,8 +142,8 @@ private struct WorkoutTile: View {
           .contentShape(.rect)
       }
       .accessibilityLabel("editar \(item.name)")
-      .padding(.bottom, 14 - menuTapPad)
-      Text("iniciar treino").font(footerFont).padding(.vertical, 12).hidden()
+      .padding(.bottom, blockPad - menuTapPad)
+      footer.hidden()
     }
     .padding(.trailing, 14)
   }
