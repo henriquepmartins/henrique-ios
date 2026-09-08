@@ -36,12 +36,22 @@ public actor APIClient {
   private let decoder: JSONDecoder
 
   public init(
-    baseURL: URL, tokenStore: any TokenStore, session: URLSession = .shared
+    baseURL: URL, tokenStore: any TokenStore, session: URLSession? = nil
   ) {
     self.baseURL = baseURL
     self.tokenStore = tokenStore
-    self.session = session
+    self.session = session ?? Self.makeSession()
     self.decoder = .henrique()
+  }
+
+  /// O pote de cookies compartilhado guardaria a sessão por fora do chaveiro, e
+  /// aí sair da conta não sairia de verdade: o cookie continuaria sendo enviado.
+  /// Desligando o pote, o token guardado é a única fonte da sessão.
+  private static func makeSession() -> URLSession {
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.httpShouldSetCookies = false
+    configuration.httpCookieStorage = nil
+    return URLSession(configuration: configuration)
   }
 
   public var isSignedIn: Bool { tokenStore.read() != nil }

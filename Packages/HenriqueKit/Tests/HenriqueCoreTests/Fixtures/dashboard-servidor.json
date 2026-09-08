@@ -1,0 +1,332 @@
+{
+  "date": "2026-09-13",
+  "workout": {
+    "id": "ea628b55-9e7d-4dbd-9db0-6f01a58a7fed",
+    "name": "treino sonda",
+    "focus": "Quadríceps",
+    "estimatedMinutes": 45,
+    "exerciseCount": 2,
+    "workSetCount": 6,
+    "completedWorkSetCount": 1,
+    "completionPercent": 17,
+    "exercises": [
+      {
+        "id": "agachamento",
+        "name": "Agachamento livre",
+        "muscleGroup": "Quadríceps",
+        "equipment": "Barra",
+        "order": 1,
+        "prescription": {
+          "prepSets": 0,
+          "workSets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "workToFailure": false,
+          "startingWeightKg": 0
+        },
+        "previous": null,
+        "sets": {
+          "prep": [],
+          "work": [
+            {
+              "kind": "work",
+              "index": 1,
+              "weightKg": 12.5,
+              "reps": 11,
+              "toFailure": true,
+              "completedAt": "2026-09-08T14:37:05.215Z"
+            },
+            {
+              "kind": "work",
+              "index": 2,
+              "weightKg": 0,
+              "reps": 12,
+              "toFailure": false,
+              "completedAt": null
+            },
+            {
+              "kind": "work",
+              "index": 3,
+              "weightKg": 0,
+              "reps": 12,
+              "toFailure": false,
+              "completedAt": null
+            }
+          ]
+        }
+      },
+      {
+        "id": "desenvolvimento",
+        "name": "Desenvolvimento",
+        "muscleGroup": "Ombros",
+        "equipment": "Halteres",
+        "order": 2,
+        "prescription": {
+          "prepSets": 0,
+          "workSets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "workToFailure": false,
+          "startingWeightKg": 0
+        },
+        "previous": null,
+        "sets": {
+          "prep": [],
+          "work": [
+            {
+              "kind": "work",
+              "index": 1,
+              "weightKg": 0,
+              "reps": 12,
+              "toFailure": false,
+              "completedAt": null
+            },
+            {
+              "kind": "work",
+              "index": 2,
+              "weightKg": 0,
+              "reps": 12,
+              "toFailure": false,
+              "completedAt": null
+            },
+            {
+              "kind": "work",
+              "index": 3,
+              "weightKg": 0,
+              "reps": 12,
+              "toFailure": false,
+              "completedAt": null
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "consistencyPercent": 0,
+  "currentStreak": 0,
+  "weeklyCompleted": 0,
+  "weeklyPlanned": 4,
+  "weekPlan": [
+    {
+      "id": "ea628b55-9e7d-4dbd-9db0-6f01a58a7fed",
+      "weekday": 0,
+      "name": "treino sonda",
+      "focus": "Quadríceps",
+      "estimatedMinutes": 45,
+      "exerciseCount": 2,
+      "exercises": [
+        {
+          "exerciseId": "agachamento",
+          "prepSets": 0,
+          "workSets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "workToFailure": false,
+          "startingWeightKg": 0
+        },
+        {
+          "exerciseId": "desenvolvimento",
+          "prepSets": 0,
+          "workSets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "workToFailure": false,
+          "startingWeightKg": 0
+        }
+      ]
+    },
+    {
+      "id": "treino-pernas-a",
+      "weekday": 1,
+      "name": "Pernas e glúteos",
+      "focus": "Quadríceps, posterior e glúteos",
+      "estimatedMinutes": 64,
+      "exerciseCount": 3,
+      "exercises": [
+        {
+          "exerciseId": "agachamento",
+          "prepSets": 2,
+          "workSets": 2,
+          "repsMin": 6,
+          "repsMax": 8,
+          "workToFailure": true,
+          "startingWeightKg": 72
+        },
+        {
+          "exerciseId": "stiff",
+          "prepSets": 2,
+          "workSets": 2,
+          "repsMin": 8,
+          "repsMax": 10,
+          "workToFailure": true,
+          "startingWeightKg": 64
+        },
+        {
+          "exerciseId": "hip-thrust",
+          "prepSets": 2,
+          "workSets": 2,
+          "repsMin": 8,
+          "repsMax": 12,
+          "workToFailure": true,
+          "startingWeightKg": 90
+        }
+      ]
+    },
+    {
+      "id": "treino-superiores-a",
+      "weekday": 3,
+      "name": "Superiores",
+      "focus": "Peito, costas e ombros",
+      "estimatedMinutes": 58,
+      "exerciseCount": 3,
+      "exercises": [
+        {
+          "exerciseId": "supino-inclinado",
+          "prepSets": 2,
+          "workSets": 2,
+          "repsMin": 8,
+          "repsMax": 10,
+          "workToFailure": true,
+          "startingWeightKg": 24
+        },
+        {
+          "exerciseId": "remada-baixa",
+          "prepSets": 2,
+          "workSets": 2,
+          "repsMin": 10,
+          "repsMax": 12,
+          "workToFailure": true,
+          "startingWeightKg": 50
+        },
+        {
+          "exerciseId": "desenvolvimento",
+          "prepSets": 2,
+          "workSets": 2,
+          "repsMin": 8,
+          "repsMax": 10,
+          "workToFailure": true,
+          "startingWeightKg": 18
+        }
+      ]
+    },
+    {
+      "id": "treino-costas-bracos",
+      "weekday": 5,
+      "name": "lower 2",
+      "focus": "Costas, bíceps e estabilidade",
+      "estimatedMinutes": 52,
+      "exerciseCount": 2,
+      "exercises": [
+        {
+          "exerciseId": "puxada-alta",
+          "prepSets": 2,
+          "workSets": 2,
+          "repsMin": 8,
+          "repsMax": 12,
+          "workToFailure": true,
+          "startingWeightKg": 48
+        },
+        {
+          "exerciseId": "rosca-inclinada",
+          "prepSets": 2,
+          "workSets": 2,
+          "repsMin": 10,
+          "repsMax": 12,
+          "workToFailure": true,
+          "startingWeightKg": 12
+        }
+      ]
+    }
+  ],
+  "exerciseCatalog": [
+    {
+      "id": "agachamento",
+      "name": "Agachamento livre",
+      "muscleGroup": "Quadríceps",
+      "equipment": "Barra"
+    },
+    {
+      "id": "desenvolvimento",
+      "name": "Desenvolvimento",
+      "muscleGroup": "Ombros",
+      "equipment": "Halteres"
+    },
+    {
+      "id": "hip-thrust",
+      "name": "Hip thrust",
+      "muscleGroup": "Glúteos",
+      "equipment": "Barra"
+    },
+    {
+      "id": "puxada-alta",
+      "name": "Puxada alta",
+      "muscleGroup": "Costas",
+      "equipment": "Cabo"
+    },
+    {
+      "id": "remada-baixa",
+      "name": "Remada baixa",
+      "muscleGroup": "Costas",
+      "equipment": "Cabo"
+    },
+    {
+      "id": "rosca-inclinada",
+      "name": "Rosca inclinada",
+      "muscleGroup": "Bíceps",
+      "equipment": "Halteres"
+    },
+    {
+      "id": "stiff",
+      "name": "Stiff",
+      "muscleGroup": "Posterior",
+      "equipment": "Barra"
+    },
+    {
+      "id": "supino-inclinado",
+      "name": "Supino inclinado",
+      "muscleGroup": "Peitoral",
+      "equipment": "Halteres"
+    }
+  ],
+  "strengthGoal": {
+    "exerciseId": "supino-inclinado",
+    "exerciseName": "Supino inclinado",
+    "targetValue": 80,
+    "lastSession": null
+  },
+  "progress": [],
+  "measurements": [
+    {
+      "id": "501f09e7-1729-407d-a863-abe56fa56ad0",
+      "date": "2026-09-08",
+      "weightKg": 78,
+      "bodyFatPercent": null,
+      "waistCm": null,
+      "chestCm": null,
+      "armCm": null,
+      "thighCm": null
+    },
+    {
+      "id": "815fa811-4bff-43ca-b791-beae4cad672b",
+      "date": "2026-09-07",
+      "weightKg": 65.5,
+      "bodyFatPercent": null,
+      "waistCm": null,
+      "chestCm": null,
+      "armCm": null,
+      "thighCm": null
+    },
+    {
+      "id": "d2899e3f-7698-4105-a85d-1951ffcb31a5",
+      "date": "2026-09-06",
+      "weightKg": 66.5,
+      "bodyFatPercent": null,
+      "waistCm": null,
+      "chestCm": null,
+      "armCm": null,
+      "thighCm": null
+    }
+  ],
+  "projection": null,
+  "onboardingCompleted": true
+}

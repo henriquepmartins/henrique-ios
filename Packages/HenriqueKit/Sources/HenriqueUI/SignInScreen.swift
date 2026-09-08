@@ -33,7 +33,9 @@ struct SignInScreen: View {
             GlassField(placeholder: "usuário") {
               TextField("usuário", text: $username)
                 .textContentType(.username)
-                .textInputAutocapitalization(.never)
+                #if os(iOS)
+                  .textInputAutocapitalization(.never)
+                #endif
                 .autocorrectionDisabled()
                 .focused($focus, equals: .username)
                 .submitLabel(.next)

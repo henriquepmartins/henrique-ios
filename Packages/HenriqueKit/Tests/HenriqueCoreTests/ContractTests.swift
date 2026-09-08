@@ -120,3 +120,40 @@ struct ContractTests {
     #expect(workVolumeKg(exercise.sets.work) == 42.5 * 9)
   }
 }
+
+/// A resposta que o servidor mandou de verdade, capturada de
+/// `POST /api/v1/workout/record-set` em 8 de setembro de 2026. A fixture escrita
+/// à mão cobre os casos ricos; esta prova que o servidor real também decodifica.
+@Suite("Resposta capturada do servidor")
+struct CapturedResponseTests {
+  static func dashboard() throws -> Dashboard {
+    try JSONDecoder.henrique().decode(
+      Dashboard.self, from: ContractTests.fixture("dashboard-servidor"))
+  }
+
+  @Test("decodifica sem perder campo")
+  func decodes() throws {
+    let dashboard = try Self.dashboard()
+    #expect(dashboard.date.iso == "2026-09-13")
+    #expect(dashboard.workout != nil)
+    #expect(!dashboard.exerciseCatalog.isEmpty)
+    #expect(!dashboard.weekPlan.isEmpty)
+  }
+
+  @Test("o instante gravado pelo Postgres decodifica")
+  func recordedTimestampDecodes() throws {
+    let exercise = try #require(Self.dashboard().workout?.exercises.first)
+    let first = try #require(exercise.sets.work.first)
+    #expect(first.isDone)
+    #expect(first.weightKg == 12.5)
+    #expect(first.reps == 11)
+    #expect(first.toFailure)
+  }
+
+  @Test("a prescrição sem aquecimento vem com lista vazia, não nula")
+  func emptyPrepIsEmptyList() throws {
+    let exercise = try #require(Self.dashboard().workout?.exercises.first)
+    #expect(exercise.sets.prep.isEmpty)
+    #expect(exercise.prescription.prepSets == 0)
+  }
+}

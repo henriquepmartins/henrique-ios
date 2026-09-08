@@ -37,11 +37,30 @@ public final class AcademiaStore {
 
   private let client: APIClient
 
+  /// Quando o painel já vem pronto, nenhuma tela chama a rede. É o modo das
+  /// pré-visualizações e do `--amostra`.
+  private let isSample: Bool
+
   public init(client: APIClient) {
     self.client = client
+    isSample = false
+  }
+
+  public convenience init(sample: Dashboard) {
+    self.init(client: APIClient(baseURL: URL(string: "https://exemplo.invalido")!, tokenStore: MemoryTokenStore()), sample: sample)
+  }
+
+  private init(client: APIClient, sample: Dashboard) {
+    self.client = client
+    isSample = true
+    dashboard = sample
+    selectedDate = sample.date
+    phase = .ready
+    isSignedIn = true
   }
 
   public func start() async {
+    guard !isSample else { return }
     isSignedIn = await client.isSignedIn
     guard isSignedIn else {
       phase = .idle
@@ -71,6 +90,7 @@ public final class AcademiaStore {
   }
 
   public func load() async {
+    guard !isSample else { return }
     if dashboard == nil { phase = .loading }
     await apply { try await self.client.dashboard(on: self.selectedDate) }
   }

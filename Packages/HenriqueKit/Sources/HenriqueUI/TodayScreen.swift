@@ -89,6 +89,7 @@ struct StatTile: View {
       Text(caption)
         .font(.caption)
         .foregroundStyle(.secondary)
+        .lineLimit(2, reservesSpace: true)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, 12)
