@@ -329,6 +329,7 @@ private struct AppHubCard: View {
 struct OverviewScreen: View {
   @Environment(AcademiaStore.self) private var store
   @Environment(\.accent) private var accent
+  @State private var showingStreak = false
   let onWorkout: () -> Void
 
   var body: some View {
@@ -344,12 +345,8 @@ struct OverviewScreen: View {
           .foregroundStyle(.white).frame(maxWidth: .infinity, alignment: .leading)
           .padding(22).background(accent.deep, in: .rect(cornerRadius: 28))
           .staggeredEntrance(index: 0, isReady: true)
-          HStack(spacing: 12) {
-            StatTile(value: "\(data.currentStreak)", caption: "treinos na sequência atual")
-            StatTile(value: "\(data.weeklyCompleted)/\(data.weeklyPlanned)", caption: "treinos concluídos nesta semana")
-          }
-          .fixedSize(horizontal: false, vertical: true)
-          .staggeredEntrance(index: 1, isReady: true)
+          StreakCard(snapshot: StreakSnapshot(dashboard: data)) { showingStreak = true }
+            .staggeredEntrance(index: 1, isReady: true)
           HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 10) {
               Text("próxima ação").font(.caption).foregroundStyle(accent.base)
@@ -367,26 +364,11 @@ struct OverviewScreen: View {
     }
     .refreshable { await store.load() }
     .overlay { TodayPlaceholder(phase: store.phase, isEmpty: store.dashboard == nil) }
-  }
-}
-
-struct StatTile: View {
-  let value: String
-  let caption: String
-  var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(value).font(.system(size: 38, weight: .medium)).monospacedDigit()
-        .contentTransition(.numericText())
-        .animation(.smooth(duration: 0.3), value: value)
-      Text(caption).font(.caption).foregroundStyle(Color.mutedInk)
+    .sheet(isPresented: $showingStreak) {
+      if let data = store.dashboard {
+        StreakScreen(snapshot: StreakSnapshot(dashboard: data))
+      }
     }
-    .frame(maxWidth: .infinity, minHeight: 90, alignment: .leading)
-    .padding(18)
-    // Mesma regra do StudyMetric: a fileira fica reta mesmo quando uma legenda
-    // quebra linha e a outra não.
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .paperCard()
-    .accessibilityElement(children: .combine)
   }
 }
 
