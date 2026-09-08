@@ -3,14 +3,15 @@ import Foundation
 public enum APIError: Error, Equatable, Sendable {
   case unauthorized
   case http(status: Int, message: String)
-  case transport(String)
+  case transport(host: String, detail: String)
   case decoding(String)
 
   public var message: String {
     switch self {
     case .unauthorized: "Sua sessão expirou. Entre de novo."
     case .http(_, let message): message
-    case .transport: "Não consegui falar com o servidor."
+    case .transport(let host, _):
+      "Não consegui falar com \(host). O servidor está no ar?"
     case .decoding: "O servidor respondeu num formato que eu não entendi."
     }
   }
@@ -123,10 +124,10 @@ public actor APIClient {
     do {
       (data, response) = try await session.data(for: request)
     } catch {
-      throw APIError.transport(error.localizedDescription)
+      throw APIError.transport(host: Self.host(of: baseURL), detail: error.localizedDescription)
     }
     guard let http = response as? HTTPURLResponse else {
-      throw APIError.transport("resposta sem status")
+      throw APIError.transport(host: Self.host(of: baseURL), detail: "resposta sem status")
     }
     if http.statusCode == 401 {
       tokenStore.write(nil)
@@ -136,6 +137,15 @@ public actor APIClient {
       throw APIError.http(status: http.statusCode, message: Self.serverMessage(from: data))
     }
     return (data, http)
+  }
+
+  /// O endereço aparece no erro porque o modo de falha mais comum é o app
+  /// apontar para um servidor que não está rodando. Sem o endereço, "não
+  /// consegui falar com o servidor" não diz com qual.
+  static func host(of url: URL) -> String {
+    guard let host = url.host() else { return url.absoluteString }
+    guard let port = url.port else { return host }
+    return "\(host):\(port)"
   }
 
   static func serverMessage(from data: Data) -> String {

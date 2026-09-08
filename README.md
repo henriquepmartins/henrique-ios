@@ -19,7 +19,8 @@ mesmos dados nos dois lugares.
 ./scripts/run.sh                 # compila, instala e abre no iPhone 17 Pro
 ./scripts/run.sh "iPhone Air"    # em outro aparelho
 ./scripts/build.sh               # só compila
-./scripts/test.sh                # a suíte
+./scripts/test.sh                # a suíte no macOS
+./scripts/test.sh ios            # a mesma suíte dentro do simulador
 ```
 
 O endereço da API vem de `HENRIQUE_API_BASE_URL` nas configurações de build:
@@ -45,8 +46,12 @@ um, e aí exercitam login, 401 sem sessão e gravação idempotente de série:
 ```sh
 bun run dev   # no repo do web
 HENRIQUE_TEST_BASE_URL=http://localhost:3000 \
-HENRIQUE_TEST_USERNAME=henrique HENRIQUE_TEST_PASSWORD=... ./scripts/test.sh
+HENRIQUE_TEST_USERNAME=henrique HENRIQUE_TEST_PASSWORD=... ./scripts/test.sh ios
 ```
+
+Rode com `ios` sempre que a mudança tocar a rede. O macOS não aplica o App
+Transport Security, então uma chamada em texto puro que o iPhone barraria passa
+lá e o erro só aparece com o app na mão.
 
 ## API
 
