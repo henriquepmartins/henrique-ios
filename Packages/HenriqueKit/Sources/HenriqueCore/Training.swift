@@ -184,6 +184,10 @@ public struct Dashboard: Codable, Hashable, Sendable {
   public var weeklyCompleted: Int
   public var weeklyPlanned: Int
   public var weekPlan: [WeekPlanItem]
+  /// Os dias com sessão concluída nas últimas quatro semanas. Nulo quando o
+  /// servidor é velho demais para mandar o campo, e aí é "não sei", diferente da
+  /// lista vazia, que é "nenhum treino".
+  public var sessionDates: [CalendarDate]?
   public var exerciseCatalog: [ExerciseCatalogItem]
   public var strengthGoal: StrengthGoal?
   public var progress: [ProgressPoint]

@@ -7,6 +7,36 @@ extension Color {
   static let surfaceMuted = Color(hex: 0xf0efed)
 }
 
+/// A paleta dos cards de treino. Um card não tem cor própria, ele herda a vaga
+/// que calhou na lista, então o par vem endereçado por índice e não por nome do
+/// treino. O tom escuro é o único legível sobre os dois extremos do degradê.
+struct WorkoutTone: Sendable, Hashable {
+  let top: Color
+  let bottom: Color
+  let ink: Color
+
+  static let all: [WorkoutTone] = [
+    WorkoutTone(top: 0xf9_7316, bottom: 0xfd_ba74, ink: 0x43_1407),
+    WorkoutTone(top: 0x3b_82f6, bottom: 0x93_c5fd, ink: 0x17_2554),
+    WorkoutTone(top: 0x8b_5cf6, bottom: 0xc4_b5fd, ink: 0x2e_1065),
+    WorkoutTone(top: 0xef_4444, bottom: 0xfc_a5a5, ink: 0x45_0a0a),
+    WorkoutTone(top: 0x22_c55e, bottom: 0x86_efac, ink: 0x05_2e16),
+    WorkoutTone(top: 0xec_4899, bottom: 0xf9_a8d4, ink: 0x50_0724),
+  ]
+
+  /// Dá a volta na lista sozinho, então quem chama nunca precisa saber que são
+  /// seis nem tratar índice negativo.
+  static func at(_ index: Int) -> WorkoutTone {
+    all[((index % all.count) + all.count) % all.count]
+  }
+
+  private init(top: UInt32, bottom: UInt32, ink: UInt32) {
+    self.top = Color(hex: top)
+    self.bottom = Color(hex: bottom)
+    self.ink = Color(hex: ink)
+  }
+}
+
 extension View {
   func paperCard(radius: CGFloat = 28) -> some View {
     background(.white, in: .rect(cornerRadius: radius))
