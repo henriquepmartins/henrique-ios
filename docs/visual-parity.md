@@ -7,13 +7,20 @@ O React em `apps/web/src` é a referência de composição. Esta revisão recupe
 | Hoje reunia resumo e treino | Hoje e treino têm destinos separados | Mesma organização do React |
 | Vidro em todos os cards | Cards sólidos; vidro na navegação, menus e botões | Preservar as cores e a hierarquia do conteúdo |
 | Exercícios sempre abertos e edição em sheet | Expansão por exercício, modo lista e campos na linha | Recuperar o fluxo de registrar séries |
-| Plano em lista | Pastas em duas colunas, criar, editar e iniciar | Recuperar a composição do plano |
+| Plano em lista | Cards em duas colunas, criar, editar e iniciar | Layout novo, escolhido pelo usuário |
 | Peso e chips | Grade de peso, gordura, cintura e massa magra | Mesmas métricas do React |
 | Formulário fechava antes da resposta | Fecha após sucesso, mantém rascunho em erro | Evitar perder a edição |
 
 A fonte é a fonte de sistema do iOS. `TabView`, `NavigationStack`, `Menu`, `Picker`, `TextField`, `Form`, sheets e Swift Charts usam as APIs nativas. O projeto exige iOS 26 e macOS 26. A barra tem quatro abas nomeadas mais a bolha de apps, que é uma `Tab` com papel `prominent` no iOS 27 e papel de busca no iOS 26. Os editores de medidas e meta abrem em sheets nativos, enquanto o React os mostra na página. O gráfico de volume voltou a usar área e linha.
 
 O menu configurar oferece primeiros passos, cor e acesso ao plano. O assistente inclui medidas, treino, exercícios e meta, com opção de pular etapas e preservação de rascunhos por dia enquanto está aberto. Fechar o assistente descarta campos ainda não salvos. Estudos e a troca entre apps estão fora deste trabalho, conforme a escolha do usuário.
+
+A tela de hoje tem o card de sequência, que abre um anel com a semana, os sete
+dias e a comemoração de quem treinou hoje. O número é `currentStreak`, que o
+servidor conta como treinos seguidos tolerando até cinco dias de intervalo, então
+o rótulo fala em treinos e nunca em dias. A fita dos sete dias depende de
+`sessionDates`, campo novo no painel; contra servidor que não manda o campo a fita
+some e o resto continua.
 
 A conclusão do assistente usa `POST /api/v1/onboarding/complete`. O repositório React recebeu a exposição HTTP do procedimento já existente no roteador mobile. Essa alteração precisa ser publicada junto do app para a conclusão funcionar em produção. Nenhum deploy foi feito.
 
