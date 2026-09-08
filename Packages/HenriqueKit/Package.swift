@@ -9,7 +9,7 @@ let package = Package(
     .library(name: "HenriqueUI", targets: ["HenriqueUI"]),
   ],
   targets: [
-    .target(name: "HenriqueCore", resources: [.process("Resources")]),
+    .target(name: "HenriqueCore"),
     .target(name: "HenriqueUI", dependencies: ["HenriqueCore"]),
     .testTarget(
       name: "HenriqueCoreTests", dependencies: ["HenriqueCore"],

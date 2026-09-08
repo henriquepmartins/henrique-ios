@@ -1,57 +1,121 @@
 import HenriqueCore
 import SwiftUI
 
-/// A semana em volta do dia escolhido. O toque troca o dia e o painel inteiro
-/// vem de novo do servidor.
 struct DayStrip: View {
   @Environment(AcademiaStore.self) private var store
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Namespace private var selection
+  @State private var anchor = CalendarDate.today
+  @State private var days: [CalendarDate] = []
+  @State private var visible: CalendarDate?
   let selected: CalendarDate
+  @Binding var notch: CGFloat
 
-  private var days: [CalendarDate] {
-    (-3...3).map { selected.adding(days: $0) }
+  private var selectionAnimation: Animation {
+    .interpolatingSpring(mass: 1, stiffness: 900, damping: 48)
   }
 
   var body: some View {
-    GlassEffectContainer(spacing: 8) {
-      HStack(spacing: 8) {
-        ForEach(days, id: \.self) { day in
-          DayChip(day: day, isSelected: day == selected, isToday: day == .today) {
-            Task { await store.select(date: day) }
+    VStack(spacing: 12) {
+      HStack {
+        Button("Voltar uma semana", systemImage: "chevron.left") { move(-7) }
+          .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
+        Spacer()
+        Button { moveTo(.today) } label: {
+          Label(selected.date().formatted(.dateTime.month(.wide).year()), systemImage: "calendar")
+            .font(.subheadline).foregroundStyle(Color.ink)
+        }.buttonStyle(.plain).accessibilityLabel("Ir para hoje")
+        Spacer()
+        Button("Avançar uma semana", systemImage: "chevron.right") { move(7) }
+          .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
+      }
+      ScrollView(.horizontal) {
+        LazyHStack(spacing: 0) {
+          ForEach(days, id: \.self) { day in
+            DayChip(day: day, isSelected: day == selected, selection: selection) {
+              moveTo(day)
+            }
+            .containerRelativeFrame(.horizontal, count: 7, spacing: 0)
+            .onGeometryChange(for: SelectedDayPosition.self) { geometry in
+              SelectedDayPosition(midpoint: geometry.frame(in: .named("days")).midX, selected: day == selected)
+            } action: { oldPosition, position in
+              guard position.selected else { return }
+              let animation = !oldPosition.selected && !reduceMotion ? selectionAnimation : nil
+              withAnimation(animation) { updateNotch(midpoint: position.midpoint) }
+            }
+            .id(day)
+          }
+        }
+        .scrollTargetLayout()
+        .animation(reduceMotion ? .easeOut(duration: 0.16) : selectionAnimation, value: selected)
+      }
+      .coordinateSpace(.named("days"))
+      .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+      .scrollIndicators(.hidden)
+      .scrollPosition(id: $visible, anchor: .center)
+      .scrollTargetBehavior(.viewAligned)
+      .frame(height: 76)
+      .onAppear {
+        if days.isEmpty { resetWindow(around: selected) }
+        visible = selected
+      }
+      .onChange(of: selected) {
+        if !days.contains(selected) { resetWindow(around: selected) }
+        withAnimation(reduceMotion ? nil : selectionAnimation) {
+          if let visible, abs(selected.date().timeIntervalSince(visible.date())) > 3 * 86400 {
+            self.visible = selected
           }
         }
       }
     }
   }
+
+  @State private var width: CGFloat = 1
+  private func updateNotch(midpoint: CGFloat) { notch = min(max(midpoint / max(width, 1), 0), 1) }
+  private func resetWindow(around day: CalendarDate) {
+    anchor = day
+    days = (-90...90).map { day.adding(days: $0) }
+  }
+  private func move(_ offset: Int) { moveTo(selected.adding(days: offset)) }
+  private func moveTo(_ day: CalendarDate) {
+    if abs(day.date().timeIntervalSince(anchor.date())) > 80 * 86400 { resetWindow(around: day) }
+    Task { await store.select(date: day) }
+  }
 }
 
 struct DayChip: View {
   @Environment(\.accent) private var accent
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let day: CalendarDate
   let isSelected: Bool
-  let isToday: Bool
+  let selection: Namespace.ID
   let onTap: () -> Void
-
-  private static let weekdayFormat = Date.FormatStyle.dateTime.weekday(.narrow)
-
   var body: some View {
     Button(action: onTap) {
-      VStack(spacing: 3) {
-        Text(day.date(), format: Self.weekdayFormat)
-          .font(.caption2)
-          .textCase(.uppercase)
-        Text("\(day.day)")
-          .font(.subheadline.weight(isSelected ? .bold : .regular))
-          .monospacedDigit()
-      }
-      .frame(maxWidth: .infinity)
-      .padding(.vertical, 9)
-      .foregroundStyle(isSelected ? .white : (isToday ? accent.base : .primary))
-    }
-    .buttonStyle(.plain)
-    .glassEffect(
-      isSelected ? .regular.tint(accent.base).interactive() : .regular.interactive(),
-      in: .rect(cornerRadius: 16))
-    .accessibilityLabel(Text(day.date(), format: .dateTime.weekday(.wide).day().month(.wide)))
-    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+      VStack(spacing: 10) {
+        Text(day.date(), format: .dateTime.weekday(.abbreviated))
+          .font(.caption2).foregroundStyle(isSelected ? accent.deep : Color.mutedInk)
+        Text("\(day.day)").font(.body.weight(isSelected ? .semibold : .regular)).monospacedDigit()
+          .frame(width: 40, height: 40)
+          .foregroundStyle(isSelected ? .white : Color.ink)
+          .background {
+            if reduceMotion {
+              Circle().fill(accent.base).opacity(isSelected ? 1 : 0)
+            } else if isSelected {
+              Circle()
+                .fill(accent.base)
+                .matchedGeometryEffect(id: "selected-day", in: selection)
+                .transition(.identity)
+            }
+          }
+      }.frame(maxWidth: .infinity).contentShape(.rect)
+    }.buttonStyle(.plain)
+      .accessibilityLabel(Text(day.date(), format: .dateTime.weekday(.wide).day().month(.wide)))
+      .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
+}
+
+private struct SelectedDayPosition: Equatable {
+  let midpoint: CGFloat
+  let selected: Bool
 }

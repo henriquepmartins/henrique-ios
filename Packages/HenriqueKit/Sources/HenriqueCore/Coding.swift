@@ -17,6 +17,23 @@ extension JSONDecoder {
   }
 }
 
+extension JSONEncoder {
+  /// O codificador que o app inteiro usa. O instante sai com milissegundos
+  /// porque `review.grade` compara o `expectedDueAt` enviado com o `dueAt` do
+  /// banco nessa precisão; truncar o segundo faria o servidor ver conflito onde
+  /// não há.
+  public static func henrique() -> JSONEncoder {
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .custom { date, encoder in
+      let formatter = ISO8601DateFormatter()
+      formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+      var container = encoder.singleValueContainer()
+      try container.encode(formatter.string(from: date))
+    }
+    return encoder
+  }
+}
+
 /// O Postgres devolve o instante com milissegundos e o Foundation só aceita os
 /// dois formatos se cada um tiver seu parser.
 public func parseTimestamp(_ text: String) -> Date? {

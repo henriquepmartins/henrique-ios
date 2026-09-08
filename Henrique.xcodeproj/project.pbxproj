@@ -177,7 +177,7 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
-				HENRIQUE_API_BASE_URL = "https://henrique.vercel.app";
+				HENRIQUE_API_BASE_URL = "https://hnrq.vercel.app";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;

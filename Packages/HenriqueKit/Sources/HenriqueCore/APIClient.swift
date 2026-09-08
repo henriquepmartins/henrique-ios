@@ -20,6 +20,7 @@ public enum APIError: Error, Equatable, Sendable {
 /// As rotas ficam nomeadas em um só lugar. O servidor declara exatamente estes
 /// caminhos, então uma divergência aparece aqui e não espalhada pelas telas.
 public enum Route: String, Sendable {
+  case completeOnboarding = "/api/v1/onboarding/complete"
   case dashboard = "/api/v1/dashboard/get"
   case recordSet = "/api/v1/workout/record-set"
   case saveWorkout = "/api/v1/plan/save-workout"
@@ -27,13 +28,29 @@ public enum Route: String, Sendable {
   case addMeasurement = "/api/v1/measurement/add"
   case signIn = "/api/auth/sign-in/username"
   case signOut = "/api/auth/sign-out"
+  case studyOverview = "/api/v1/estudos/overview/get"
+  case studySubjectList = "/api/v1/estudos/subject/list"
+  case studySubjectGet = "/api/v1/estudos/subject/get"
+  case studyAssignmentList = "/api/v1/estudos/assignment/list"
+  case studyAssignmentSetStatus = "/api/v1/estudos/assignment/set-status"
+  case studyNoteList = "/api/v1/estudos/note/list"
+  case studyNoteGet = "/api/v1/estudos/note/get"
+  case studyNoteSave = "/api/v1/estudos/note/save"
+  case studySessionStart = "/api/v1/estudos/session/start"
+  case studySessionFinish = "/api/v1/estudos/session/finish"
+  case studyReviewQueue = "/api/v1/estudos/review/queue"
+  case studyReviewGrade = "/api/v1/estudos/review/grade"
+  case studyNotebookList = "/api/v1/estudos/notebook/list"
+  case studyNotebookGet = "/api/v1/estudos/notebook/get"
+  case studyNotebookSave = "/api/v1/estudos/notebook/save"
+  case studyNotebookRemove = "/api/v1/estudos/notebook/remove"
 }
 
 public actor APIClient {
   private let baseURL: URL
   private let session: URLSession
   private let tokenStore: any TokenStore
-  private let encoder = JSONEncoder()
+  private let encoder: JSONEncoder
   private let decoder: JSONDecoder
 
   public init(
@@ -42,6 +59,7 @@ public actor APIClient {
     self.baseURL = baseURL
     self.tokenStore = tokenStore
     self.session = session ?? Self.makeSession()
+    self.encoder = .henrique()
     self.decoder = .henrique()
   }
 
@@ -94,6 +112,80 @@ public actor APIClient {
     try await call(.addMeasurement, body: input)
   }
 
+  public func completeOnboarding() async throws {
+    _ = try await send(.completeOnboarding, body: EmptyBody())
+  }
+
+  // MARK: Estudos
+
+  public func studyOverview(on date: CalendarDate) async throws -> StudyOverview {
+    try await call(.studyOverview, body: DateInput(date: date))
+  }
+
+  public func studySubjects() async throws -> [StudySubject] {
+    try await call(.studySubjectList, body: EmptyBody())
+  }
+
+  /// O servidor devolve `null` quando a matéria não existe, e `Optional`
+  /// decodifica esse nulo direto.
+  public func studySubject(id: String) async throws -> SubjectDetail? {
+    try await call(.studySubjectGet, body: IdInput(id: id))
+  }
+
+  public func studyAssignments() async throws -> [AssignmentGroup] {
+    try await call(.studyAssignmentList, body: AssignmentListInput())
+  }
+
+  public func setAssignmentStatus(_ input: SetAssignmentStatusInput) async throws
+    -> StudyAssignment
+  {
+    try await call(.studyAssignmentSetStatus, body: input)
+  }
+
+  public func studyNotes(subjectId: String? = nil) async throws -> [NoteSummary] {
+    try await call(.studyNoteList, body: NoteListInput(subjectId: subjectId))
+  }
+
+  public func studyNote(path: String) async throws -> StudyNote? {
+    try await call(.studyNoteGet, body: NotePathInput(path: path))
+  }
+
+  public func saveStudyNote(_ input: SaveNoteInput) async throws -> StudyNote {
+    try await call(.studyNoteSave, body: input)
+  }
+
+  public func startStudySession(_ input: StartSessionInput) async throws -> StudySession {
+    try await call(.studySessionStart, body: input)
+  }
+
+  public func finishStudySession(_ input: FinishSessionInput) async throws -> StudySession {
+    try await call(.studySessionFinish, body: input)
+  }
+
+  public func reviewQueue() async throws -> ReviewQueue {
+    try await call(.studyReviewQueue, body: EmptyBody())
+  }
+
+  public func gradeFlashcard(_ input: GradeFlashcardInput) async throws -> GradeResult {
+    try await call(.studyReviewGrade, body: input)
+  }
+
+  public func notebooks() async throws -> [Notebook] {
+    try await call(.studyNotebookList, body: EmptyBody())
+  }
+
+  public func notebookPage(id: String) async throws -> NotebookPage? {
+    try await call(.studyNotebookGet, body: IdInput(id: id))
+  }
+
+  public func saveNotebookPage(_ input: SaveNotebookPageInput) async throws -> NotebookPage {
+    try await call(.studyNotebookSave, body: input)
+  }
+
+  public func removeNotebookPage(id: String) async throws {
+    _ = try await send(.studyNotebookRemove, body: IdInput(id: id))
+  }
+
   private struct EmptyBody: Encodable {}
 
   private func call<Body: Encodable, Value: Decodable>(_ route: Route, body: Body) async throws
@@ -124,8 +216,12 @@ public actor APIClient {
     do {
       (data, response) = try await session.data(for: request)
     } catch {
+      if Task.isCancelled || error is CancellationError || (error as? URLError)?.code == .cancelled {
+        throw CancellationError()
+      }
       throw APIError.transport(host: Self.host(of: baseURL), detail: error.localizedDescription)
     }
+    try Task.checkCancellation()
     guard let http = response as? HTTPURLResponse else {
       throw APIError.transport(host: Self.host(of: baseURL), detail: "resposta sem status")
     }

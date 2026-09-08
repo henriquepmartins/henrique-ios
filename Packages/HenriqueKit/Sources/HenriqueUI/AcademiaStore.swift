@@ -36,31 +36,53 @@ public final class AcademiaStore {
   public var banner: String?
 
   private let client: APIClient
+  private struct CachedDay {
+    let dashboard: Dashboard
+    let storedAt: Date
+  }
+  @ObservationIgnored private var dayCache: [CalendarDate: CachedDay] = [:]
+  @ObservationIgnored private var readTask: Task<Void, Never>?
+  @ObservationIgnored private var readID = UUID()
+  @ObservationIgnored private var sessionID = UUID()
 
-  /// Quando o painel já vem pronto, nenhuma tela chama a rede. É o modo das
-  /// pré-visualizações e do `--amostra`.
-  private let isSample: Bool
+  private func cancelRead() {
+    readID = UUID()
+    readTask?.cancel()
+    readTask = nil
+  }
+
+  private func invalidateDays() {
+    dayCache.removeAll()
+    cancelRead()
+  }
+
+  private func remember(_ value: Dashboard) {
+    dayCache[value.date] = CachedDay(dashboard: value, storedAt: Date())
+    if dayCache.count > 14, let oldest = dayCache.min(by: { $0.value.storedAt < $1.value.storedAt })?.key {
+      dayCache.removeValue(forKey: oldest)
+    }
+  }
 
   public init(client: APIClient) {
     self.client = client
-    isSample = false
   }
 
-  public convenience init(sample: Dashboard) {
-    self.init(client: APIClient(baseURL: URL(string: "https://exemplo.invalido")!, tokenStore: MemoryTokenStore()), sample: sample)
-  }
+  #if DEBUG
+    /// A casca do app sem servidor nem conta, só para capturar as telas com
+    /// `--casca`. Nada carrega, então as abas aparecem vazias.
+    @ObservationIgnored private var isCaptureShell = false
 
-  private init(client: APIClient, sample: Dashboard) {
-    self.client = client
-    isSample = true
-    dashboard = sample
-    selectedDate = sample.date
-    phase = .ready
-    isSignedIn = true
-  }
+    public func openCaptureShell() {
+      isCaptureShell = true
+      isSignedIn = true
+      phase = .ready
+    }
+  #endif
 
   public func start() async {
-    guard !isSample else { return }
+    #if DEBUG
+      if isCaptureShell { return }
+    #endif
     isSignedIn = await client.isSignedIn
     guard isSignedIn else {
       phase = .idle
@@ -83,22 +105,52 @@ public final class AcademiaStore {
   }
 
   public func signOut() async {
-    await client.signOut()
+    sessionID = UUID()
+    invalidateDays()
     isSignedIn = false
     dashboard = nil
+    banner = nil
     phase = .idle
+    await client.signOut()
   }
 
   public func load() async {
-    guard !isSample else { return }
-    if dashboard == nil { phase = .loading }
-    await apply { try await self.client.dashboard(on: self.selectedDate) }
+    await fetchDay(selectedDate)
   }
 
   public func select(date: CalendarDate) async {
     guard date != selectedDate else { return }
     selectedDate = date
-    await load()
+    banner = nil
+    if let cached = dayCache[date], Date().timeIntervalSince(cached.storedAt) < 30 {
+      dashboard = cached.dashboard
+      phase = .ready
+    }
+    await fetchDay(date)
+  }
+
+  private func fetchDay(_ date: CalendarDate) async {
+    cancelRead()
+    let requestID = readID
+    if dashboard == nil { phase = .loading }
+    let task = Task { [weak self, client] in
+      do {
+        let received = try await client.dashboard(on: date)
+        guard let self, self.readID == requestID, self.selectedDate == date,
+          received.date == date, !Task.isCancelled else { return }
+        self.remember(received)
+        self.dashboard = received
+        self.phase = .ready
+        self.banner = nil
+      } catch {
+        guard let self, self.readID == requestID, self.selectedDate == date,
+          !Task.isCancelled, !(error is CancellationError) else { return }
+        self.handle(error)
+      }
+    }
+    readTask = task
+    await task.value
+    if readID == requestID { readTask = nil }
   }
 
   /// Grava a série e recebe o painel inteiro de volta. O servidor é quem decide
@@ -107,7 +159,7 @@ public final class AcademiaStore {
     exercise: DashboardExercise, kind: SetKey.Kind, index: Int, weightKg: Double, reps: Int,
     completed: Bool, toFailure: Bool
   ) async {
-    guard let templateId = dashboard?.workout?.id else { return }
+    guard dashboard?.date == selectedDate, let templateId = dashboard?.workout?.id else { return }
     let key = SetKey(exerciseId: exercise.id, kind: kind, index: index)
     guard !inFlight.contains(key) else { return }
 
@@ -122,37 +174,68 @@ public final class AcademiaStore {
     await apply { try await self.client.recordSet(input) }
   }
 
-  public func addMeasurement(_ input: AddMeasurementInput) async {
+  @discardableResult
+  public func addMeasurement(_ input: AddMeasurementInput) async -> Bool {
     await apply { try await self.client.addMeasurement(input) }
   }
 
-  public func saveWorkout(_ input: SaveWorkoutInput) async {
+  @discardableResult
+  public func saveWorkout(_ input: SaveWorkoutInput) async -> Bool {
     await apply { try await self.client.saveWorkout(input) }
   }
 
-  public func setStrengthGoal(_ input: SetStrengthGoalInput) async {
+  @discardableResult
+  public func setStrengthGoal(_ input: SetStrengthGoalInput) async -> Bool {
     await apply { try await self.client.setStrengthGoal(input) }
+  }
+
+  @discardableResult
+  public func completeSetup() async -> Bool {
+    await apply {
+      try await self.client.completeOnboarding()
+      return try await self.client.dashboard(on: self.selectedDate)
+    }
   }
 
   /// Toda chamada devolve o painel inteiro, então o tratamento de erro e a
   /// troca de estado ficam num lugar só.
-  private func apply(_ work: @Sendable () async throws -> Dashboard) async {
+  @discardableResult
+  private func apply(_ work: @Sendable () async throws -> Dashboard) async -> Bool {
+    invalidateDays()
+    let mutationSession = sessionID
     do {
-      dashboard = try await work()
+      let received = try await work()
+      guard sessionID == mutationSession else { return false }
+      invalidateDays()
+      guard received.date == selectedDate else { return true }
+      dashboard = received
       phase = .ready
       banner = nil
-    } catch APIError.unauthorized {
+      return true
+    } catch {
+      guard sessionID == mutationSession else { return false }
+      invalidateDays()
+      if !(error is CancellationError) { handle(error) }
+    }
+    return false
+  }
+
+  private func handle(_ error: any Error) {
+    switch error {
+    case APIError.unauthorized:
+      sessionID = UUID()
+      invalidateDays()
       isSignedIn = false
       dashboard = nil
       phase = .idle
       banner = "Sua sessão expirou. Entre de novo."
-    } catch let error as APIError {
+    case let error as APIError:
       if dashboard == nil {
         phase = .failed(error.message)
       } else {
         banner = error.message
       }
-    } catch {
+    default:
       banner = "Algo deu errado."
     }
   }

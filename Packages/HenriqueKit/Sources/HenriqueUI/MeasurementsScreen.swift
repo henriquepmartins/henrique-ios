@@ -5,103 +5,131 @@ import SwiftUI
 struct MeasurementsScreen: View {
   @Environment(AcademiaStore.self) private var store
   @State private var isAdding = false
-  @Binding var accent: Accent
+  @Environment(\.dynamicTypeSize) private var textSize
 
   private var measurements: [BodyMeasurement] {
     (store.dashboard?.measurements ?? []).sorted { $0.date > $1.date }
   }
 
   var body: some View {
-    List {
-      if let latest = measurements.first {
-        Section {
-          LatestMeasurementCard(measurement: latest)
-            .listRowInsets(.init(top: 8, leading: 0, bottom: 8, trailing: 0))
-            .listRowBackground(Color.clear)
+    ScrollView {
+      VStack(alignment: .leading, spacing: 24) {
+        PageHeading(eyebrow: "seu corpo", title: "medidas",
+          subtitle: "Registre nas mesmas condições para enxergar a tendência, não o ruído do dia.")
+        Button("nova medida", systemImage: "plus") { isAdding = true }
+          .buttonStyle(.glassProminent).controlSize(.large)
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: textSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
+          MeasurementMetric(title: "peso", value: measurements.first?.weightKg, unit: "kg", symbol: "scalemass")
+            .staggeredEntrance(index: 0, isReady: true)
+          MeasurementMetric(title: "gordura corporal", value: measurements.first?.bodyFatPercent, unit: "%", symbol: "figure")
+            .staggeredEntrance(index: 1, isReady: true)
+          MeasurementMetric(title: "cintura", value: measurements.first?.waistCm, unit: "cm", symbol: "ruler")
+            .staggeredEntrance(index: 2, isReady: true)
+          MeasurementMetric(title: "massa magra", value: leanMass, unit: "kg", symbol: "figure.strengthtraining.traditional")
+            .staggeredEntrance(index: 3, isReady: true)
         }
-      }
-
-      if measurements.count >= 2 {
-        Section("Peso") {
-          WeightChart(measurements: measurements)
-            .frame(height: 160)
-            .listRowBackground(Color.clear)
-        }
-      }
-
-      Section("Histórico") {
-        ForEach(measurements) { measurement in
-          MeasurementRow(measurement: measurement)
-        }
-        if measurements.isEmpty {
-          Text("Nenhuma medida registrada.")
-            .font(.callout)
-            .foregroundStyle(.secondary)
-        }
-      }
-
-      Section("Cor do app") {
-        AccentPicker(accent: $accent)
-      }
-
-      Section {
-        Button("Sair da conta", role: .destructive) {
-          Task { await store.signOut() }
-        }
-      }
+        VStack(alignment: .leading, spacing: 16) {
+          Text("peso corporal").font(.title2.weight(.medium))
+          if measurements.isEmpty {
+            Text("Nenhuma medida registrada.").foregroundStyle(Color.mutedInk).frame(height: 220)
+          } else {
+            WeightChart(measurements: measurements.sorted { $0.date < $1.date }).frame(height: 220)
+          }
+        }.padding(22).paperCard(radius: 32)
+          .staggeredEntrance(index: 4, isReady: true)
+        VStack(alignment: .leading, spacing: 16) {
+          Text("histórico").font(.title2.weight(.medium))
+          ForEach(measurements) { measurement in
+            MeasurementRow(measurement: measurement)
+            Divider()
+          }
+        }.padding(22).paperCard(radius: 32)
+          .staggeredEntrance(index: 5, isReady: true)
+      }.padding(16).padding(.bottom, 32)
     }
-    .navigationTitle("Medidas")
     .refreshable { await store.load() }
-    .toolbar {
-      ToolbarItem(placement: .primaryAction) {
-        Button("Nova medida", systemImage: "plus") { isAdding = true }
-      }
-    }
-    .sheet(isPresented: $isAdding) {
-      MeasurementEditor(previous: measurements.first)
-    }
+    .sheet(isPresented: $isAdding) { MeasurementEditor(previous: measurements.first) }
+  }
+  private var leanMass: Double? {
+    guard let item = measurements.first, let fat = item.bodyFatPercent else { return nil }
+    return item.weightKg * (1 - fat / 100)
   }
 }
 
-struct LatestMeasurementCard: View {
+/// A porta das medidas dentro de progresso. Medidas deixou de ser aba, então o
+/// resumo mostra o número mais recente e o toque abre a tela inteira.
+struct MeasurementsLink: View {
   @Environment(\.accent) private var accent
-  let measurement: BodyMeasurement
+  let latest: BodyMeasurement?
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(measurement.date.date(), format: .dateTime.day().month(.wide).year())
-        .font(.caption)
-        .foregroundStyle(.secondary)
-      Text(weightLabel(measurement.weightKg))
-        .font(.system(size: 40, weight: .semibold))
-        .monospacedDigit()
-        .foregroundStyle(accent.base)
-      HStack(spacing: 14) {
-        MeasurementChip(label: "gordura", value: measurement.bodyFatPercent, unit: "%")
-        MeasurementChip(label: "cintura", value: measurement.waistCm, unit: "cm")
-        MeasurementChip(label: "braço", value: measurement.armCm, unit: "cm")
+    NavigationLink {
+      MeasurementsScreen()
+        .background(Color.canvas.ignoresSafeArea())
+        .navigationTitle("")
+        .toolbarTitleDisplayMode(.inline)
+    } label: {
+      HStack(alignment: .top, spacing: 16) {
+        VStack(alignment: .leading, spacing: 10) {
+          Text("suas medidas").font(.caption).foregroundStyle(accent.base)
+          if let latest {
+            HStack(alignment: .firstTextBaseline, spacing: 14) {
+              value(weightLabel(latest.weightKg), caption: "peso")
+              if let fat = latest.bodyFatPercent {
+                value("\(fat.formatted(.number.precision(.fractionLength(0...1))))%",
+                  caption: "gordura")
+              }
+            }
+          } else {
+            Text("nenhuma medida registrada").font(.title3.weight(.medium))
+          }
+          Text(latest.map { "última em \($0.date.date().formatted(.dateTime.day().month(.wide)))" }
+            ?? "Registre a primeira para o gráfico começar.")
+            .font(.subheadline).foregroundStyle(Color.mutedInk)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        Spacer(minLength: 0)
+        Image(systemName: "arrow.right")
+          .font(.headline)
+          .foregroundStyle(accent.base)
+          .padding(.top, 4)
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(22)
+      .paperCard(radius: 32)
+      .contentShape(.rect(cornerRadius: 32))
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
-    .glassEffect(.regular.tint(accent.pale.opacity(0.5)), in: .rect(cornerRadius: 28))
+    .buttonStyle(StudyPressStyle())
+    .foregroundStyle(Color.ink)
+  }
+
+  private func value(_ text: String, caption: String) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(text).font(.system(size: 30, weight: .medium)).monospacedDigit()
+        .contentTransition(.numericText())
+        .animation(.smooth(duration: 0.3), value: text)
+      Text(caption).font(.caption).foregroundStyle(Color.mutedInk)
+    }
   }
 }
 
-struct MeasurementChip: View {
-  let label: String
+struct MeasurementMetric: View {
+  @Environment(\.accent) private var accent
+  let title: String
   let value: Double?
   let unit: String
-
+  let symbol: String
   var body: some View {
-    if let value {
-      VStack(alignment: .leading, spacing: 1) {
-        Text(label).font(.caption2).foregroundStyle(.secondary)
-        Text("\(value, format: .number.precision(.fractionLength(0...1))) \(unit)")
-          .font(.caption.weight(.medium))
-          .monospacedDigit()
+    VStack(alignment: .leading, spacing: 12) {
+      Image(systemName: symbol).foregroundStyle(accent.base)
+      Text(title).font(.caption).foregroundStyle(Color.mutedInk)
+      HStack(alignment: .firstTextBaseline, spacing: 4) {
+        Text(value.map { $0.formatted(.number.precision(.fractionLength(0...1))) } ?? "sem registro")
+          .font(.title2.weight(.medium)).monospacedDigit()
+        if value != nil { Text(unit).font(.caption).foregroundStyle(Color.mutedInk) }
       }
-    }
+    }.frame(maxWidth: .infinity, minHeight: 110, alignment: .leading).padding(16).paperCard(radius: 26)
+      .accessibilityElement(children: .combine)
   }
 }
 
@@ -143,28 +171,11 @@ struct MeasurementRow: View {
   }
 }
 
-struct AccentPicker: View {
-  @Binding var accent: Accent
-
-  var body: some View {
-    Picker("cor", selection: $accent) {
-      ForEach(Accent.allCases) { option in
-        HStack {
-          Circle().fill(option.base).frame(width: 14, height: 14)
-          Text(option.label)
-        }
-        .tag(option)
-      }
-    }
-    .labelsHidden()
-    .pickerStyle(.inline)
-  }
-}
-
 struct MeasurementEditor: View {
   @Environment(AcademiaStore.self) private var store
   @Environment(\.dismiss) private var dismiss
-  @State private var weightKg: Double
+  @State private var weightKg: Double?
+  @State private var isSaving = false
   @State private var bodyFatPercent: Double?
   @State private var waistCm: Double?
   @State private var chestCm: Double?
@@ -174,7 +185,7 @@ struct MeasurementEditor: View {
   /// Começar da última medida poupa digitação: o peso muda pouco entre pesagens
   /// e as circunferências costumam ficar iguais por semanas.
   init(previous: BodyMeasurement?) {
-    weightKg = previous?.weightKg ?? 70
+    weightKg = previous?.weightKg
     bodyFatPercent = previous?.bodyFatPercent
     waistCm = previous?.waistCm
     chestCm = previous?.chestCm
@@ -186,9 +197,8 @@ struct MeasurementEditor: View {
     NavigationStack {
       Form {
         Section("Peso") {
-          Stepper(value: $weightKg, in: 20...500, step: 0.1) {
-            Text(weightLabel(weightKg)).monospacedDigit()
-          }
+          TextField("peso em kg", value: $weightKg, format: .number.precision(.fractionLength(0...2)))
+            .decimalInput()
         }
         Section {
           OptionalField(label: "gordura corporal", unit: "%", range: 1...70, value: $bodyFatPercent)
@@ -202,6 +212,7 @@ struct MeasurementEditor: View {
           Text("Deixe de fora o que você não mediu. Só o peso é obrigatório.")
         }
       }
+      .interactiveDismissDisabled(isSaving)
       .navigationTitle("Nova medida")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
@@ -209,18 +220,23 @@ struct MeasurementEditor: View {
           Button("Cancelar") { dismiss() }
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button("Salvar") { save() }
+          Button(isSaving ? "Salvando" : "Salvar") { save() }.disabled(isSaving || weightKg == nil || (weightKg ?? 0) <= 0)
         }
       }
     }
   }
 
   private func save() {
+    guard let weightKg else { return }
     let input = AddMeasurementInput(
       date: .today, weightKg: weightKg, bodyFatPercent: bodyFatPercent, waistCm: waistCm,
       chestCm: chestCm, armCm: armCm, thighCm: thighCm)
-    dismiss()
-    Task { await store.addMeasurement(input) }
+    isSaving = true
+    Task {
+      let saved = await store.addMeasurement(input)
+      isSaving = false
+      if saved { dismiss() }
+    }
   }
 }
 
@@ -234,27 +250,12 @@ struct OptionalField: View {
 
   var body: some View {
     HStack {
-      Toggle(isOn: .init(get: { value != nil }, set: { value = $0 ? range.lowerBound : nil })) {
-        Text(label)
-      }
-      .labelsHidden()
-
       Text(label)
-
       Spacer()
-
-      if let current = value {
-        Stepper(value: .init(get: { current }, set: { value = $0 }), in: range, step: 0.5) {
-          Text("\(current, format: .number.precision(.fractionLength(0...1))) \(unit)")
-            .monospacedDigit()
-            .font(.callout)
-        }
-        .labelsHidden()
-        Text("\(current, format: .number.precision(.fractionLength(0...1))) \(unit)")
-          .monospacedDigit()
-          .font(.callout)
-          .foregroundStyle(.secondary)
-      }
+      TextField("não medido", value: $value, format: .number.precision(.fractionLength(0...2)))
+        .decimalInput().multilineTextAlignment(.trailing)
+        .accessibilityLabel(label)
+      Text(unit).font(.caption).foregroundStyle(Color.mutedInk)
     }
   }
 }

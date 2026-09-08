@@ -13,17 +13,17 @@ struct SignInScreen: View {
   private enum Field: Hashable { case username, password }
 
   private var canSubmit: Bool {
-    !username.isEmpty && password.count >= 6 && phase != .loading
+    !username.isEmpty && !password.isEmpty && phase != .loading
   }
 
   var body: some View {
     ZStack {
-      SignInBackdrop(accent: accent)
+      Color.canvas.ignoresSafeArea()
 
       VStack(spacing: 24) {
         VStack(spacing: 6) {
-          Text("Academia").font(.largeTitle.weight(.semibold))
-          Text("Entre para ver o treino de hoje.")
+          Text("h&").font(.system(size: 64, weight: .medium)).tracking(-4).foregroundStyle(accent.deep)
+          Text("entre para continuar")
             .font(.callout)
             .foregroundStyle(.secondary)
         }
@@ -60,7 +60,7 @@ struct SignInScreen: View {
         }
 
         Button(action: submit) {
-          Text(phase == .loading ? "Entrando…" : "Entrar")
+          Text(phase == .loading ? "entrando" : "entrar")
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
         }
@@ -71,36 +71,13 @@ struct SignInScreen: View {
       .padding(.horizontal, 28)
       .frame(maxWidth: 420)
     }
-    .animation(.smooth(duration: 0.25), value: phase)
+
   }
 
   private func submit() {
     guard canSubmit else { return }
     focus = nil
     Task { await store.signIn(username: username, password: password) }
-  }
-}
-
-/// O vidro precisa de alguma coisa embaixo para refratar. Sobre uma cor chapada
-/// ele vira um retângulo cinza, então o fundo traz duas manchas de cor.
-struct SignInBackdrop: View {
-  let accent: Accent
-
-  var body: some View {
-    ZStack {
-      accent.pale.opacity(0.55)
-      Circle()
-        .fill(accent.base.opacity(0.35))
-        .frame(width: 320, height: 320)
-        .blur(radius: 90)
-        .offset(x: -110, y: -230)
-      Circle()
-        .fill(accent.signal.opacity(0.45))
-        .frame(width: 280, height: 280)
-        .blur(radius: 90)
-        .offset(x: 130, y: 260)
-    }
-    .ignoresSafeArea()
   }
 }
 
@@ -113,7 +90,8 @@ struct GlassField<Content: View>: View {
       .textFieldStyle(.plain)
       .padding(.horizontal, 16)
       .padding(.vertical, 14)
-      .glassEffect(.regular.interactive(), in: .capsule)
+      .background(.white, in: .rect(cornerRadius: 16))
+      .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.ink.opacity(0.12)))
       .accessibilityLabel(placeholder)
   }
 }

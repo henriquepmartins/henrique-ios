@@ -1,12 +1,5 @@
 import SwiftUI
 
-/// A cor de destaque do app. Os valores são os mesmos de `apps/web/src/lib/accent.ts`,
-/// só que aqui os nomes dizem o papel em vez de "green", que no web ficou como
-/// nome herdado mesmo quando a cor é rosa.
-///
-/// O fundo e os materiais ficam por conta do sistema. Trazer o papel claro do
-/// web para cá brigaria com o modo escuro e com o vidro, que precisa de um fundo
-/// que ele possa amostrar.
 public enum Accent: String, CaseIterable, Identifiable, Sendable, Codable {
   case verde, rosa, vermelho, azul, amarelo, grafite
 
@@ -24,6 +17,28 @@ public enum Accent: String, CaseIterable, Identifiable, Sendable, Codable {
     case .azul: Color(hex: 0x1f_5fbf)
     case .amarelo: Color(hex: 0x8a_6a08)
     case .grafite: Color(hex: 0x2e_2e2c)
+    }
+  }
+
+  public var acid: Color {
+    switch self {
+    case .verde: Color(hex: 0xe1f96c)
+    case .rosa: Color(hex: 0xffd3e6)
+    case .vermelho: Color(hex: 0xffd6c2)
+    case .azul: Color(hex: 0xcfe6ff)
+    case .amarelo: Color(hex: 0xffeaa0)
+    case .grafite: Color(hex: 0xe7e6e3)
+    }
+  }
+
+  public var mint: Color {
+    switch self {
+    case .verde: Color(hex: 0x9fead9)
+    case .rosa: Color(hex: 0xf7bcd6)
+    case .vermelho: Color(hex: 0xf9c0b4)
+    case .azul: Color(hex: 0xb3d1f7)
+    case .amarelo: Color(hex: 0xf5dd9a)
+    case .grafite: Color(hex: 0xd5d4d0)
     }
   }
 

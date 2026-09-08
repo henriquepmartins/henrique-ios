@@ -1,0 +1,324 @@
+{
+  "overview": {
+    "date": "2026-09-08",
+    "subjects": [
+      { "id": "s-eda", "name": "Estruturas de Dados", "color": "#0075de", "code": "SCC0202", "semester": 3 },
+      { "id": "s-so", "name": "Sistemas Operacionais", "color": "#ffb110", "code": "SSC0140", "semester": 4 },
+      { "id": "s-calc", "name": "Cálculo Numérico", "color": "#9d95ff", "code": null, "semester": null }
+    ],
+    "dueSoon": [
+      {
+        "id": "a-lista3",
+        "subjectId": "s-eda",
+        "subjectName": "Estruturas de Dados",
+        "subjectColor": "#0075de",
+        "title": "Lista 3 sobre árvores balanceadas",
+        "dueAt": "2026-09-05T23:59:00.000Z",
+        "status": "in_progress",
+        "source": "moodle",
+        "url": "https://edisciplinas.usp.br/mod/assign/view.php?id=1842"
+      },
+      {
+        "id": "a-leitura",
+        "subjectId": null,
+        "subjectName": null,
+        "subjectColor": null,
+        "title": "Ler o capítulo 4 do Tanenbaum",
+        "dueAt": "2026-09-08T18:30:45.250Z",
+        "status": "open",
+        "source": "manual",
+        "url": null
+      },
+      {
+        "id": "a-prova",
+        "subjectId": "s-calc",
+        "subjectName": "Cálculo Numérico",
+        "subjectColor": "#9d95ff",
+        "title": "Prova 1, métodos de raízes",
+        "dueAt": "2026-09-11T14:00:00.000Z",
+        "status": "open",
+        "source": "manual",
+        "url": null
+      }
+    ],
+    "reviewCount": 12,
+    "weekMinutes": 260,
+    "lastSession": {
+      "id": "ses-2026-09-07",
+      "subjectId": "s-eda",
+      "materialId": "mat-eda-08",
+      "startedAt": "2026-09-07T19:04:00.000Z",
+      "endedAt": "2026-09-07T19:54:30.000Z",
+      "completedMinutes": 50
+    },
+    "lastSync": {
+      "id": "sync-2026-09-08",
+      "source": "moodle",
+      "status": "ok",
+      "createdCount": 2,
+      "existingCount": 9,
+      "completedAt": "2026-09-08T11:15:03.117Z"
+    }
+  },
+  "subjects": [
+    { "id": "s-eda", "name": "Estruturas de Dados", "color": "#0075de", "code": "SCC0202", "semester": 3 },
+    { "id": "s-so", "name": "Sistemas Operacionais", "color": "#ffb110", "code": "SSC0140", "semester": 4 },
+    { "id": "s-calc", "name": "Cálculo Numérico", "color": "#9d95ff", "code": null, "semester": null }
+  ],
+  "subject": {
+    "subject": { "id": "s-eda", "name": "Estruturas de Dados", "color": "#0075de", "code": "SCC0202", "semester": 3 },
+    "materials": [
+      {
+        "id": "mat-eda-08",
+        "subjectId": "s-eda",
+        "kind": "slide",
+        "lessonNumber": 8,
+        "title": "Árvores AVL",
+        "source": "moodle",
+        "storageKey": "materiais/eda/aula-08.pdf",
+        "url": null,
+        "page": 34
+      },
+      {
+        "id": "mat-eda-09",
+        "subjectId": "s-eda",
+        "kind": "pdf",
+        "lessonNumber": 9,
+        "title": "Tabelas hash com encadeamento",
+        "source": "moodle",
+        "storageKey": "materiais/eda/aula-09.pdf",
+        "url": null,
+        "page": 41
+      },
+      {
+        "id": "mat-eda-vis",
+        "subjectId": "s-eda",
+        "kind": "link",
+        "lessonNumber": null,
+        "title": "Visualizador de rotações da USFCA",
+        "source": "manual",
+        "storageKey": null,
+        "url": "https://www.cs.usfca.edu/~galles/visualization/AVLtree.html",
+        "page": 1
+      }
+    ],
+    "assignments": [
+      {
+        "id": "a-lista3",
+        "subjectId": "s-eda",
+        "subjectName": "Estruturas de Dados",
+        "subjectColor": "#0075de",
+        "title": "Lista 3 sobre árvores balanceadas",
+        "dueAt": "2026-09-05T23:59:00.000Z",
+        "status": "in_progress",
+        "source": "moodle",
+        "url": "https://edisciplinas.usp.br/mod/assign/view.php?id=1842"
+      }
+    ],
+    "notes": [
+      {
+        "id": "note-avl",
+        "path": "eda/avl",
+        "title": "Rotações em AVL",
+        "subjectId": "s-eda",
+        "tags": ["eda", "árvores", "revisão"],
+        "updatedAt": "2026-09-07T20:12:44.903Z"
+      }
+    ]
+  },
+  "assignments": [
+    {
+      "date": "2026-09-05",
+      "items": [
+        {
+          "id": "a-lista3",
+          "subjectId": "s-eda",
+          "subjectName": "Estruturas de Dados",
+          "subjectColor": "#0075de",
+          "title": "Lista 3 sobre árvores balanceadas",
+          "dueAt": "2026-09-05T23:59:00.000Z",
+          "status": "in_progress",
+          "source": "moodle",
+          "url": "https://edisciplinas.usp.br/mod/assign/view.php?id=1842"
+        }
+      ]
+    },
+    {
+      "date": "2026-09-08",
+      "items": [
+        {
+          "id": "a-relatorio",
+          "subjectId": "s-so",
+          "subjectName": "Sistemas Operacionais",
+          "subjectColor": "#ffb110",
+          "title": "Relatório do escalonador round robin",
+          "dueAt": "2026-09-08T21:00:00.000Z",
+          "status": "done",
+          "source": "moodle",
+          "url": "https://edisciplinas.usp.br/mod/assign/view.php?id=1907"
+        },
+        {
+          "id": "a-leitura",
+          "subjectId": null,
+          "subjectName": null,
+          "subjectColor": null,
+          "title": "Ler o capítulo 4 do Tanenbaum",
+          "dueAt": "2026-09-08T18:30:45.250Z",
+          "status": "open",
+          "source": "manual",
+          "url": null
+        }
+      ]
+    },
+    {
+      "date": "2026-09-11",
+      "items": [
+        {
+          "id": "a-prova",
+          "subjectId": "s-calc",
+          "subjectName": "Cálculo Numérico",
+          "subjectColor": "#9d95ff",
+          "title": "Prova 1, métodos de raízes",
+          "dueAt": "2026-09-11T14:00:00.000Z",
+          "status": "open",
+          "source": "manual",
+          "url": null
+        }
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "id": "note-avl",
+      "path": "eda/avl",
+      "title": "Rotações em AVL",
+      "subjectId": "s-eda",
+      "tags": ["eda", "árvores", "revisão"],
+      "updatedAt": "2026-09-07T20:12:44.903Z"
+    },
+    {
+      "id": "note-deadlock",
+      "path": "so/deadlock",
+      "title": "Condições de Coffman",
+      "subjectId": "s-so",
+      "tags": ["so", "concorrência"],
+      "updatedAt": "2026-09-06T22:47:10.005Z"
+    },
+    {
+      "id": "note-bissecao",
+      "path": "calc/bissecao",
+      "title": "Bisseção contra Newton",
+      "subjectId": null,
+      "tags": ["calculo"],
+      "updatedAt": "2026-09-04T14:30:00.412Z"
+    }
+  ],
+  "note": {
+    "id": "note-avl",
+    "path": "eda/avl",
+    "title": "Rotações em AVL",
+    "subjectId": "s-eda",
+    "tags": ["eda", "árvores", "revisão"],
+    "updatedAt": "2026-09-07T20:12:44.903Z",
+    "body": "A rotação simples resolve quando o desbalanceamento e o filho pendem para o mesmo lado. Quando pendem para lados opostos, gira o filho primeiro e só depois a raiz. O fator de balanceamento fica em -1, 0 ou 1 em toda a árvore.",
+    "materialId": "mat-eda-08",
+    "links": ["eda/hash", "so/deadlock"]
+  },
+  "queue": {
+    "cards": [
+      {
+        "id": "card-avl",
+        "noteId": "note-avl",
+        "front": "Quando a AVL precisa de rotação dupla?",
+        "back": "Quando o filho mais alto pende para o lado oposto ao do desbalanceamento.",
+        "dueAt": "2026-09-08T09:00:00.000Z",
+        "subjectId": "s-eda",
+        "subjectName": "Estruturas de Dados",
+        "subjectColor": "#0075de"
+      },
+      {
+        "id": "card-deadlock",
+        "noteId": "note-deadlock",
+        "front": "Quais são as quatro condições de Coffman?",
+        "back": "Exclusão mútua, posse e espera, ausência de preempção e espera circular.",
+        "dueAt": "2026-09-08T09:30:00.000Z",
+        "subjectId": "s-so",
+        "subjectName": "Sistemas Operacionais",
+        "subjectColor": "#ffb110"
+      }
+    ],
+    "bySubject": [
+      { "subjectId": "s-eda", "name": "Estruturas de Dados", "color": "#0075de", "count": 7 },
+      { "subjectId": "s-so", "name": "Sistemas Operacionais", "color": "#ffb110", "count": 5 }
+    ]
+  },
+  "notebooks": [
+    {
+      "subject": { "id": "s-eda", "name": "Estruturas de Dados", "color": "#0075de", "code": "SCC0202", "semester": 3 },
+      "pages": [
+        { "id": "pag-avl", "subjectId": "s-eda", "title": "Rotações em árvore AVL", "position": 1, "updatedAt": "2026-09-08T13:02:11.482Z" },
+        { "id": "pag-hash", "subjectId": "s-eda", "title": "Colisões em tabela hash", "position": 2, "updatedAt": "2026-09-06T18:20:05.760Z" }
+      ]
+    },
+    {
+      "subject": { "id": "s-so", "name": "Sistemas Operacionais", "color": "#ffb110", "code": "SSC0140", "semester": 4 },
+      "pages": [
+        { "id": "pag-escalonador", "subjectId": "s-so", "title": "Escalonamento round robin", "position": 1, "updatedAt": "2026-09-07T15:41:29.048Z" }
+      ]
+    }
+  ],
+  "page": {
+    "id": "pag-avl",
+    "subjectId": "s-eda",
+    "title": "Rotações em árvore AVL",
+    "position": 1,
+    "updatedAt": "2026-09-08T13:02:11.482Z",
+    "createdAt": "2026-09-01T17:55:02.610Z",
+    "content": [
+      {
+        "id": "bloco-intro",
+        "type": "paragraph",
+        "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+        "content": [
+          { "type": "text", "text": "A árvore rebalanceia sempre que o fator de balanceamento de um nó sai da faixa de -1 a 1.", "styles": {} }
+        ],
+        "children": []
+      },
+      {
+        "id": "bloco-titulo",
+        "type": "heading",
+        "props": { "textColor": "blue", "backgroundColor": "default", "textAlignment": "left", "level": 2 },
+        "content": [
+          { "type": "text", "text": "Rotação dupla esquerda-direita", "styles": {} }
+        ],
+        "children": []
+      },
+      {
+        "id": "bloco-passo",
+        "type": "bulletListItem",
+        "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+        "content": [
+          { "type": "text", "text": "Gira o filho esquerdo para a esquerda e só depois gira a raiz para a direita.", "styles": {} }
+        ],
+        "children": []
+      },
+      {
+        "id": "bloco-tarefa",
+        "type": "checkListItem",
+        "props": { "textColor": "default", "backgroundColor": "yellow", "textAlignment": "left", "checked": true },
+        "content": [
+          { "type": "text", "text": "Refazer o exercício 7 da lista 3", "styles": {} }
+        ],
+        "children": []
+      }
+    ]
+  },
+  "syncLog": {
+    "id": "sync-2026-09-08",
+    "source": "moodle",
+    "status": "ok",
+    "createdCount": 2,
+    "existingCount": 9,
+    "completedAt": "2026-09-08T11:15:03.117Z"
+  }
+}

@@ -5,39 +5,47 @@ import SwiftUI
 struct ProgressScreen: View {
   @Environment(AcademiaStore.self) private var store
   @State private var isEditingGoal = false
+  var onWorkout: () -> Void = {}
 
   var body: some View {
     ScrollView {
       VStack(spacing: 20) {
+        PageHeading(eyebrow: "evolução", title: "força, volume e direção",
+          subtitle: "O gráfico usa as séries valendo concluídas. Preparação e peso digitado sem marcar a série não entram na conta.")
+        NavigationLink("detalhe da métrica") { MetricDetailScreen(onWorkout: onWorkout) }
+          .frame(maxWidth: .infinity, alignment: .trailing).font(.subheadline)
         if let dashboard = store.dashboard {
           if let goal = dashboard.strengthGoal {
             GoalCard(
               exerciseName: goal.exerciseName, targetValue: goal.targetValue,
               projection: dashboard.projection)
+              .staggeredEntrance(index: 0, isReady: true)
           }
 
+          Button(dashboard.strengthGoal == nil ? "criar meta" : "atualizar meta") { isEditingGoal = true }
+            .buttonStyle(.glassProminent).controlSize(.large)
+            .disabled(dashboard.exerciseCatalog.isEmpty)
+            .staggeredEntrance(index: 1, isReady: true)
           if dashboard.progress.isEmpty {
             ContentUnavailableView(
               "Sem histórico ainda", systemImage: "chart.xyaxis.line",
               description: Text("O gráfico aparece depois da primeira série de trabalho gravada."))
               .padding(.vertical, 40)
+              .staggeredEntrance(index: 2, isReady: true)
           } else {
             OneRepMaxChart(
               points: dashboard.progress, target: dashboard.strengthGoal?.targetValue)
+              .staggeredEntrance(index: 2, isReady: true)
             VolumeChart(points: dashboard.progress)
+              .staggeredEntrance(index: 3, isReady: true)
           }
-
-          Button(dashboard.strengthGoal == nil ? "Definir meta de força" : "Trocar a meta") {
-            isEditingGoal = true
-          }
-          .buttonStyle(.glass)
-          .disabled(dashboard.exerciseCatalog.isEmpty)
+          MeasurementsLink(latest: latest(in: dashboard))
+            .staggeredEntrance(index: 4, isReady: true)
         }
       }
       .padding(.horizontal, 16)
       .padding(.bottom, 40)
     }
-    .navigationTitle("Progresso")
     .refreshable { await store.load() }
     .sheet(isPresented: $isEditingGoal) {
       GoalEditor(
@@ -45,6 +53,12 @@ struct ProgressScreen: View {
         current: store.dashboard?.strengthGoal)
     }
   }
+}
+
+/// A medida mais recente do painel. O servidor devolve a lista sem ordem
+/// garantida, então a data decide.
+private func latest(in dashboard: Dashboard) -> BodyMeasurement? {
+  dashboard.measurements.max { $0.date < $1.date }
 }
 
 struct GoalCard: View {
@@ -75,7 +89,7 @@ struct GoalCard: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(20)
-    .glassEffect(.regular.tint(accent.pale.opacity(0.5)), in: .rect(cornerRadius: 28))
+    .background(accent.pale, in: .rect(cornerRadius: 32))
   }
 
   private func projectionSentence(_ projection: Projection) -> String {
@@ -129,9 +143,11 @@ struct VolumeChart: View {
   var body: some View {
     ChartCard(title: "Volume por treino", caption: "carga vezes repetições, somando as séries") {
       Chart(points) { point in
-        BarMark(x: .value("dia", point.date.date(), unit: .day), y: .value("volume", point.volumeKg))
-          .foregroundStyle(accent.pale)
-          .cornerRadius(4)
+        AreaMark(x: .value("dia", point.date.date()), y: .value("volume", point.volumeKg))
+          .interpolationMethod(.monotone)
+          .foregroundStyle(LinearGradient(colors: [accent.mint.opacity(0.8), accent.mint.opacity(0.08)], startPoint: .top, endPoint: .bottom))
+        LineMark(x: .value("dia", point.date.date()), y: .value("volume", point.volumeKg))
+          .interpolationMethod(.monotone).foregroundStyle(accent.base)
       }
       .chartYAxisLabel("kg")
     }
@@ -150,11 +166,11 @@ struct ChartCard<Content: View>: View {
         Text(caption).font(.caption).foregroundStyle(.secondary)
       }
       content
-        .frame(height: 180)
+        .frame(height: 220)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(18)
-    .glassEffect(.regular, in: .rect(cornerRadius: 26))
+    .paperCard(radius: 32)
   }
 }
 
@@ -163,6 +179,7 @@ struct GoalEditor: View {
   @Environment(\.dismiss) private var dismiss
   @State private var exerciseId: String
   @State private var targetValue: Double
+  @State private var isSaving = false
 
   private let catalog: [ExerciseCatalogItem]
 
@@ -188,6 +205,7 @@ struct GoalEditor: View {
           WeightStepper(weightKg: $targetValue)
         }
       }
+      .interactiveDismissDisabled(isSaving)
       .navigationTitle("Meta de força")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
@@ -195,7 +213,7 @@ struct GoalEditor: View {
           Button("Cancelar") { dismiss() }
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button("Salvar") { save() }.disabled(exerciseId.isEmpty || targetValue < 1)
+          Button(isSaving ? "Salvando" : "Salvar") { save() }.disabled(isSaving || exerciseId.isEmpty || targetValue < 1)
         }
       }
     }
@@ -204,7 +222,105 @@ struct GoalEditor: View {
   private func save() {
     let input = SetStrengthGoalInput(
       date: store.selectedDate, exerciseId: exerciseId, targetValue: targetValue)
-    dismiss()
-    Task { await store.setStrengthGoal(input) }
+    isSaving = true
+    Task {
+      let saved = await store.setStrengthGoal(input)
+      isSaving = false
+      if saved { dismiss() }
+    }
+  }
+}
+
+struct MetricDetailScreen: View {
+  @Environment(AcademiaStore.self) private var store
+  @Environment(\.accent) private var accent
+  @State private var bodyTrack = false
+  @State private var allHistory = false
+
+  private var values: [(date: CalendarDate, value: Double)] {
+    guard let data = store.dashboard else { return [] }
+    if bodyTrack {
+      return data.measurements.compactMap { item in
+        item.bodyFatPercent.map { (date: item.date, value: item.weightKg * (1 - $0 / 100)) }
+      }.sorted { $0.date < $1.date }
+    }
+    return data.progress.map { (date: $0.date, value: $0.estimatedOneRepMax) }.sorted { $0.date < $1.date }
+  }
+  private var window: [(date: CalendarDate, value: Double)] {
+    guard !allHistory, let last = values.last else { return values }
+    return values.filter { $0.date >= last.date.adding(days: -56) }
+  }
+
+  @Environment(\.dismiss) private var dismiss
+  @State private var isAddingMeasurement = false
+  var onWorkout: () -> Void = {}
+
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 28) {
+        Picker("Métrica em foco", selection: $bodyTrack) {
+          Text("força").tag(false)
+          Text("corpo").tag(true)
+        }.pickerStyle(.segmented)
+        VStack(spacing: 18) {
+          Text(bodyTrack ? "massa magra" : "força estimada").font(.caption).foregroundStyle(Color.mutedInk)
+          if let latest = window.last {
+            Text(latest.date.date(), format: .dateTime.day().month(.wide).year()).font(.caption)
+            Text(weightLabel(latest.value)).font(.system(size: 64, weight: .medium)).tracking(-3).monospacedDigit()
+              .minimumScaleFactor(0.6).lineLimit(1)
+            if let first = window.first, first.date != latest.date {
+              let weeks = max(1, Int((latest.date.date().timeIntervalSince(first.date.date()) / 604800).rounded()))
+              Text("\((latest.value - first.value).formatted(.number.sign(strategy: .always()).precision(.fractionLength(1)))) kg em \(weeks) semanas")
+                .font(.subheadline).foregroundStyle(accent.base)
+            } else {
+              Text("tendência a partir da segunda medida").font(.caption).foregroundStyle(Color.mutedInk)
+            }
+          } else {
+            Text(bodyTrack ? "sem medida com gordura" : "sem série valendo registrada").font(.title2)
+            Text("O número aparece assim que existir registro.").font(.subheadline).foregroundStyle(Color.mutedInk)
+          }
+        }.frame(maxWidth: .infinity, minHeight: 230).padding(.vertical, 24)
+        HStack(alignment: .top, spacing: 8) {
+          action("registrar", symbol: "square.and.pencil") {
+            if bodyTrack { isAddingMeasurement = true } else { onWorkout() }
+          }
+          action(allHistory ? "tudo" : "8 semanas", symbol: "calendar") { allHistory.toggle() }
+          action("meta", symbol: "target") { dismiss() }
+          action("sessões", symbol: "chart.xyaxis.line") { dismiss() }
+        }
+        if !bodyTrack, let last = store.dashboard?.strengthGoal?.lastSession {
+          VStack(alignment: .leading, spacing: 20) {
+            HStack {
+              Text("última sessão").font(.headline)
+              Spacer()
+              Text(last.date.date(), format: .dateTime.day().month(.abbreviated)).font(.caption)
+            }
+            HStack(alignment: .top) {
+              sessionValue("reps na falha", value: last.reps.map(String.init).joined(separator: ", "))
+              sessionValue("melhor carga", value: weightLabel(last.weightKg))
+              sessionValue("volume", value: weightLabel(last.volumeKg))
+            }
+          }.padding(22).paperCard(radius: 28)
+            .padding(7).background(Color.surfaceMuted, in: .rect(cornerRadius: 34))
+        }
+      }.padding(16)
+    }.background(Color.canvas.ignoresSafeArea())
+      .navigationTitle(bodyTrack ? "composição" : (store.dashboard?.strengthGoal?.exerciseName.lowercased() ?? "força"))
+      .toolbarTitleDisplayMode(.inline)
+      .sheet(isPresented: $isAddingMeasurement) { MeasurementEditor(previous: store.dashboard?.measurements.first) }
+  }
+
+  private func action(_ title: String, symbol: String, perform: @escaping () -> Void) -> some View {
+    VStack(spacing: 8) {
+      Button(title, systemImage: symbol, action: perform)
+        .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
+      Text(title).font(.caption2)
+    }.frame(maxWidth: .infinity)
+  }
+  private func sessionValue(_ title: String, value: String) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      Text(title).font(.caption2).foregroundStyle(Color.mutedInk)
+      Text(value).font(.subheadline.weight(.medium)).monospacedDigit()
+    }.frame(maxWidth: .infinity, alignment: .leading)
   }
 }
