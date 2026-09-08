@@ -7,7 +7,7 @@ O React em `apps/web/src` é a referência de composição. Esta revisão recupe
 | Hoje reunia resumo e treino | Hoje e treino têm destinos separados | Mesma organização do React |
 | Vidro em todos os cards | Cards sólidos; vidro na navegação, menus e botões | Preservar as cores e a hierarquia do conteúdo |
 | Exercícios sempre abertos e edição em sheet | Expansão por exercício, modo lista e campos na linha | Recuperar o fluxo de registrar séries |
-| Plano em lista | Cards em duas colunas, criar, editar e iniciar | Layout novo, escolhido pelo usuário |
+| Plano em lista | Cards em duas colunas, com bloco colorido, três pontos e play de iniciar | Layout novo, escolhido pelo usuário |
 | Peso e chips | Grade de peso, gordura, cintura e massa magra | Mesmas métricas do React |
 | Formulário fechava antes da resposta | Fecha após sucesso, mantém rascunho em erro | Evitar perder a edição |
 
@@ -34,7 +34,7 @@ A conclusão do assistente usa `POST /api/v1/onboarding/complete`. O repositóri
 
 ## Rodar
 
-Abra `Henrique.xcodeproj`, escolha o esquema Henrique e execute. O app só mostra dados da conta; entre com sua sessão. Para abrir direto numa aba, rode com `--aba treino`. As abas aceitas são `hoje`, `semana`, `treino` e `progresso`; `semana` é o nome interno da aba plano. `--aba apps` não é aba, abre a lista de apps por cima da tela de hoje. Medidas saiu da barra e virou um cartão no fim de progresso, mas `--aba medidas` continua valendo e cai lá.
+Abra `Henrique.xcodeproj`, escolha o esquema Henrique e execute. O app só mostra dados da conta; entre com sua sessão. Para abrir direto numa aba, rode com `--aba treino`. As abas aceitas são `hoje`, `semana`, `treino` e `progresso`; `semana` é o nome interno da aba plano. `--aba apps` não é aba, abre o painel de apps por cima da tela de hoje. Medidas saiu da barra e virou um cartão no fim de progresso, mas `--aba medidas` continua valendo e cai lá.
 
 Sem sessão dá para capturar só a casca, com `--casca`. O app abre já dentro, sem servidor e sem conta, e as abas ficam vazias. Serve para conferir a barra e a bolha de apps, não o conteúdo.
 
@@ -55,7 +55,7 @@ O React em `apps/web/src/components/estudos` e o `estudos.css` são a referênci
 | Antes | Depois | Motivo |
 | --- | --- | --- |
 | Botões em CSS (`.study-btn`) | `Button` com `.glassProminent` azul e `.glass` | Aspecto nativo, como na Academia |
-| Trilha "estudos / aba" e menu de apps flutuante | Marca estática de duas linhas na barra; a troca de app mora na bolha de vidro à direita da barra de abas, que abre uma lista curta em vez de levar a uma tela | Mesma casca da Academia |
+| Trilha "estudos / aba" e menu de apps flutuante | Marca estática de duas linhas na barra; a troca de app mora na bolha de vidro à direita da barra de abas, que abre um painel de vidro logo acima da barra em vez de levar a uma tela | Mesma casca da Academia |
 | Editor BlockNote na página do caderno | Título editável com autosave; blocos renderizados somente leitura | O JSON do BlockNote é preservado byte a byte e o corpo continua sendo editado no web |
 | GSAP para cascata de entrada e virada do cartão | Cascata nativa de 35 ms por item na primeira montagem; virada em `rotation3DEffect` em duas metades | Mesmo tempo e curva do web, sem biblioteca |
 | Arrasto do flashcard com Motion | `DragGesture` 1:1 com mola interpolating recebendo a velocidade do dedo | Regras de 80 pt e 500 pt/s iguais ao web |
