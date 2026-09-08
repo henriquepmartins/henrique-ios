@@ -25,13 +25,6 @@ public enum AppSection: String, CaseIterable, Sendable {
     }
   }
 
-  var detail: String {
-    switch self {
-    case .academia: "treino e progresso"
-    case .estudos: "aprender e escrever"
-    }
-  }
-
   var symbol: String {
     switch self {
     case .academia: "dumbbell"
@@ -148,7 +141,12 @@ struct AcademiaTabs: View {
       Tab("progresso", systemImage: "chart.xyaxis.line", value: AcademiaTab.progresso) {
         shell { ProgressScreen(onWorkout: { tab = .treino }) }
       }
-      Tab("apps", systemImage: "square.grid.2x2", value: AcademiaTab.apps, role: appHubTabRole) {
+      // A bolha é o botão do painel, então ela mostra o x enquanto o painel
+      // está aberto, do mesmo jeito que um menu marca que está aberto.
+      Tab(
+        "apps", systemImage: showingApps ? "xmark" : "square.grid.2x2",
+        value: AcademiaTab.apps, role: appHubTabRole
+      ) {
         Color.clear
       }
     }
@@ -204,8 +202,8 @@ var appHubTabRole: TabRole {
   if #available(iOS 27, macOS 27, *) { .prominent } else { .search }
 }
 
-/// A bolha não leva a lugar nenhum, ela abre a lista. Escolher a aba dela vira
-/// abrir a folha e a seleção fica onde estava.
+/// A bolha não leva a lugar nenhum, ela abre o painel de apps. Escolher a aba
+/// dela vira abrir o painel e a seleção fica onde estava.
 @MainActor func appSwitcherSelection<Tab: Hashable & Sendable>(
   _ tab: Binding<Tab>, isPresented: Binding<Bool>, bubble: Tab
 ) -> Binding<Tab> {
@@ -221,8 +219,8 @@ var appHubTabRole: TabRole {
 }
 
 extension View {
-  /// A lista de apps que a bolha abre. Mora nos dois apps e veste a pele de
-  /// quem a abriu, então `current` escolhe o estilo e marca o app atual.
+  /// O painel de apps que a bolha abre. Mora nos dois apps e veste a pele de
+  /// quem o abriu, então `current` escolhe o estilo e marca o app atual.
   func appSwitcher(
     current: AppSection, isPresented: Binding<Bool>,
     onSelect: @escaping @MainActor (AppSection) -> Void
@@ -232,97 +230,85 @@ extension View {
 }
 
 private struct AppSwitcher: ViewModifier {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let current: AppSection
   @Binding var isPresented: Bool
   let onSelect: @MainActor (AppSection) -> Void
-  @State private var picked: AppSection?
 
   func body(content: Content) -> some View {
     content
-      // A troca espera a folha sair. Feita junto, a transição do app engole a
-      // animação de fechar.
-      .sheet(isPresented: $isPresented, onDismiss: sendPick) {
-        AppSwitcherList(current: current) { app in
-          picked = app == current ? nil : app
-          isPresented = false
+      // Véu e painel entram como camadas separadas para o véu só aparecer e o
+      // painel crescer do canto da bolha.
+      .overlay {
+        if isPresented {
+          Color.ink.opacity(0.12)
+            .ignoresSafeArea()
+            .contentShape(.rect)
+            .onTapGesture { isPresented = false }
+            .transition(.opacity)
         }
       }
-  }
-
-  private func sendPick() {
-    guard let app = picked else { return }
-    picked = nil
-    onSelect(app)
+      .overlay(alignment: .bottomTrailing) {
+        if isPresented {
+          AppSwitcherPanel(current: current) { app in
+            isPresented = false
+            if app != current { onSelect(app) }
+          }
+          .padding(.trailing, 14)
+          .padding(.bottom, 72)
+          .transition(.scale(scale: 0.88, anchor: .bottomTrailing).combined(with: .opacity))
+        }
+      }
+      .animation(reduceMotion ? nil : .snappy(duration: 0.3, extraBounce: 0.2), value: isPresented)
   }
 }
 
-private struct AppSwitcherList: View {
+private struct AppSwitcherPanel: View {
   let current: AppSection
   let onSelect: @MainActor (AppSection) -> Void
 
-  private var height: CGFloat { CGFloat(AppSection.allCases.count) * 84 + 16 }
-
   var body: some View {
-    VStack(spacing: 12) {
-      ForEach(AppSection.allCases, id: \.self) { app in
-        AppHubCard(app: app, style: current, isCurrent: app == current) { onSelect(app) }
+    VStack(spacing: 0) {
+      ForEach(Array(AppSection.allCases.enumerated()), id: \.element) { index, app in
+        if index > 0 { Divider().padding(.leading, 52) }
+        AppSwitcherRow(app: app, style: current, isCurrent: app == current) { onSelect(app) }
       }
-      Spacer(minLength: 0)
     }
-    .padding(16)
-    .frame(maxWidth: .infinity)
-    .background(backdrop.ignoresSafeArea())
-    .presentationDetents([.height(height)])
-    .presentationDragIndicator(.visible)
-    .presentationCornerRadius(28)
+    .frame(width: 228)
+    .glassEffect(in: .rect(cornerRadius: 24))
+    .shadow(color: Color.ink.opacity(0.18), radius: 22, y: 10)
     .tint(current == .estudos ? .studyBlue : nil)
-  }
-
-  private var backdrop: Color {
-    current == .estudos ? .studyPaper : .canvas
   }
 }
 
-private struct AppHubCard: View {
+private struct AppSwitcherRow: View {
   @Environment(\.accent) private var accent
   let app: AppSection
   let style: AppSection
   let isCurrent: Bool
   let action: @MainActor () -> Void
 
+  private var tint: Color { style == .estudos ? .studyBlue : accent.base }
+
   var body: some View {
     Button(action: action) {
-      switch style {
-      case .academia: row.padding(16).paperCard(radius: 24)
-      case .estudos: StudyCard { row }
+      HStack(spacing: 12) {
+        Image(systemName: app.symbol).font(.system(size: 17)).frame(width: 24)
+        Text(app.label).font(.body.weight(.medium))
+        Spacer(minLength: 0)
+        if isCurrent {
+          Image(systemName: "checkmark")
+            .font(.footnote.weight(.semibold))
+            .accessibilityLabel("app atual")
+        }
       }
+      .foregroundStyle(isCurrent ? tint : Color.ink)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 14)
+      .contentShape(.rect)
     }
     .buttonStyle(StudyPressStyle())
     .accessibilityAddTraits(isCurrent ? .isSelected : [])
-  }
-
-  private var tint: Color { style == .estudos ? .studyBlue : accent.base }
-
-  private var row: some View {
-    HStack(spacing: 14) {
-      Image(systemName: app.symbol)
-        .font(.title2)
-        .foregroundStyle(tint)
-        .frame(width: 32)
-      VStack(alignment: .leading, spacing: 2) {
-        Text(app.label).font(.headline.weight(.medium)).foregroundStyle(Color.primary)
-        Text(app.detail)
-          .font(.subheadline)
-          .foregroundStyle(style == .estudos ? Color.studyGraphite : Color.mutedInk)
-      }
-      Spacer(minLength: 0)
-      if isCurrent {
-        Image(systemName: "checkmark")
-          .font(.subheadline.weight(.semibold))
-          .foregroundStyle(tint)
-          .accessibilityLabel("app atual")
-      }
-    }
   }
 }
 

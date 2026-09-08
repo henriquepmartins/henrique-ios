@@ -55,7 +55,12 @@ struct EstudosTabs: View {
       Tab("revisar", systemImage: "rectangle.on.rectangle", value: EstudosTab.revisar) {
         shell("revisar") { StudyReviewScreen() }
       }
-      Tab("apps", systemImage: "square.grid.2x2", value: EstudosTab.apps, role: appHubTabRole) {
+      // A bolha é o botão do painel, então ela mostra o x enquanto o painel
+      // está aberto.
+      Tab(
+        "apps", systemImage: showingApps ? "xmark" : "square.grid.2x2",
+        value: EstudosTab.apps, role: appHubTabRole
+      ) {
         Color.clear
       }
     }
