@@ -19,8 +19,8 @@ struct WeekScreen: View {
           LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
                                    count: textSize.isAccessibilitySize ? 1 : 2), spacing: 18) {
             ForEach(Array(dashboard.weekPlan.enumerated()), id: \.element.id) { index, item in
-              WorkoutFolder(item: item, tone: index % 4,
-                            onEdit: { editor = .existing(item) }, onStart: { onStart(item.weekday) })
+              WorkoutTile(item: item, index: index,
+                          onEdit: { editor = .existing(item) }, onStart: { onStart(item.weekday) })
                 .staggeredEntrance(index: index, isReady: true)
             }
           }
@@ -49,62 +49,125 @@ private enum PlanEditorDestination: Identifiable {
 
 private let planWeekdays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"]
 
-private struct WorkoutFolder: View {
+private struct WorkoutTile: View {
   let item: WeekPlanItem
-  let tone: Int
+  let index: Int
   let onEdit: () -> Void
   let onStart: () -> Void
 
-  private var face: Color {
-    [Color(red: 11/255, green: 103/255, blue: 84/255),
-     Color(red: 88/255, green: 102/255, blue: 46/255),
-     Color(red: 117/255, green: 68/255, blue: 93/255),
-     Color(red: 86/255, green: 86/255, blue: 83/255)][tone]
-  }
-  private var paper: Color {
-    [Color(red: 159/255, green: 234/255, blue: 217/255),
-     Color(red: 225/255, green: 249/255, blue: 108/255),
-     Color(red: 255/255, green: 160/255, blue: 223/255),
-     Color(red: 219/255, green: 218/255, blue: 217/255)][tone]
-  }
+  private var tone: WorkoutTone { .at(index) }
+  private var nameFont: Font { .system(.title3, weight: .medium) }
+  private var footerFont: Font { .caption }
+  /// A folga que leva a área de toque dos três pontos aos 44 pontos. Sai de
+  /// novo do recuo de baixo, senão o glifo desce e desalinha do nome.
+  private let menuTapPad: CGFloat = 10
 
   var body: some View {
-    ZStack(alignment: .topLeading) {
-      RoundedRectangle(cornerRadius: 23).fill(face.opacity(0.8)).padding(.top, 22)
-      UnevenRoundedRectangle(topLeadingRadius: 12, topTrailingRadius: 12)
-        .fill(face.opacity(0.8)).frame(width: 78, height: 36).offset(y: 10)
-      RoundedRectangle(cornerRadius: 15).fill(paper.opacity(0.75))
-        .padding(.horizontal, 15).padding(.top, 20).padding(.bottom, 35).rotationEffect(.degrees(-4))
-      RoundedRectangle(cornerRadius: 15).fill(paper)
-        .padding(.horizontal, 10).padding(.top, 28).padding(.bottom, 25).rotationEffect(.degrees(3))
-      VStack(alignment: .leading, spacing: 14) {
-        HStack(alignment: .top, spacing: 2) {
-          VStack(alignment: .leading, spacing: 5) {
-            Text(planWeekdays[item.weekday]).font(.caption)
-            Text(item.name).font(.system(.title3, weight: .medium)).tracking(-0.6)
-          }
-          Spacer(minLength: 0)
-          Button(action: onEdit) { Image(systemName: "ellipsis").frame(width: 44, height: 44) }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Editar \(item.name)")
-        }
-        Spacer(minLength: 0)
-        Text(item.focus).font(.caption)
-        Text("\(item.exerciseCount) exercícios · \(item.estimatedMinutes) min")
-          .font(.caption2).monospacedDigit()
-        Button(action: onStart) {
-          Label("iniciar treino", systemImage: "play.fill")
-            .font(.caption.weight(.medium)).frame(maxWidth: .infinity, minHeight: 44)
-        }
-        .buttonStyle(.glass)
+    Button(action: onStart) { face }
+      .buttonStyle(StudyPressStyle())
+      .accessibilityLabel("iniciar \(item.name), \(planWeekdays[item.weekday])")
+      // Menu dentro do label de um Button nunca chega a receber o dedo. Por isso
+      // ele vem numa camada por cima, com área de toque só nos três pontos.
+      .overlay(alignment: .bottomTrailing) { menuLayer }
+  }
+
+  private var face: some View {
+    VStack(spacing: 0) {
+      ZStack(alignment: .top) {
+        sheet(inset: 22, opacity: 0.3)
+        sheet(inset: 10, opacity: 0.52).padding(.top, 7)
+        block.padding(.top, 15)
       }
-      .padding(14)
-      .foregroundStyle(.white)
-      .background(face.gradient, in: .rect(cornerRadius: 22))
-      .padding(.top, 48)
+      .padding(.horizontal, 12)
+      Text("iniciar treino")
+        .font(footerFont)
+        .foregroundStyle(Color.mutedInk)
+        .padding(.vertical, 12)
     }
-    .frame(minHeight: 246)
-    .shadow(color: face.opacity(0.13), radius: 16, y: 10)
+    .padding(.top, 10)
+    .paperCard(radius: 22)
+    .shadow(color: Color.ink.opacity(0.1), radius: 14, y: 8)
+  }
+
+  private func sheet(inset: CGFloat, opacity: Double) -> some View {
+    RoundedRectangle(cornerRadius: 8)
+      .fill(tone.top.opacity(opacity))
+      .frame(height: 30)
+      .padding(.horizontal, inset)
+  }
+
+  private var block: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Spacer(minLength: 0)
+      Text(planWeekdays[item.weekday])
+        .font(.caption2)
+        .foregroundStyle(tone.ink.opacity(0.7))
+      Text(item.name)
+        .font(nameFont)
+        .tracking(-0.4)
+        .foregroundStyle(tone.ink)
+        .lineLimit(2)
+        .padding(.trailing, 30)
+    }
+    .frame(maxWidth: .infinity, minHeight: 118, alignment: .bottomLeading)
+    .padding(14)
+    .background {
+      ZStack {
+        LinearGradient(colors: [tone.top, tone.bottom], startPoint: .top, endPoint: .bottom)
+        WorkoutWave(closed: true).fill(.white.opacity(0.12))
+        WorkoutWave().stroke(.white.opacity(0.45), lineWidth: 1.5)
+      }
+    }
+    .clipShape(.rect(cornerRadius: 18))
+  }
+
+  private var menuLayer: some View {
+    VStack(alignment: .trailing, spacing: 0) {
+      Menu {
+        Button("editar treino", systemImage: "pencil", action: onEdit)
+      } label: {
+        // O espaço invisível no corpo do nome dá a altura da linha, então os
+        // três pontos caem no meio dela em qualquer tamanho de texto.
+        Text(verbatim: " ")
+          .font(nameFont)
+          .hidden()
+          .frame(width: 44)
+          .overlay {
+            Image(systemName: "ellipsis")
+              .font(.system(.body, weight: .semibold))
+              .rotationEffect(.degrees(90))
+              .foregroundStyle(tone.ink)
+          }
+          .padding(.vertical, menuTapPad)
+          .contentShape(.rect)
+      }
+      .accessibilityLabel("editar \(item.name)")
+      .padding(.bottom, 14 - menuTapPad)
+      Text("iniciar treino").font(footerFont).padding(.vertical, 12).hidden()
+    }
+    .padding(.trailing, 14)
+  }
+}
+
+private struct WorkoutWave: Shape {
+  /// Fechada vira a faixa clara da metade de baixo, aberta vira só o traço.
+  var closed = false
+
+  func path(in rect: CGRect) -> Path {
+    let base = rect.minY + rect.height * 0.52
+    let amp = rect.height * 0.085
+    var path = Path()
+    path.move(to: CGPoint(x: rect.minX, y: base))
+    path.addQuadCurve(to: CGPoint(x: rect.midX, y: base),
+                      control: CGPoint(x: rect.minX + rect.width * 0.25, y: base - amp))
+    path.addQuadCurve(to: CGPoint(x: rect.maxX, y: base),
+                      control: CGPoint(x: rect.midX + rect.width * 0.25, y: base + amp))
+    if closed {
+      path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+      path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+      path.closeSubpath()
+    }
+    return path
   }
 }
 
