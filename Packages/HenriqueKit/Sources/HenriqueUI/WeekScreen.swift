@@ -17,7 +17,7 @@ struct WeekScreen: View {
           .controlSize(.large)
         if let dashboard = store.dashboard {
           LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
-                                   count: textSize.isAccessibilitySize ? 1 : 2), spacing: 18) {
+                                   count: textSize.isAccessibilitySize ? 1 : 2), spacing: 6) {
             ForEach(Array(dashboard.weekPlan.enumerated()), id: \.element.id) { index, item in
               WorkoutTile(item: item, index: index,
                           onEdit: { editor = .existing(item) }, onStart: { onStart(item.weekday) })
@@ -76,16 +76,16 @@ private struct WorkoutTile: View {
   private var face: some View {
     VStack(spacing: 0) {
       ZStack(alignment: .top) {
-        sheet(inset: 22, opacity: 0.3)
-        sheet(inset: 10, opacity: 0.52).padding(.top, 6)
+        sheet(inset: 24, opacity: 0.3)
+        sheet(inset: 12, opacity: 0.52).padding(.top, 6)
         block.padding(.top, 13)
       }
-      .padding(.horizontal, 12)
+      // Sem achatar antes, a sombra é aplicada em cada vinco e cai sobre o
+      // bloco como uma faixa escura.
+      .compositingGroup()
+      .shadow(color: Color.ink.opacity(0.12), radius: 12, y: 6)
       footer
     }
-    .padding(.top, 9)
-    .paperCard(radius: 20)
-    .shadow(color: Color.ink.opacity(0.1), radius: 14, y: 8)
   }
 
   private var footer: some View {
@@ -109,7 +109,7 @@ private struct WorkoutTile: View {
       .foregroundStyle(tone.ink)
       .lineLimit(2)
       .padding(.trailing, 30)
-      .frame(maxWidth: .infinity, minHeight: 62, alignment: .bottomLeading)
+      .frame(maxWidth: .infinity, minHeight: 88, alignment: .bottomLeading)
       .padding(blockPad)
       .background {
         ZStack {
@@ -118,7 +118,7 @@ private struct WorkoutTile: View {
           WorkoutWave().stroke(.white.opacity(0.45), lineWidth: 1.5)
         }
       }
-      .clipShape(.rect(cornerRadius: 16))
+      .clipShape(.rect(cornerRadius: 18))
   }
 
   private var menuLayer: some View {
@@ -145,7 +145,7 @@ private struct WorkoutTile: View {
       .padding(.bottom, blockPad - menuTapPad)
       footer.hidden()
     }
-    .padding(.trailing, 14)
+    .padding(.trailing, 2)
   }
 }
 
