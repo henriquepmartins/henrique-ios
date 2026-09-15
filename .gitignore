@@ -5,3 +5,4 @@ output/
 *.xcuserdatad
 xcuserdata/
 .DS_Store
+UITests/*.xcodeproj

@@ -1,0 +1,38 @@
+# Alvo de UI test que abre o app já instalado no simulador. O host é vazio
+# porque o XCTest exige um app hospedeiro, mas o fluxo fala com
+# app.henrique.academia pelo bundle id. Gerar com `xcodegen generate`.
+name: UIDrive
+options:
+  bundleIdPrefix: app.henrique.uidrive
+  deploymentTarget:
+    iOS: "26.0"
+targets:
+  Host:
+    type: application
+    platform: iOS
+    sources: [Host]
+    info:
+      path: Host/Info.plist
+      properties:
+        UILaunchScreen: {}
+    settings:
+      CODE_SIGNING_ALLOWED: NO
+      GENERATE_INFOPLIST_FILE: YES
+  Drive:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [Drive]
+    dependencies:
+      - target: Host
+    settings:
+      CODE_SIGNING_ALLOWED: NO
+      GENERATE_INFOPLIST_FILE: YES
+      TEST_TARGET_NAME: Host
+schemes:
+  Drive:
+    build:
+      targets:
+        Host: all
+        Drive: [test]
+    test:
+      targets: [Drive]
