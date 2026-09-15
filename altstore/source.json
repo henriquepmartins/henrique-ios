@@ -17,6 +17,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "6",
+          "date": "2026-09-15T17:47:03-03:00",
+          "localizedDescription": "• chore: verify-ui.sh dirige o app contra o servidor local de teste\n• feat: menos texto nas telas de Estudos\n• feat: corte de texto na academia\n• feat: metas de presença e de treinos completos em progresso\n• feat: contador de sequência no topo da academia\n• feat: streak de presença e metas de sequência no painel\n• docs: readme como hub pessoal, em minúsculas\n• feat: instalar no iPhone pelo Wi-Fi sem tocar no aparelho",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-6/Henrique.ipa",
+          "size": 3359851,
+          "sha256": "15d93129d88991274f0f7b6657329efbb54ca0c0ce47af9175db7ecc412565ef",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "5",
           "date": "2026-09-15T13:32:34-03:00",
           "localizedDescription": "Primeiro build publicado pela fonte do AltStore.",
