@@ -18,8 +18,24 @@ public struct StreakDay: Sendable, Hashable, Identifiable {
   public var id: CalendarDate { date }
 }
 
-public struct WorkoutStreak: Sendable, Hashable {
+/// Um dos dois números da sequência com a meta dele, se houver.
+public struct StreakFigure: Sendable, Hashable {
   public var count: Int
+  public var target: Int?
+
+  public init(count: Int, target: Int?) {
+    self.count = count
+    self.target = target
+  }
+
+  public init(dashboard: Dashboard, kind: StreakKind) {
+    self.init(count: dashboard.streak(kind), target: dashboard.goal(kind)?.target)
+  }
+}
+
+public struct WorkoutStreak: Sendable, Hashable {
+  public var attendance: StreakFigure
+  public var complete: StreakFigure
   public var weeklyCompleted: Int
   public var weeklyPlanned: Int
   public var days: [StreakDay]
@@ -50,7 +66,8 @@ extension WorkoutStreak {
       return StreakDay(date: date, state: state)
     }
 
-    self.count = dashboard.currentStreak
+    self.attendance = StreakFigure(dashboard: dashboard, kind: .attendance)
+    self.complete = StreakFigure(dashboard: dashboard, kind: .complete)
     self.weeklyCompleted = dashboard.weeklyCompleted
     self.weeklyPlanned = dashboard.weeklyPlanned
     self.days = days

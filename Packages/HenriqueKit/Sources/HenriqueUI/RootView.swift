@@ -117,6 +117,7 @@ struct AcademiaTabs: View {
   @Environment(AcademiaStore.self) private var store
   @State private var showingSetup = false
   @State private var showingApps = false
+  @State private var showingStreak = false
   @Binding var accent: Accent
   @Binding var tab: AcademiaTab
   let onSwitchApp: @MainActor (AppSection) -> Void
@@ -152,15 +153,18 @@ struct AcademiaTabs: View {
     }
     .appSwitcher(current: .academia, isPresented: $showingApps, onSelect: onSwitchApp)
     .sheet(isPresented: $showingSetup) { SetupScreen() }
+    .sheet(isPresented: $showingStreak) {
+      if let data = store.dashboard {
+        StreakScreen(snapshot: StreakSnapshot(dashboard: data))
+      }
+    }
     .onChange(of: store.dashboard?.onboardingCompleted, initial: true) {
       if store.dashboard?.onboardingCompleted == false { showingSetup = true }
     }
     .onAppear { if tab == .apps { tab = .hoje; showingApps = true } }
   }
 
-  private func shell<Content: View>(
-    _ label: String = "seu treino", @ViewBuilder content: () -> Content
-  ) -> some View {
+  private func shell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
     NavigationStack {
       content()
         .scrollEdgeEffectStyle(.soft, for: .top)
@@ -169,10 +173,11 @@ struct AcademiaTabs: View {
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
           ToolbarItem(placement: .navigationLeading) {
-            VStack(alignment: .leading, spacing: 2) {
-              Text("academia").font(.caption2).foregroundStyle(accent.base)
-              Text(label).font(.headline.weight(.medium))
-            }.fixedSize(horizontal: true, vertical: false)
+            if let data = store.dashboard {
+              StreakCounter(
+                count: data.streak(.attendance), isLit: data.hasAttended(on: .today)
+              ) { showingStreak = true }
+            }
           }.sharedBackgroundVisibility(.hidden)
           ToolbarItem(placement: .primaryAction) {
             Menu {
@@ -315,7 +320,6 @@ private struct AppSwitcherRow: View {
 struct OverviewScreen: View {
   @Environment(AcademiaStore.self) private var store
   @Environment(\.accent) private var accent
-  @State private var showingStreak = false
   let onWorkout: () -> Void
 
   var body: some View {
@@ -331,8 +335,6 @@ struct OverviewScreen: View {
           .foregroundStyle(.white).frame(maxWidth: .infinity, alignment: .leading)
           .padding(22).background(accent.deep, in: .rect(cornerRadius: 28))
           .staggeredEntrance(index: 0, isReady: true)
-          StreakCard(snapshot: StreakSnapshot(dashboard: data)) { showingStreak = true }
-            .staggeredEntrance(index: 1, isReady: true)
           HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 10) {
               Text("próxima ação").font(.caption).foregroundStyle(accent.base)
@@ -344,17 +346,12 @@ struct OverviewScreen: View {
             Button("Abrir treino", systemImage: "arrow.right", action: onWorkout)
               .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
           }.padding(22).paperCard(radius: 32)
-            .staggeredEntrance(index: 2, isReady: true)
+            .staggeredEntrance(index: 1, isReady: true)
         }
       }.padding(16).padding(.bottom, 24)
     }
     .refreshable { await store.load() }
     .overlay { TodayPlaceholder(phase: store.phase, isEmpty: store.dashboard == nil) }
-    .sheet(isPresented: $showingStreak) {
-      if let data = store.dashboard {
-        StreakScreen(snapshot: StreakSnapshot(dashboard: data))
-      }
-    }
   }
 }
 

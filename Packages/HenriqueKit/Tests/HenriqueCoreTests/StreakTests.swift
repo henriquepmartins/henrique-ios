@@ -125,7 +125,8 @@ struct StreakTests {
   func buildsFromFixture() throws {
     let dashboard = try ContractTests.dashboard()
     let streak = WorkoutStreak(dashboard: dashboard, today: dashboard.date)
-    #expect(streak.count == 4)
+    #expect(streak.attendance == StreakFigure(count: 6, target: 10))
+    #expect(streak.complete == StreakFigure(count: 4, target: 7))
     #expect(streak.weeklyCompleted == 2)
     #expect(streak.weekProgress == 0.5)
     #expect(
@@ -138,6 +139,9 @@ struct StreakTests {
   func capturedServerHasNoSessionDates() throws {
     let dashboard = try CapturedResponseTests.dashboard()
     #expect(dashboard.sessionDates == nil)
-    #expect(WorkoutStreak(dashboard: dashboard).days.count == 7)
+    let streak = WorkoutStreak(dashboard: dashboard)
+    #expect(streak.days.count == 7)
+    #expect(streak.attendance == StreakFigure(count: 0, target: nil))
+    #expect(streak.complete == StreakFigure(count: 0, target: nil))
   }
 }

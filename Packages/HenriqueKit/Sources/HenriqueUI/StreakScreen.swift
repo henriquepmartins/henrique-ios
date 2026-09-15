@@ -21,48 +21,48 @@ struct StreakSnapshot: Equatable {
   }
 }
 
-// MARK: - O card de hoje
+private let streakGradient = LinearGradient(
+  colors: [streakTone.top, streakTone.bottom], startPoint: .top, endPoint: .bottom)
 
-struct StreakCard: View {
-  let snapshot: StreakSnapshot
+// MARK: - O contador do topo
+
+/// Chama e número lado a lado, aceso quando hoje já teve série valendo. Fica em
+/// toda tela da academia, então só o que muda anima: o número quando sobe e a
+/// cor quando acende.
+struct StreakCounter: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var rises = 0
+  let count: Int
+  let isLit: Bool
   let action: () -> Void
-
-  private var streak: WorkoutStreak { snapshot.streak }
 
   var body: some View {
     Button(action: action) {
-      VStack(alignment: .leading, spacing: 16) {
-        HStack(spacing: 14) {
-          FlameBadge(size: 44)
-          VStack(alignment: .leading, spacing: 2) {
-            Text("\(streak.count)")
-              .font(.system(size: 38, weight: .medium)).monospacedDigit()
-              .contentTransition(.numericText())
-              .animation(.smooth(duration: 0.3), value: streak.count)
-            Text("treinos seguidos").font(.caption).foregroundStyle(Color.mutedInk)
+      HStack(spacing: 4) {
+        Image(systemName: "flame.fill")
+          .foregroundStyle(Color.mutedInk)
+          .overlay {
+            Image(systemName: "flame.fill")
+              .foregroundStyle(streakGradient)
+              .opacity(isLit ? 1 : 0)
           }
-          Spacer(minLength: 0)
-          Image(systemName: "chevron.right")
-            .font(.footnote.weight(.semibold)).foregroundStyle(Color.mutedInk)
-        }
-        if let week = snapshot.week {
-          StreakRibbon(days: week, style: .card)
-        }
-        Text("\(streak.weeklyCompleted) de \(streak.weeklyPlanned) nesta semana")
-          .font(.caption).foregroundStyle(Color.mutedInk)
+          .symbolEffect(.bounce, value: rises)
+        Text("\(count)")
+          .foregroundStyle(isLit ? Color.ink : Color.mutedInk)
+          .contentTransition(reduceMotion ? .identity : .numericText(value: Double(count)))
       }
-      .padding(20)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .foregroundStyle(Color.ink)
-      .paperCard()
+      .font(.headline.weight(.bold))
+      .fontDesign(.rounded)
+      .monospacedDigit()
+      .animation(.smooth(duration: 0.2), value: isLit)
+      .animation(.snappy(duration: 0.25), value: count)
     }
-    .buttonStyle(StudyPressStyle())
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(
-      "\(streak.count) treinos seguidos, \(streak.weeklyCompleted) de \(streak.weeklyPlanned) nesta semana"
-    )
-    .accessibilityHint("Abre a sequência")
-    .accessibilityAddTraits(.isButton)
+    .buttonStyle(.plain)
+    .onChange(of: count) { old, new in
+      if new > old, !reduceMotion { rises += 1 }
+    }
+    .accessibilityLabel("sequência")
+    .accessibilityValue("\(count) treinos")
   }
 }
 
@@ -81,7 +81,7 @@ struct StreakScreen: View {
         VStack(spacing: 28) {
           StreakRing(streak: streak, entered: entered)
           if let week = snapshot.week {
-            StreakRibbon(days: week, style: .screen, entered: entered)
+            StreakRibbon(days: week, entered: entered)
           }
           Text("\(streak.weeklyCompleted) de \(streak.weeklyPlanned) nesta semana")
             .font(.subheadline).foregroundStyle(Color.mutedInk)
@@ -146,7 +146,7 @@ private struct StreakRing: View {
         )
         .rotationEffect(.degrees(-90))
         .animation(growth, value: entered)
-      StreakCount(count: streak.count, entered: entered)
+      StreakCount(attendance: streak.attendance, complete: streak.complete, entered: entered)
     }
     .frame(width: diameter, height: diameter)
     .modifier(AttentionPulse(active: streak.isAtRisk, trigger: entered))
@@ -161,7 +161,8 @@ private struct StreakRing: View {
     }
     .padding(.bottom, badge / 2)
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel("\(streak.count) treinos seguidos")
+    .accessibilityLabel(
+      "\(streak.attendance.count) treinos seguidos, \(streak.complete.count) completos")
   }
 
   private var shownProgress: Double { entered || reduceMotion ? streak.weekProgress : 0 }
@@ -176,7 +177,8 @@ private struct StreakRing: View {
 /// chegar a rodar, e um número que some é pior do que um que não pula.
 private struct StreakCount: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  let count: Int
+  let attendance: StreakFigure
+  let complete: StreakFigure
   let entered: Bool
 
   var body: some View {
@@ -206,10 +208,24 @@ private struct StreakCount: View {
 
   private var label: some View {
     VStack(spacing: 4) {
-      Text("\(count)")
-        .font(.system(size: 66, weight: .medium)).monospacedDigit()
-        .contentTransition(.numericText())
+      HStack(alignment: .firstTextBaseline, spacing: 2) {
+        Text("\(attendance.count)")
+          .font(.system(size: 66, weight: .medium))
+          .contentTransition(.numericText())
+        if let target = attendance.target {
+          Text("/\(target)").font(.title3).foregroundStyle(Color.mutedInk)
+        }
+      }
+      .monospacedDigit()
       Text("treinos seguidos").font(.caption).foregroundStyle(Color.mutedInk)
+      Label {
+        Text(complete.target.map { "\(complete.count)/\($0) completos" } ?? "\(complete.count) completos")
+      } icon: {
+        Image(systemName: "checkmark.seal.fill")
+      }
+      .font(.caption.weight(.medium)).monospacedDigit()
+      .foregroundStyle(streakTone.ink)
+      .padding(.top, 4)
     }
   }
 }
@@ -254,10 +270,7 @@ struct FlameBadge: View {
 
   var body: some View {
     Circle()
-      .fill(
-        LinearGradient(
-          colors: [streakTone.top, streakTone.bottom], startPoint: .top, endPoint: .bottom)
-      )
+      .fill(streakGradient)
       .frame(width: size, height: size)
       .overlay {
         Image(systemName: "flame.fill")
@@ -345,38 +358,23 @@ private struct SparkPose {
 
 // MARK: - A fita dos sete dias
 
-/// Os dois tamanhos da fita numa tabela só, para o card e a tela cheia nunca
-/// discordarem sobre o que é um dia feito.
-private enum StreakRibbonStyle {
-  case card, screen
-
-  var marker: CGFloat { self == .card ? 22 : 32 }
-  var spacing: CGFloat { self == .card ? 4 : 6 }
-  var showsWeekday: Bool { self == .screen }
-  /// No card a cascata brigaria com a entrada escalonada da pilha inteira.
-  var cascades: Bool { self == .screen }
-}
-
 private struct StreakRibbon: View {
   @Environment(\.accent) private var accent
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let days: [StreakDay]
-  let style: StreakRibbonStyle
-  var entered = true
+  let entered: Bool
 
   var body: some View {
-    HStack(spacing: style.spacing) {
+    HStack(spacing: 6) {
       ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
         VStack(spacing: 6) {
-          if style.showsWeekday {
-            // A inicial sozinha não serve em português, sexta, sábado e segunda
-            // começam todas com s.
-            Text(day.date.date(), format: .dateTime.weekday(.abbreviated))
-              .font(.caption2).foregroundStyle(Color.mutedInk)
-              .textCase(.lowercase)
-          }
+          // A inicial sozinha não serve em português, sexta, sábado e segunda
+          // começam todas com s.
+          Text(day.date.date(), format: .dateTime.weekday(.abbreviated))
+            .font(.caption2).foregroundStyle(Color.mutedInk)
+            .textCase(.lowercase)
           DayMarker(
-            day: day, isToday: index == days.count - 1, size: style.marker, accent: accent)
+            day: day, isToday: index == days.count - 1, size: 32, accent: accent)
         }
         .frame(maxWidth: .infinity)
         .scaleEffect(shown ? 1 : 0.35)
@@ -390,10 +388,10 @@ private struct StreakRibbon: View {
     }
   }
 
-  private var shown: Bool { entered || reduceMotion || !style.cascades }
+  private var shown: Bool { entered || reduceMotion }
 
   private func cascade(_ index: Int) -> Animation? {
-    guard style.cascades, !reduceMotion else { return nil }
+    guard !reduceMotion else { return nil }
     return .snappy(duration: 0.42, extraBounce: 0.35).delay(0.45 + 0.04 * Double(index))
   }
 }
