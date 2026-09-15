@@ -1,0 +1,667 @@
+[
+ {
+  "id": "abdominal-solo",
+  "name": "Abdominal no solo",
+  "muscleGroup": "Abdômen",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/91/Crunches-1.png.400x400_q85.png"
+ },
+ {
+  "id": "abdominal-russo",
+  "name": "Abdominal russo",
+  "muscleGroup": "Abdômen",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/1193/70ca5d80-3847-4a8c-8882-c6e9e485e29e.png.400x400_q85.png"
+ },
+ {
+  "id": "abdutora-maquina",
+  "name": "Abdutora na máquina",
+  "muscleGroup": "Glúteos",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/1748/923a3ff7-c269-49bd-9f03-697151a40f06.jpg.400x400_q85.jpg"
+ },
+ {
+  "id": "adutora-maquina",
+  "name": "Adutora na máquina",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/12/4a42cc6f-648d-40cc-a72a-c49dd47e1667.webp.400x400_q85.png"
+ },
+ {
+  "id": "afundo-caminhando",
+  "name": "Afundo caminhando",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/113/Walking-lunges-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "afundo-atras",
+  "name": "Afundo para trás",
+  "muscleGroup": "Glúteos",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/999/d0931eb3-8db0-4049-bb08-aa4036072056.jfif.400x400_q85.jpg"
+ },
+ {
+  "id": "agachamento-bulgaro",
+  "name": "Agachamento búlgaro",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/1706/0c5243cc-2539-4005-aee0-d3a8c5d3a32c.jfif.400x400_q85.jpg"
+ },
+ {
+  "id": "agachamento-frontal",
+  "name": "Agachamento frontal",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/191/Front-squat-1-857x1024.png.400x400_q85.png"
+ },
+ {
+  "id": "agachamento-goblet",
+  "name": "Agachamento goblet",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/203/1c052351-2af0-4227-aeb0-244008e4b0a8.jpeg.400x400_q85.jpg"
+ },
+ {
+  "id": "agachamento",
+  "name": "Agachamento livre",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/1801/60043328-1cfb-4289-9865-aaf64d5aaa28.jpg.400x400_q85.jpg"
+ },
+ {
+  "id": "agachamento-profundo",
+  "name": "Agachamento livre profundo",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/1801/60043328-1cfb-4289-9865-aaf64d5aaa28.jpg.400x400_q85.jpg"
+ },
+ {
+  "id": "agachamento-caixa",
+  "name": "Agachamento no caixote",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/977/3124c091-6395-4377-96c5-56048b627ceb.png.400x400_q85.png"
+ },
+ {
+  "id": "agachamento-smith",
+  "name": "Agachamento no smith",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/1747/af9647dd-04ec-4adf-9c07-4e33edb77277.jpg.400x400_q85.jpg"
+ },
+ {
+  "id": "barra-fixa",
+  "name": "Barra fixa pronada",
+  "muscleGroup": "Costas",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/475/b0554016-16fd-4dbe-be47-a2a17d16ae0e.jpg.400x400_q85.jpg"
+ },
+ {
+  "id": "barra-fixa-supinada",
+  "name": "Barra fixa supinada",
+  "muscleGroup": "Costas",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/152/6c1a7459-266d-491a-bd50-7cbaea2bc771.png.400x400_q85.png"
+ },
+ {
+  "id": "bom-dia",
+  "name": "Bom dia",
+  "muscleGroup": "Posterior",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/1392/a02c9c7d-f42d-43e0-9946-1b99b014daee.png.400x400_q85.png"
+ },
+ {
+  "id": "cadeira-extensora",
+  "name": "Cadeira extensora",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/369/78c915d1-e46d-4d30-8124-65d68664c3ef.png.400x400_q85.jpg"
+ },
+ {
+  "id": "cadeira-flexora",
+  "name": "Cadeira flexora",
+  "muscleGroup": "Posterior",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/117/seated-leg-curl-large-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "crossover-cabo",
+  "name": "Crossover no cabo",
+  "muscleGroup": "Peito",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/71/Cable-crossover-2.png.400x400_q85.jpg"
+ },
+ {
+  "id": "crucifixo-halteres",
+  "name": "Crucifixo com halteres",
+  "muscleGroup": "Peito",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/238/2fc242d3-5bdd-4f97-99bd-678adb8c96fc.png.400x400_q85.jpg"
+ },
+ {
+  "id": "crucifixo-inverso-cabo",
+  "name": "Crucifixo inverso no cabo",
+  "muscleGroup": "Ombros",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/822/74affc0d-03b6-4f33-b5f4-a822a2615f68.png.400x400_q85.jpg"
+ },
+ {
+  "id": "crucifixo-cabo",
+  "name": "Crucifixo no cabo",
+  "muscleGroup": "Peito",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/122/Incline-cable-flyes-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "desenvolvimento",
+  "name": "Desenvolvimento",
+  "muscleGroup": "Ombros",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/123/dumbbell-shoulder-press-large-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "desenvolvimento-barra",
+  "name": "Desenvolvimento com barra",
+  "muscleGroup": "Ombros",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/119/seated-barbell-shoulder-press-large-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "elevacao-frontal",
+  "name": "Elevação frontal",
+  "muscleGroup": "Ombros",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/256/b7def5bc-2352-499b-b9e5-fff741003831.png.400x400_q85.jpg"
+ },
+ {
+  "id": "elevacao-lateral",
+  "name": "Elevação lateral",
+  "muscleGroup": "Ombros",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/148/lateral-dumbbell-raises-large-2.png.400x400_q85.jpg"
+ },
+ {
+  "id": "elevacao-lateral-maquina",
+  "name": "Elevação lateral na máquina",
+  "muscleGroup": "Ombros",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/1654/aa724a58-b3b5-4522-b278-1155416236a5.jpg.400x400_q85.jpg"
+ },
+ {
+  "id": "elevacao-posterior",
+  "name": "Elevação posterior",
+  "muscleGroup": "Ombros",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/487/ad724e5c-b1ed-49e8-9279-a17545b0dd0b.png.400x400_q85.jpg"
+ },
+ {
+  "id": "encolhimento-barra",
+  "name": "Encolhimento com barra",
+  "muscleGroup": "Trapézio",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/150/Barbell-shrugs-1.png.400x400_q85.png"
+ },
+ {
+  "id": "encolhimento-halteres",
+  "name": "Encolhimento com halteres",
+  "muscleGroup": "Trapézio",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/151/Dumbbell-shrugs-2.png.400x400_q85.jpg"
+ },
+ {
+  "id": "face-pull",
+  "name": "Face pull com elástico",
+  "muscleGroup": "Ombros",
+  "equipment": "Elástico",
+  "imageUrl": "https://wger.de/media/exercise-images/1732/d13b9adb-968e-4f73-95e6-b16690bcf616.jpg.400x400_q85.jpg"
+ },
+ {
+  "id": "flexora-em-pe",
+  "name": "Flexora em pé",
+  "muscleGroup": "Posterior",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/118/standing-leg-curls-large-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "flexao-braco",
+  "name": "Flexão de braço",
+  "muscleGroup": "Peito",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/1551/a6a9e561-3965-45c6-9f2b-ee671e1a3a45.png.400x400_q85.jpg"
+ },
+ {
+  "id": "hack-squat",
+  "name": "Hack squat",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/130/Narrow-stance-hack-squats-1-1024x721.png.400x400_q85.png"
+ },
+ {
+  "id": "hip-thrust",
+  "name": "Hip thrust",
+  "muscleGroup": "Glúteos",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/1642/a81ad922-caf5-47f8-99b4-640cb0717436.webp.400x400_q85.jpg"
+ },
+ {
+  "id": "hiperextensao",
+  "name": "Hiperextensão lombar",
+  "muscleGroup": "Costas",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/301/2d5c2f99-b8ff-4095-b515-4c2a85afde70.png.400x400_q85.png"
+ },
+ {
+  "id": "infra-barra",
+  "name": "Infra na barra",
+  "muscleGroup": "Abdômen",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/978/d3ffe51f-7eb8-4cc9-9eae-105847af3005.png.400x400_q85.png"
+ },
+ {
+  "id": "infra-solo",
+  "name": "Infra no solo",
+  "muscleGroup": "Abdômen",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/125/Leg-raises-2.png.400x400_q85.png"
+ },
+ {
+  "id": "leg-press-45",
+  "name": "Leg press 45",
+  "muscleGroup": "Quadríceps",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/371/d2136f96-3a43-4d4c-9944-1919c4ca1ce1.webp.400x400_q85.png"
+ },
+ {
+  "id": "levantamento-romeno",
+  "name": "Levantamento romeno",
+  "muscleGroup": "Posterior",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/507/13d526ab-12fc-461e-828a-051dd7c13fb1.png.400x400_q85.png"
+ },
+ {
+  "id": "levantamento-sumo",
+  "name": "Levantamento sumô",
+  "muscleGroup": "Posterior",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/630/b0f0c7d8-5878-4d9e-b820-21acc013741d.webp.400x400_q85.png"
+ },
+ {
+  "id": "levantamento-terra",
+  "name": "Levantamento terra",
+  "muscleGroup": "Costas",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/184/1709c405-620a-4d07-9658-fade2b66a2df.jpeg.400x400_q85.jpg"
+ },
+ {
+  "id": "mergulho-paralelas",
+  "name": "Mergulho nas paralelas",
+  "muscleGroup": "Peito",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/194/34600351-8b0b-4cb0-8daa-583537be15b0.png.400x400_q85.png"
+ },
+ {
+  "id": "mergulho-banco",
+  "name": "Mergulho no banco",
+  "muscleGroup": "Tríceps",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/83/Bench-dips-1.png.400x400_q85.png"
+ },
+ {
+  "id": "mesa-flexora",
+  "name": "Mesa flexora deitada",
+  "muscleGroup": "Posterior",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/154/lying-leg-curl-machine-large-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "pallof-press",
+  "name": "Pallof press",
+  "muscleGroup": "Abdômen",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/1194/34c03421-0803-4859-a2b0-5710f2bd94cd.png.400x400_q85.png"
+ },
+ {
+  "id": "panturrilha-em-pe",
+  "name": "Panturrilha em pé",
+  "muscleGroup": "Panturrilha",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/622/9a429bd0-afd3-4ad0-8043-e9beec901c81.jpeg.400x400_q85.jpg"
+ },
+ {
+  "id": "panturrilha-leg-press",
+  "name": "Panturrilha no leg press",
+  "muscleGroup": "Panturrilha",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/146/8b284904-d072-4381-a256-4c81d8fd9c1f.png.400x400_q85.jpg"
+ },
+ {
+  "id": "panturrilha-sentada",
+  "name": "Panturrilha sentada",
+  "muscleGroup": "Panturrilha",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/1620/edd40e39-e337-4460-a8dd-6127d40ddd16.jpeg.400x400_q85.jpg"
+ },
+ {
+  "id": "perdigueiro",
+  "name": "Perdigueiro",
+  "muscleGroup": "Lombar",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/1572/3d14e761-a73d-49da-8804-f3016a7573ff.png.400x400_q85.jpg"
+ },
+ {
+  "id": "ponte-gluteo",
+  "name": "Ponte de glúteo",
+  "muscleGroup": "Glúteos",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/265/7528acb4-b2cc-4b75-b6ae-d514cbd4f78b.png.400x400_q85.png"
+ },
+ {
+  "id": "prancha",
+  "name": "Prancha isométrica",
+  "muscleGroup": "Abdômen",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/458/b7bd9c28-9f1d-4647-bd17-ab6a3adf5770.png.400x400_q85.png"
+ },
+ {
+  "id": "press-militar",
+  "name": "Press militar em pé",
+  "muscleGroup": "Ombros",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/1893/7dbad19e-0616-41fd-9d7d-3e21649c0eea.png.400x400_q85.png"
+ },
+ {
+  "id": "pullover-cabo",
+  "name": "Pullover no cabo alto",
+  "muscleGroup": "Costas",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/1137/42f22229-c0a0-4bfc-aca6-66fe5e1ab10d.PNG.400x400_q85.jpg"
+ },
+ {
+  "id": "push-press",
+  "name": "Push press",
+  "muscleGroup": "Ombros",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/478/70a2d72c-a822-45f3-8de2-54ea85951b84.jpg.400x400_q85.jpg"
+ },
+ {
+  "id": "puxada-alta",
+  "name": "Puxada alta",
+  "muscleGroup": "Costas",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/158/0d51a0f2-622f-434b-beb8-1a003c54712a.png.400x400_q85.jpg"
+ },
+ {
+  "id": "puxada-fechada",
+  "name": "Puxada alta pegada fechada",
+  "muscleGroup": "Costas",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/158/0d51a0f2-622f-434b-beb8-1a003c54712a.png.400x400_q85.jpg"
+ },
+ {
+  "id": "puxada-neutra",
+  "name": "Puxada alta pegada neutra",
+  "muscleGroup": "Costas",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/1136/5778a8e9-c606-4843-89c8-9d9469eeb6e4.PNG.400x400_q85.jpg"
+ },
+ {
+  "id": "rack-pull",
+  "name": "Rack pull",
+  "muscleGroup": "Costas",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/161/Dead-lifts-2.png.400x400_q85.jpg"
+ },
+ {
+  "id": "remada-alta-barra",
+  "name": "Remada alta com barra",
+  "muscleGroup": "Ombros",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/693/05c91bd2-7814-40b6-b2d1-51ae942b8321.png.400x400_q85.jpg"
+ },
+ {
+  "id": "remada-alta-halteres",
+  "name": "Remada alta com halteres",
+  "muscleGroup": "Ombros",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/694/119e6823-6960-4341-a9e1-aaf78d7fb57c.png.400x400_q85.jpg"
+ },
+ {
+  "id": "remada-baixa",
+  "name": "Remada baixa",
+  "muscleGroup": "Costas",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/394/5e0c015f-9e4c-4034-beea-b0afbf15d0bd.png.400x400_q85.png"
+ },
+ {
+  "id": "remada-cavalinho",
+  "name": "Remada cavalinho",
+  "muscleGroup": "Costas",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/106/T-bar-row-1.png.400x400_q85.png"
+ },
+ {
+  "id": "remada-apoio-peito",
+  "name": "Remada com apoio no peito",
+  "muscleGroup": "Costas",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/1283/e7262f70-7512-408a-8d00-4c499ef632fc.jpg.400x400_q85.jpg"
+ },
+ {
+  "id": "remada-curvada-barra",
+  "name": "Remada curvada com barra",
+  "muscleGroup": "Costas",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/109/Barbell-rear-delt-row-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "remada-curvada-halter",
+  "name": "Remada curvada com halter",
+  "muscleGroup": "Costas",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/81/a751a438-ae2d-4751-8d61-cef0e9292174.png.400x400_q85.jpg"
+ },
+ {
+  "id": "remada-cabo-sentada",
+  "name": "Remada sentada no cabo",
+  "muscleGroup": "Costas",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/1117/2555c4c3-a84d-47db-b83b-cbf721f12e45.png.400x400_q85.jpg"
+ },
+ {
+  "id": "remada-unilateral-cabo",
+  "name": "Remada unilateral no cabo",
+  "muscleGroup": "Costas",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/1621/ca1bc68d-9c36-4dd3-8ec4-496c57b5c564.jpg.400x400_q85.jpg"
+ },
+ {
+  "id": "roda-abdominal",
+  "name": "Roda abdominal",
+  "muscleGroup": "Abdômen",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/41/34b37423-269f-43d4-9d29-d2a90eeaa6b4.png.400x400_q85.png"
+ },
+ {
+  "id": "rosca-alternada",
+  "name": "Rosca alternada",
+  "muscleGroup": "Bíceps",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/1012/8270fdb8-28f1-4eff-b410-af8642085b3f.png.400x400_q85.jpg"
+ },
+ {
+  "id": "rosca-barra-w",
+  "name": "Rosca com barra W",
+  "muscleGroup": "Bíceps",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/94/6dee2f60-aea2-4f2d-9bf6-aef50c4f9483.png.400x400_q85.jpg"
+ },
+ {
+  "id": "rosca-direta-barra",
+  "name": "Rosca direta com barra",
+  "muscleGroup": "Bíceps",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/74/Bicep-curls-1.png.400x400_q85.png"
+ },
+ {
+  "id": "rosca-direta-halteres",
+  "name": "Rosca direta com halteres",
+  "muscleGroup": "Bíceps",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/81/Biceps-curl-1.png.400x400_q85.png"
+ },
+ {
+  "id": "rosca-inclinada",
+  "name": "Rosca inclinada",
+  "muscleGroup": "Bíceps",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/81/Biceps-curl-1.png.400x400_q85.png"
+ },
+ {
+  "id": "rosca-inversa",
+  "name": "Rosca inversa",
+  "muscleGroup": "Antebraço",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/1290/c05818bf-1c81-46df-9f24-42e354265388.png.400x400_q85.jpg"
+ },
+ {
+  "id": "rosca-martelo",
+  "name": "Rosca martelo",
+  "muscleGroup": "Bíceps",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/86/Bicep-hammer-curl-1.png.400x400_q85.png"
+ },
+ {
+  "id": "rosca-cabo",
+  "name": "Rosca no cabo",
+  "muscleGroup": "Bíceps",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/129/Standing-biceps-curl-1.png.400x400_q85.png"
+ },
+ {
+  "id": "rosca-scott",
+  "name": "Rosca scott",
+  "muscleGroup": "Bíceps",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/193/Preacher-curl-3-1.png.400x400_q85.png"
+ },
+ {
+  "id": "stiff",
+  "name": "Stiff",
+  "muscleGroup": "Posterior",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/507/13d526ab-12fc-461e-828a-051dd7c13fb1.png.400x400_q85.png"
+ },
+ {
+  "id": "stiff-halteres",
+  "name": "Stiff com halteres",
+  "muscleGroup": "Posterior",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/1652/0306c8c0-70cc-45d4-92de-6fa72ceaa834.webp.400x400_q85.jpg"
+ },
+ {
+  "id": "subida-caixa",
+  "name": "Subida no caixote",
+  "muscleGroup": "Glúteos",
+  "equipment": "Peso corporal",
+  "imageUrl": "https://wger.de/media/exercise-images/981/f9377a7e-eb58-4cca-b805-2d36863aeb03.png.400x400_q85.png"
+ },
+ {
+  "id": "supino-declinado",
+  "name": "Supino declinado com barra",
+  "muscleGroup": "Peito",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/100/Decline-bench-press-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "supino-inclinado",
+  "name": "Supino inclinado",
+  "muscleGroup": "Peitoral",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/16/Incline-press-1.png.400x400_q85.png"
+ },
+ {
+  "id": "supino-inclinado-barra",
+  "name": "Supino inclinado com barra",
+  "muscleGroup": "Peito",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/41/Incline-bench-press-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "supino-maquina",
+  "name": "Supino na máquina",
+  "muscleGroup": "Peito",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/129/b263c968-e067-4750-916a-d8758a7df23e.webp.400x400_q85.jpg"
+ },
+ {
+  "id": "supino-fechado",
+  "name": "Supino pegada fechada",
+  "muscleGroup": "Tríceps",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/88/Narrow-grip-bench-press-1.png.400x400_q85.png"
+ },
+ {
+  "id": "supino-reto-barra",
+  "name": "Supino reto com barra",
+  "muscleGroup": "Peito",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/192/Bench-press-1.png.400x400_q85.png"
+ },
+ {
+  "id": "supino-reto-halteres",
+  "name": "Supino reto com halteres",
+  "muscleGroup": "Peito",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/97/Dumbbell-bench-press-1.png.400x400_q85.jpg"
+ },
+ {
+  "id": "triceps-frances",
+  "name": "Tríceps francês com halter",
+  "muscleGroup": "Tríceps",
+  "equipment": "Halteres",
+  "imageUrl": "https://wger.de/media/exercise-images/1336/ebf88217-df26-4ef7-94cb-f0c2220c6abe.webp.400x400_q85.png"
+ },
+ {
+  "id": "triceps-corda",
+  "name": "Tríceps na corda",
+  "muscleGroup": "Tríceps",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/1900/a8243245-8f8f-4e2b-93ca-694d416cb11d.png.400x400_q85.png"
+ },
+ {
+  "id": "triceps-cabo-alto",
+  "name": "Tríceps no cabo alto",
+  "muscleGroup": "Tríceps",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/659/a60452f1-e2ea-43fe-baa6-c1a2208d060c.png.400x400_q85.jpg"
+ },
+ {
+  "id": "triceps-pulley",
+  "name": "Tríceps no pulley",
+  "muscleGroup": "Tríceps",
+  "equipment": "Cabo",
+  "imageUrl": "https://wger.de/media/exercise-images/805/7a437824-e2cc-46e1-804a-674f0ea31d25.png.400x400_q85.png"
+ },
+ {
+  "id": "triceps-testa",
+  "name": "Tríceps testa com barra",
+  "muscleGroup": "Tríceps",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/50/695ced5c-9961-4076-add2-cb250d01089e.png.400x400_q85.jpg"
+ },
+ {
+  "id": "triceps-testa-w",
+  "name": "Tríceps testa com barra W",
+  "muscleGroup": "Tríceps",
+  "equipment": "Barra",
+  "imageUrl": "https://wger.de/media/exercise-images/84/Lying-close-grip-triceps-press-to-chin-1.png.400x400_q85.png"
+ },
+ {
+  "id": "peck-deck",
+  "name": "Voador no aparelho",
+  "muscleGroup": "Peito",
+  "equipment": "Máquina",
+  "imageUrl": "https://wger.de/media/exercise-images/98/Butterfly-machine-2.png.400x400_q85.jpg"
+ }
+]

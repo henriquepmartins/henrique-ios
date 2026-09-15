@@ -4,6 +4,7 @@ import SwiftUI
 struct WeekScreen: View {
   @Environment(AcademiaStore.self) private var store
   @Environment(\.dynamicTypeSize) private var textSize
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var editor: PlanEditorDestination?
   var onStart: (Int) -> Void = { _ in }
 
@@ -12,19 +13,21 @@ struct WeekScreen: View {
       VStack(alignment: .leading, spacing: 24) {
         PageHeading(eyebrow: "sua semana", title: "plano de treino",
                     subtitle: "Distribua o esforço e deixe espaço para recuperar.")
-        Button("novo treino", systemImage: "plus") { editor = .new }
+        Button("novo treino", systemImage: "plus") { editor = .new(weekdays: newWorkoutWeekdays) }
           .buttonStyle(.glassProminent)
           .controlSize(.large)
-        if let dashboard = store.dashboard {
-          LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
-                                   count: textSize.isAccessibilitySize ? 1 : 2), spacing: 6) {
-            ForEach(Array(dashboard.weekPlan.enumerated()), id: \.element.id) { index, item in
-              WorkoutTile(item: item, index: index,
-                          onEdit: { editor = .existing(item) }, onStart: { onStart(item.weekday) })
-                .staggeredEntrance(index: index, isReady: true)
-            }
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
+                                 count: textSize.isAccessibilitySize ? 1 : 2), spacing: 6) {
+          ForEach(Array(store.weekPlan.enumerated()), id: \.element.id) { index, item in
+            WorkoutTile(
+              item: item,
+              onEdit: { editor = .existing(item) },
+              onDelete: { store.deleteWorkout(workoutTemplateId: item.id) },
+              onStart: { onStart(item.nextWeekday(from: store.selectedDate.weekday())) })
+              .staggeredEntrance(index: index, isReady: true)
           }
         }
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .snappy, value: store.weekPlan.map(\.id))
       }
       .padding(16)
       .padding(.bottom, 32)
@@ -32,30 +35,56 @@ struct WeekScreen: View {
     .background(Color.canvas)
     .refreshable { await store.load() }
     .sheet(item: $editor) { destination in
-      WorkoutEditor(item: destination.item, catalog: store.dashboard?.exerciseCatalog ?? [])
+      WorkoutEditor(
+        item: destination.item, weekdays: destination.weekdays,
+        catalog: store.dashboard?.exerciseCatalog ?? [])
     }
+  }
+
+  /// O treino novo já nasce no dia aberto na tela, a não ser que esse dia seja
+  /// de outro treino. Aí começa sem dia, para não tirar nada de ninguém sem o
+  /// toque de quem monta.
+  private var newWorkoutWeekdays: Set<Int> {
+    let today = store.selectedDate.weekday()
+    return WeekdayOwners(plan: store.weekPlan, excluding: nil)[today] == nil ? [today] : []
   }
 }
 
 private enum PlanEditorDestination: Identifiable {
-  case new
+  case new(weekdays: Set<Int>)
   case existing(WeekPlanItem)
   var id: String { item?.id ?? "new" }
   var item: WeekPlanItem? {
     if case .existing(let item) = self { return item }
     return nil
   }
+  var weekdays: Set<Int> {
+    switch self {
+    case .new(let weekdays): weekdays
+    case .existing(let item): Set(item.weekdays)
+    }
+  }
 }
 
 private let planWeekdays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"]
+private let planWeekdaysShort = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"]
+
+/// "segunda e quinta". O locale fica preso no português porque o resto da tela
+/// também é, e senão um aparelho em inglês lia "segunda and quinta".
+private func spokenWeekdays(_ weekdays: [Int]) -> String {
+  weekdays.map { planWeekdays[$0] }.formatted(.list(type: .and).locale(StudyFormat.locale))
+}
 
 private struct WorkoutTile: View {
   let item: WeekPlanItem
-  let index: Int
   let onEdit: () -> Void
+  let onDelete: () -> Void
   let onStart: () -> Void
+  @State private var confirmDelete = false
 
-  private var tone: WorkoutTone { .at(index) }
+  /// A cor vem do dia e não da posição na grade. Pela posição, apagar um card
+  /// repintava todos os que vinham depois.
+  private var tone: WorkoutTone { .at(item.weekdays[0]) }
   private var nameFont: Font { .system(.headline, weight: .semibold) }
   /// O recuo do bloco colorido. Os três pontos leem o mesmo valor para cair na
   /// linha do nome.
@@ -67,7 +96,7 @@ private struct WorkoutTile: View {
   var body: some View {
     Button(action: onStart) { face }
       .buttonStyle(StudyPressStyle())
-      .accessibilityLabel("iniciar \(item.name), \(planWeekdays[item.weekday])")
+      .accessibilityLabel("iniciar \(item.name), \(spokenWeekdays(item.weekdays))")
       // Menu dentro do label de um Button nunca chega a receber o dedo. Por isso
       // ele vem numa camada por cima, com área de toque só nos três pontos.
       .overlay(alignment: .bottomTrailing) { menuLayer }
@@ -125,6 +154,7 @@ private struct WorkoutTile: View {
     VStack(alignment: .trailing, spacing: 0) {
       Menu {
         Button("editar treino", systemImage: "pencil", action: onEdit)
+        Button("apagar treino", systemImage: "trash", role: .destructive) { confirmDelete = true }
       } label: {
         // O espaço invisível no corpo do nome dá a altura da linha, então os
         // três pontos caem no meio dela em qualquer tamanho de texto.
@@ -142,6 +172,9 @@ private struct WorkoutTile: View {
           .contentShape(.rect)
       }
       .accessibilityLabel("editar \(item.name)")
+      // Preso nos três pontos, o diálogo aponta para o card que vai sumir. Preso
+      // na tela, ele abria no topo, longe do toque.
+      .deleteWorkoutConfirmation(isPresented: $confirmDelete, name: item.name, onDelete: onDelete)
       .padding(.bottom, blockPad - menuTapPad)
       footer.hidden()
     }
@@ -180,25 +213,29 @@ struct WorkoutEditor: View {
   @State private var exercises: [PlanExercise]
   @State private var isPickingExercise = false
   @State private var isSaving = false
-  @State private var weekday: Int
+  @State private var confirmDelete = false
+  @State private var weekdays: Set<Int>
+  /// O catálogo por id, montado uma vez. Cada tecla no nome roda o body de novo
+  /// e cada linha de exercício lê daqui, então a busca não pode varrer a lista.
+  @State private var exerciseInfo: [String: ExerciseCatalogItem]
 
   private let catalog: [ExerciseCatalogItem]
+  private let workoutId: String?
 
-  init(item: WeekPlanItem?, catalog: [ExerciseCatalogItem]) {
-    weekday = item?.weekday ?? 2
+  init(item: WeekPlanItem?, weekdays: Set<Int>, catalog: [ExerciseCatalogItem]) {
+    workoutId = item?.id
+    self.weekdays = weekdays
     self.catalog = catalog
+    exerciseInfo = Dictionary(catalog.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     name = item?.name ?? ""
     focus = item?.focus ?? ""
     estimatedMinutes = item?.estimatedMinutes ?? 55
     exercises = item?.exercises ?? []
   }
 
-  private var namesById: [String: String] {
-    Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0.name) })
-  }
-
   private var canSave: Bool {
-    name.trimmingCharacters(in: .whitespaces).count >= 2
+    !weekdays.isEmpty
+      && name.trimmingCharacters(in: .whitespaces).count >= 2
       && focus.trimmingCharacters(in: .whitespaces).count >= 2
       && !exercises.isEmpty && exercises.count <= 12 && (15...180).contains(estimatedMinutes)
       && exercises.allSatisfy { $0.repsMin <= $0.repsMax && $0.startingWeightKg >= 0 }
@@ -207,10 +244,9 @@ struct WorkoutEditor: View {
   var body: some View {
     NavigationStack {
       Form {
+        WorkoutDaysSection(selection: $weekdays, workoutId: workoutId)
+
         Section("Treino") {
-          Picker("dia", selection: $weekday) {
-            ForEach(0..<7, id: \.self) { day in Text(planWeekdays[day]).tag(day) }
-          }
           TextField("nome", text: $name)
           TextField("foco", text: $focus)
           TextField("duração em minutos", value: $estimatedMinutes, format: .number)
@@ -219,7 +255,11 @@ struct WorkoutEditor: View {
 
         Section {
           ForEach($exercises) { $exercise in
-            PlanExerciseRow(exercise: $exercise, name: namesById[exercise.exerciseId] ?? exercise.exerciseId)
+            let info = exerciseInfo[exercise.exerciseId]
+            PlanExerciseRow(
+              exercise: $exercise, name: info?.name ?? exercise.exerciseId,
+              subtitle: info.map { "\($0.muscleGroup.lowercased()) · \($0.equipment.lowercased())" },
+              imageUrl: info?.imageUrl)
           }
           .onDelete { exercises.remove(atOffsets: $0) }
           .onMove { exercises.move(fromOffsets: $0, toOffset: $1) }
@@ -232,6 +272,16 @@ struct WorkoutEditor: View {
           Text("Exercícios")
         } footer: {
           Text("Arraste para trocar a ordem. Deslize para remover.")
+        }
+
+        if workoutId != nil {
+          Section {
+            Button("apagar treino", systemImage: "trash", role: .destructive) {
+              confirmDelete = true
+            }
+            .disabled(isSaving)
+            .deleteWorkoutConfirmation(isPresented: $confirmDelete, name: name, onDelete: remove)
+          }
         }
       }
       .navigationTitle(name.isEmpty ? "Treino" : name)
@@ -250,10 +300,15 @@ struct WorkoutEditor: View {
       }
       .sheet(isPresented: $isPickingExercise) {
         ExercisePicker(catalog: catalog, chosen: Set(exercises.map(\.exerciseId))) { item in
+          let known = catalog.contains(where: { $0.id == item.id })
+          exerciseInfo[item.id] = item
           exercises.append(
             PlanExercise(
               exerciseId: item.id, prepSets: 2, workSets: 2, repsMin: 8, repsMax: 12,
-              workToFailure: true, startingWeightKg: 0))
+              workToFailure: true, startingWeightKg: 0, name: known ? nil : item.name,
+              muscleGroup: known ? nil : item.muscleGroup,
+              equipment: known ? nil : item.equipment,
+              imageUrl: known ? nil : item.imageUrl))
         }
       }
     }
@@ -261,7 +316,7 @@ struct WorkoutEditor: View {
 
   private func save() {
     let input = SaveWorkoutInput(
-      date: store.selectedDate, weekday: weekday,
+      date: store.selectedDate, workoutTemplateId: workoutId, weekdays: weekdays.sorted(),
       name: name.trimmingCharacters(in: .whitespaces),
       focus: focus.trimmingCharacters(in: .whitespaces), estimatedMinutes: estimatedMinutes,
       exercises: exercises)
@@ -272,85 +327,514 @@ struct WorkoutEditor: View {
       if saved { dismiss() }
     }
   }
+
+  private func remove() {
+    guard let workoutId else { return }
+    store.deleteWorkout(workoutTemplateId: workoutId)
+    dismiss()
+  }
+}
+
+/// Os sete dias num toque cada, na ordem da semana do aparelho. O rodapé avisa
+/// quando um dia marcado sai de outro treino, antes de salvar.
+private struct WorkoutDaysSection: View {
+  @Environment(AcademiaStore.self) private var store
+  @Environment(\.dynamicTypeSize) private var textSize
+  @Binding var selection: Set<Int>
+  let workoutId: String?
+
+  private var orderedWeekdays: [Int] {
+    let first = Calendar.autoupdatingCurrent.firstWeekday - 1
+    return (0..<7).map { (first + $0) % 7 }
+  }
+
+  var body: some View {
+    let handoffs = WeekdayOwners(plan: store.weekPlan, excluding: workoutId).handoffs(to: selection)
+    Section {
+      // Nos tamanhos de acessibilidade sete círculos não cabem numa linha. Em
+      // quatro colunas cada círculo cresce com o texto e a semana quebra em duas.
+      LazyVGrid(
+        columns: Array(repeating: GridItem(.flexible(), spacing: 4),
+                       count: textSize.isAccessibilitySize ? 4 : 7),
+        spacing: 8
+      ) {
+        ForEach(orderedWeekdays, id: \.self) { day in
+          WeekdayToggle(
+            shortName: planWeekdaysShort[day], fullName: planWeekdays[day],
+            isOn: selection.contains(day)
+          ) {
+            if selection.contains(day) { selection.remove(day) } else { selection.insert(day) }
+          }
+        }
+      }
+      .padding(.vertical, 4)
+      .sensoryFeedback(.selection, trigger: selection)
+    } header: {
+      Text("dias")
+    } footer: {
+      if !handoffs.isEmpty {
+        Text(handoffs.map(Self.note).joined(separator: " "))
+      }
+    }
+  }
+
+  private static func note(_ handoff: WeekdayHandoff) -> String {
+    let days = spokenWeekdays(handoff.weekdays)
+    let verb = handoff.weekdays.count == 1 ? "sai" : "saem"
+    guard handoff.leavesPlan else { return "\(days) \(verb) de \(handoff.workoutName)." }
+    return "\(days) \(verb) de \(handoff.workoutName), que fica sem dia e sai do plano. "
+      + "As séries já registradas nele continuam no progresso."
+  }
+}
+
+/// A troca de cor é imediata. Marcar dia é toque repetido, e esperar uma
+/// animação a cada toque deixa a fileira lenta.
+private struct WeekdayToggle: View {
+  let shortName: String
+  let fullName: String
+  let isOn: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Circle()
+        .fill(isOn ? Color.ink : Color.surfaceMuted)
+        .overlay {
+          Text(shortName)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(isOn ? .white : Color.ink)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .padding(4)
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .contentShape(.rect)
+    }
+    // Sem estilo próprio, o Form junta todos os botões da linha num toque só.
+    .buttonStyle(.plain)
+    .accessibilityLabel(fullName)
+    .accessibilityAddTraits(isOn ? .isSelected : [])
+  }
+}
+
+private extension View {
+  /// O treino leva junto as sessões e as séries registradas nele, então o
+  /// diálogo diz o nome e o que se perde.
+  func deleteWorkoutConfirmation(
+    isPresented: Binding<Bool>, name: String, onDelete: @escaping () -> Void
+  ) -> some View {
+    confirmationDialog("apagar \(name)?", isPresented: isPresented, titleVisibility: .visible) {
+      Button("apagar", role: .destructive, action: onDelete)
+      Button("cancelar", role: .cancel) {}
+    } message: {
+      Text("As séries já registradas nesse treino somem junto.")
+    }
+  }
 }
 
 struct PlanExerciseRow: View {
   @Binding var exercise: PlanExercise
   let name: String
+  let subtitle: String?
+  let imageUrl: String?
+
+  init(exercise: Binding<PlanExercise>, name: String, subtitle: String? = nil, imageUrl: String? = nil) {
+    _exercise = exercise
+    self.name = name
+    self.subtitle = subtitle
+    self.imageUrl = imageUrl
+  }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(name).font(.body.weight(.medium))
-      HStack(spacing: 16) {
-        CompactStepper(label: "aquec.", value: $exercise.prepSets, range: 0...6)
-        CompactStepper(label: "trabalho", value: $exercise.workSets, range: 1...10)
+    VStack(alignment: .leading, spacing: 14) {
+      HStack(spacing: 12) {
+        ExerciseThumb(imageUrl: imageUrl, size: 48)
+        VStack(alignment: .leading, spacing: 3) {
+          Text(name.lowercased()).font(.headline.weight(.semibold))
+          if let subtitle {
+            Text(subtitle).font(.caption).foregroundStyle(Color.mutedInk)
+          }
+        }
       }
-      HStack(spacing: 16) {
-        CompactStepper(label: "reps mín.", value: $exercise.repsMin, range: 1...50)
-        CompactStepper(label: "reps máx.", value: $exercise.repsMax, range: 1...50)
-      }
+      .padding(.top, 6)
+      Divider()
+      ExerciseStepperRow(
+        label: "séries de aquecimento", value: $exercise.prepSets, range: 0...6)
+      Divider()
+      ExerciseStepperRow(label: "séries de trabalho", value: $exercise.workSets, range: 1...10)
+      Divider()
+      ExerciseStepperRow(label: "reps mínimas", value: $exercise.repsMin, range: 1...50)
+      Divider()
+      ExerciseStepperRow(label: "reps máximas", value: $exercise.repsMax, range: 1...50)
+      Divider()
       WeightStepper(weightKg: $exercise.startingWeightKg)
+      Divider()
       Toggle("até a falha", isOn: $exercise.workToFailure)
-        .font(.caption)
+        .font(.body)
+        .frame(minHeight: 48)
     }
-    .padding(.vertical, 6)
+    .padding(.vertical, 10)
   }
 }
 
-struct CompactStepper: View {
+/// Um controle por linha, etiqueta de um lado e stepper do outro. Cada linha
+/// tem 48 de altura para o dedo acertar sem mirar, e o número em tabular não
+/// empurra o stepper quando vai de 9 para 10.
+struct ExerciseStepperRow: View {
   let label: String
   @Binding var value: Int
   let range: ClosedRange<Int>
 
   var body: some View {
-    Stepper(value: $value, in: range) {
-      HStack(spacing: 4) {
-        Text(label).font(.caption).foregroundStyle(.secondary)
-        Text("\(value)").font(.caption.weight(.medium)).monospacedDigit()
+    HStack(spacing: 12) {
+      Text(label).font(.body)
+      Spacer(minLength: 8)
+      Text("\(value)").font(.body.weight(.semibold)).monospacedDigit()
+        .frame(minWidth: 32, alignment: .trailing)
+      Stepper("", value: $value, in: range)
+        .labelsHidden()
+        .accessibilityLabel(label)
+    }
+    .frame(minHeight: 48)
+  }
+}
+
+/// A miniatura do exercício. Foto quando tem, halter quando não tem. O contorno
+/// fino separa a foto do fundo sem virar borda dura.
+struct ExerciseThumb: View {
+  let imageUrl: String?
+  let size: CGFloat
+  private var radius: CGFloat { size * 0.32 }
+
+  var body: some View {
+    Group {
+      if let imageUrl, let url = URL(string: imageUrl) {
+        AsyncImage(url: url) { phase in
+          switch phase {
+          case .success(let image):
+            image.resizable().scaledToFill()
+              .transition(.opacity)
+          default:
+            RoundedRectangle(cornerRadius: radius).fill(Color.surfaceMuted)
+              .overlay { Image(systemName: "dumbbell").foregroundStyle(Color.mutedInk.opacity(0.5)) }
+          }
+        }
+      } else {
+        RoundedRectangle(cornerRadius: radius).fill(Color.surfaceMuted)
+          .overlay { Image(systemName: "dumbbell").foregroundStyle(Color.mutedInk.opacity(0.6)) }
       }
     }
+    .frame(width: size, height: size)
+    .clipShape(.rect(cornerRadius: radius))
+    .overlay(RoundedRectangle(cornerRadius: radius).strokeBorder(Color.black.opacity(0.1)))
+    .accessibilityHidden(true)
   }
 }
 
 struct ExercisePicker: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @FocusState private var searchFocused: Bool
   @State private var search = ""
+  @State private var muscle: String?
+  @State private var remote: [ExerciseCatalogItem] = []
+  @State private var remotePhase: RemotePhase = .idle
+  @State private var lookup: Task<Void, Never>?
 
   let catalog: [ExerciseCatalogItem]
   let chosen: Set<String>
   let onPick: (ExerciseCatalogItem) -> Void
+  @State private var wger = WgerClient()
 
-  private var results: [ExerciseCatalogItem] {
-    let available = catalog.filter { !chosen.contains($0.id) }
-    guard !search.isEmpty else { return available }
-    return available.filter {
-      $0.name.localizedStandardContains(search) || $0.muscleGroup.localizedStandardContains(search)
-    }
+  private enum RemotePhase: Equatable {
+    case idle, loading, done, failed
+  }
+
+  private var library: [ExerciseCatalogItem] {
+    ExerciseLibrary.merged(with: catalog)
+  }
+
+  private var local: [ExerciseCatalogItem] {
+    ExerciseLibrary.search(search, muscle: muscle, in: library)
+  }
+
+  private var exactMatch: Bool {
+    let folded = ExerciseLibrary.fold(search.trimmingCharacters(in: .whitespaces))
+    guard !folded.isEmpty else { return false }
+    return library.contains { ExerciseLibrary.fold($0.name) == folded }
   }
 
   var body: some View {
     NavigationStack {
-      List(results) { item in
-        Button {
-          onPick(item)
-          dismiss()
-        } label: {
-          VStack(alignment: .leading, spacing: 2) {
-            Text(item.name)
-            Text("\(item.muscleGroup) · \(item.equipment)")
-              .font(.caption).foregroundStyle(.secondary)
+      ScrollView {
+        LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+          Section {
+            if local.isEmpty, remote.isEmpty, remotePhase != .loading, !search.isEmpty {
+              ContentUnavailableView.search(text: search)
+            } else {
+              ForEach(Array(local.enumerated()), id: \.element.id) { index, item in
+                ExercisePickerRow(
+                  item: item, picked: chosen.contains(item.id),
+                  action: { pick(item) }
+                )
+                .staggeredEntrance(index: index, isReady: true)
+                Divider().padding(.leading, 76).opacity(0.6)
+              }
+              if !remote.isEmpty {
+                HStack {
+                  Text("da base pública").font(.caption).foregroundStyle(Color.mutedInk)
+                  Spacer()
+                  Text("nomes em inglês").font(.caption2).foregroundStyle(Color.mutedInk.opacity(0.7))
+                }
+                .padding(.horizontal, 16).padding(.top, 18).padding(.bottom, 4)
+                ForEach(Array(remote.enumerated()), id: \.element.id) { index, item in
+                  ExercisePickerRow(
+                    item: item, picked: chosen.contains(item.id),
+                    action: { pick(item) }
+                  )
+                  .staggeredEntrance(index: index, isReady: remotePhase == .done)
+                  Divider().padding(.leading, 76).opacity(0.6)
+                }
+                Text("Fotos da base pública wger.de, licença CC-BY-SA.")
+                  .font(.caption2).foregroundStyle(Color.mutedInk.opacity(0.7))
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .padding(.horizontal, 16).padding(.vertical, 10)
+              } else if remotePhase == .loading {
+                HStack(spacing: 10) {
+                  ProgressView().controlSize(.small)
+                  Text("buscando na base pública…").font(.caption).foregroundStyle(Color.mutedInk)
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
+              }
+              if !search.trimmingCharacters(in: .whitespaces).isEmpty, !exactMatch {
+                Button { createCustom() } label: {
+                  HStack(spacing: 12) {
+                    Circle().fill(Color.surfaceMuted).frame(width: 56, height: 56)
+                      .overlay { Image(systemName: "plus").foregroundStyle(Color.mutedInk) }
+                    VStack(alignment: .leading, spacing: 2) {
+                      Text("Criar \"\(search.trimmingCharacters(in: .whitespaces))\"")
+                        .font(.body.weight(.medium)).foregroundStyle(Color.ink)
+                      Text("\(muscle ?? "geral") · entra no treino e no catálogo")
+                        .font(.caption).foregroundStyle(Color.mutedInk)
+                    }
+                    Spacer(minLength: 0)
+                  }
+                  .padding(.horizontal, 16).padding(.vertical, 8)
+                  .contentShape(.rect)
+                }.buttonStyle(StudyPressStyle())
+              }
+            }
+          } header: {
+            VStack(spacing: 10) {
+              HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                  .foregroundStyle(Color.mutedInk)
+                  .padding(.leading, 2)
+                TextField("buscar exercício, músculo ou aparelho", text: $search)
+                  .focused($searchFocused)
+                  .textInputAutocapitalization(.never)
+                  .autocorrectionDisabled()
+                  .accessibilityLabel("Buscar exercício")
+                if !search.isEmpty {
+                  Button { search = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                      .foregroundStyle(Color.mutedInk)
+                      .frame(width: 40, height: 40)
+                      .contentShape(.rect)
+                  }
+                  .buttonStyle(.plain)
+                  .accessibilityLabel("Limpar busca")
+                }
+              }
+              .padding(.horizontal, 12).padding(.vertical, 6)
+              .background(.white, in: .rect(cornerRadius: 18))
+              .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Color.ink.opacity(0.08)))
+              ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                  MuscleChip(title: "todos", selected: muscle == nil) { muscle = nil }
+                  ForEach(ExerciseLibrary.muscleGroups, id: \.self) { group in
+                    MuscleChip(title: group.lowercased(), selected: muscle == group) {
+                      muscle = muscle == group ? nil : group
+                    }
+                  }
+                }.padding(.horizontal, 16).padding(.vertical, 2)
+              }
+              HStack {
+                Text(local.isEmpty ? "nada por aqui" : "\(local.count) no catálogo")
+                  .font(.caption).foregroundStyle(Color.mutedInk).monospacedDigit()
+                Spacer(minLength: 0)
+              }.padding(.horizontal, 16)
+            }
+            .padding(.top, 8).padding(.bottom, 6)
+            .background(Color.canvas)
           }
         }
-        .buttonStyle(.plain)
       }
-      .searchable(text: $search, prompt: "buscar exercício")
+      .background(Color.canvas)
       .navigationTitle("Exercícios")
       .toolbarTitleDisplayMode(.inline)
-      .overlay {
-        if results.isEmpty {
-          ContentUnavailableView.search(text: search)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Fechar") { dismiss() }
         }
+      }
+      .onAppear { searchFocused = true }
+      .onChange(of: search) { scheduleRemote() }
+      .onChange(of: muscle) { scheduleRemote() }
+    }
+  }
+
+  private func pick(_ item: ExerciseCatalogItem) {
+    guard !chosen.contains(item.id) else { return }
+    onPick(item)
+    dismiss()
+  }
+
+  private func createCustom() {
+    let name = search.trimmingCharacters(in: .whitespaces)
+    guard name.count >= 2 else { return }
+    let item = ExerciseCatalogItem(
+      id: ExerciseLibrary.slug(name), name: name,
+      muscleGroup: muscle ?? "Geral", equipment: "Livre", imageUrl: nil)
+    guard !chosen.contains(item.id) else { return }
+    onPick(item)
+    dismiss()
+  }
+
+  private func scheduleRemote() {
+    lookup?.cancel()
+    remote = []
+    remotePhase = .idle
+    let term = search.trimmingCharacters(in: .whitespaces)
+    let scope = library
+    let client = wger
+    let animated = !reduceMotion
+    guard term.count >= 3, local.count < 8 else { return }
+    remotePhase = .loading
+    lookup = Task {
+      try? await Task.sleep(for: .milliseconds(500))
+      guard !Task.isCancelled else { return }
+      do {
+        let found = try await client.search(term, excluding: scope)
+        guard !Task.isCancelled else { return }
+        withAnimation(animated ? .easeOut(duration: 0.2) : nil) {
+          remote = found
+          remotePhase = .done
+        }
+      } catch is CancellationError {
+        return
+      } catch {
+        guard !Task.isCancelled else { return }
+        remotePhase = .failed
       }
     }
   }
 }
+
+private struct MuscleChip: View {
+  let title: String
+  let selected: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Text(title)
+        .font(.subheadline.weight(selected ? .semibold : .regular))
+        .foregroundStyle(selected ? .white : Color.ink)
+        .padding(.horizontal, 16).padding(.vertical, 10)
+        .background(selected ? Color.ink : .white, in: .capsule)
+        .overlay(Capsule().strokeBorder(selected ? .clear : Color.ink.opacity(0.1)))
+        .contentShape(.capsule)
+    }
+    .buttonStyle(StudyPressStyle())
+    .accessibilityAddTraits(selected ? .isSelected : [])
+  }
+}
+
+private struct ExercisePickerRow: View {  let item: ExerciseCatalogItem
+  let picked: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 12) {
+        ExerciseThumb(imageUrl: item.imageUrl, size: 56)
+        VStack(alignment: .leading, spacing: 3) {
+          Text(item.name.lowercased())
+            .font(.body.weight(.medium)).foregroundStyle(Color.ink)
+            .lineLimit(2)
+          Text("\(item.muscleGroup.lowercased()) · \(item.equipment.lowercased())")
+            .font(.caption).foregroundStyle(Color.mutedInk)
+            .lineLimit(1)
+        }
+        Spacer(minLength: 8)
+        if picked {
+          Text("no treino").font(.caption2.weight(.medium))
+            .foregroundStyle(Color.mutedInk)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(Color.surfaceMuted, in: .capsule)
+            .accessibilityLabel("\(item.name) já está no treino")
+        } else {
+          Image(systemName: "plus.circle.fill")
+            .font(.title2).foregroundStyle(Color.ink.opacity(0.75))
+            .frame(width: 44, height: 44)
+            .contentShape(.rect)
+            .accessibilityLabel("Adicionar \(item.name)")
+        }
+      }
+      .padding(.horizontal, 16).padding(.vertical, 8)
+      .contentShape(.rect)
+      .opacity(picked ? 0.55 : 1)
+    }
+    .buttonStyle(StudyPressStyle())
+    .disabled(picked)
+  }
+}
+
+#if DEBUG
+  #Preview("Seletor de exercícios") {
+    ExercisePicker(
+      catalog: [
+        ExerciseCatalogItem(
+          id: "supino-reto-barra", name: "Supino reto com barra", muscleGroup: "Peito",
+          equipment: "Barra",
+          imageUrl:
+            "https://wger.de/media/exercise-images/192/Bench-press-1.png.400x400_q85.png"),
+        ExerciseCatalogItem(
+          id: "puxada-fechada", name: "Puxada alta pegada fechada", muscleGroup: "Costas",
+          equipment: "Cabo",
+          imageUrl:
+            "https://wger.de/media/exercise-images/158/0d51a0f2-622f-434b-beb8-1a003c54712a.png.400x400_q85.jpg"
+        ),
+        ExerciseCatalogItem(
+          id: "panturrilha-em-pe", name: "Panturrilha em pé", muscleGroup: "Panturrilha",
+          equipment: "Peso corporal",
+          imageUrl:
+            "https://wger.de/media/exercise-images/622/9a429bd0-afd3-4ad0-8043-e9beec901c81.jpeg.400x400_q85.jpg"
+        ),
+      ],
+      chosen: ["supino-reto-barra"]
+    ) { _ in }
+  }
+
+  #Preview("Linha do exercício") {
+    PlanExercisePreview()
+  }
+
+  private struct PlanExercisePreview: View {
+    @State private var exercise = PlanExercise(
+      exerciseId: "panturrilha-em-pe", prepSets: 2, workSets: 2, repsMin: 8, repsMax: 12,
+      workToFailure: true, startingWeightKg: 0)
+
+    var body: some View {
+      Form {
+        PlanExerciseRow(
+          exercise: $exercise, name: "Panturrilha em pé",
+          subtitle: "panturrilha · peso corporal",
+          imageUrl:
+            "https://wger.de/media/exercise-images/622/9a429bd0-afd3-4ad0-8043-e9beec901c81.jpeg.400x400_q85.jpg"
+        )
+      }
+    }
+  }
+#endif

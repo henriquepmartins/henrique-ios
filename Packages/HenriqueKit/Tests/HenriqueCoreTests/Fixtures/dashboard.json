@@ -75,6 +75,7 @@
   "weekPlan": [
     {
       "id": "tpl-terca",
+      "weekdays": [2],
       "weekday": 2,
       "name": "Empurrar A",
       "focus": "peito, ombro e tríceps",

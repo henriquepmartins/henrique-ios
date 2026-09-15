@@ -129,7 +129,7 @@ struct WorkoutHero: View {
         Spacer()
         if let workout { Label("\(workout.estimatedMinutes) min", systemImage: "clock") }
       }.font(.caption).foregroundStyle(accent.deep)
-      Text(workout?.name.lowercased() ?? "treino leve ou descanso")
+      Text(workout?.name.lowercased() ?? "descanso")
         .font(.system(size: titleSize, weight: .medium)).tracking(-titleSize * 0.055)
         .fixedSize(horizontal: false, vertical: true)
       Text(workout?.focus ?? "Sem treino programado. Mobilidade e uma caminhada curta já contam.")

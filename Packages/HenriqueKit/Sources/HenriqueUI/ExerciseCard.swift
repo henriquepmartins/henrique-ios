@@ -12,8 +12,12 @@ struct ExerciseCard: View {
     VStack(spacing: 0) {
       Button(action: onToggle) {
         HStack(spacing: 12) {
-          Image(systemName: "dumbbell").font(.title3).foregroundStyle(accent.base)
-            .frame(width: 48, height: 48).background(accent.pale.opacity(0.4), in: .circle)
+          if exercise.imageUrl != nil {
+            ExerciseThumb(imageUrl: exercise.imageUrl, size: 48)
+          } else {
+            Image(systemName: "dumbbell").font(.title3).foregroundStyle(accent.base)
+              .frame(width: 48, height: 48).background(accent.pale.opacity(0.4), in: .circle)
+          }
           VStack(alignment: .leading, spacing: 6) {
             Text(exercise.name.lowercased()).font(.headline.weight(.medium))
             Text(prescription).font(.caption).foregroundStyle(Color.mutedInk)

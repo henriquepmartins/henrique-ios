@@ -13,20 +13,21 @@ struct StreakTests {
     try #require(CalendarDate(iso: iso))
   }
 
-  static func planItem(weekday: Int) -> WeekPlanItem {
+  static func planItem(weekdays: [Int]) -> WeekPlanItem {
     WeekPlanItem(
-      id: "tpl-\(weekday)", weekday: weekday, name: "Empurrar A", focus: "peito",
-      exerciseCount: 0, exercises: [], estimatedMinutes: 45)
+      id: "tpl-\(weekdays.map(String.init).joined(separator: "-"))", weekdays: weekdays,
+      name: "Empurrar A", focus: "peito", exerciseCount: 0, exercises: [], estimatedMinutes: 45)
   }
 
+  /// Cada item de `plan` é um treino com os seus dias.
   static func dashboard(
     currentStreak: Int = 0, weeklyCompleted: Int = 0, weeklyPlanned: Int = 0,
-    weekdays: [Int] = [], sessionDates: [CalendarDate]? = []
+    plan: [[Int]] = [], sessionDates: [CalendarDate]? = []
   ) -> Dashboard {
     Dashboard(
       date: Self.terca, workout: nil, consistencyPercent: 0, currentStreak: currentStreak,
       weeklyCompleted: weeklyCompleted, weeklyPlanned: weeklyPlanned,
-      weekPlan: weekdays.map(planItem(weekday:)), sessionDates: sessionDates,
+      weekPlan: plan.map(planItem(weekdays:)), sessionDates: sessionDates,
       exerciseCatalog: [], strengthGoal: nil, progress: [], measurements: [], projection: nil,
       onboardingCompleted: true)
   }
@@ -51,20 +52,28 @@ struct StreakTests {
   func sessionOutsideThePlanIsDone() throws {
     let domingo = try Self.date("2026-09-06")
     let streak = WorkoutStreak(
-      dashboard: Self.dashboard(weekdays: [2], sessionDates: [domingo]), today: Self.terca)
+      dashboard: Self.dashboard(plan: [[2]], sessionDates: [domingo]), today: Self.terca)
     #expect(try Self.state("2026-09-06", in: streak) == .done)
   }
 
   @Test("dia passado com treino no plano e sem sessão fica perdido, sem plano vira folga")
   func pastDaySplitsByThePlan() throws {
-    let streak = WorkoutStreak(dashboard: Self.dashboard(weekdays: [4]), today: Self.terca)
+    let streak = WorkoutStreak(dashboard: Self.dashboard(plan: [[4]]), today: Self.terca)
     #expect(try Self.state("2026-09-03", in: streak) == .missed)
     #expect(try Self.state("2026-09-04", in: streak) == .rest)
   }
 
+  @Test("um treino em dois dias marca os dois na fita")
+  func oneWorkoutOnTwoDays() {
+    let streak = WorkoutStreak(dashboard: Self.dashboard(plan: [[2, 4]]), today: Self.terca)
+    #expect(
+      streak.days.map(\.state) == [.rest, .missed, .rest, .rest, .rest, .rest, .planned])
+    #expect(streak.isAtRisk)
+  }
+
   @Test("hoje planejado e ainda não feito deixa a fita em risco")
   func plannedTodayIsAtRisk() throws {
-    let streak = WorkoutStreak(dashboard: Self.dashboard(weekdays: [2]), today: Self.terca)
+    let streak = WorkoutStreak(dashboard: Self.dashboard(plan: [[2]]), today: Self.terca)
     #expect(try Self.state("2026-09-08", in: streak) == .planned)
     #expect(streak.isAtRisk)
     #expect(!streak.isTodayDone)
@@ -73,14 +82,14 @@ struct StreakTests {
   @Test("hoje já feito tira a fita do risco")
   func doneTodayLeavesNoRisk() throws {
     let streak = WorkoutStreak(
-      dashboard: Self.dashboard(weekdays: [2], sessionDates: [Self.terca]), today: Self.terca)
+      dashboard: Self.dashboard(plan: [[2]], sessionDates: [Self.terca]), today: Self.terca)
     #expect(streak.isTodayDone)
     #expect(!streak.isAtRisk)
   }
 
   @Test("hoje sem treino no plano fica livre")
   func todayWithoutPlanIsOpen() throws {
-    let streak = WorkoutStreak(dashboard: Self.dashboard(weekdays: [4]), today: Self.terca)
+    let streak = WorkoutStreak(dashboard: Self.dashboard(plan: [[4]]), today: Self.terca)
     #expect(try Self.state("2026-09-08", in: streak) == .open)
     #expect(!streak.isAtRisk)
   }
@@ -106,7 +115,7 @@ struct StreakTests {
   @Test("sem sessionDates nenhum dia fica feito")
   func nilSessionDatesMarksNothingDone() {
     let streak = WorkoutStreak(
-      dashboard: Self.dashboard(weekdays: [2], sessionDates: nil), today: Self.terca)
+      dashboard: Self.dashboard(plan: [[2]], sessionDates: nil), today: Self.terca)
     #expect(!streak.days.contains { $0.state == .done })
     #expect(!streak.isTodayDone)
     #expect(streak.isAtRisk)

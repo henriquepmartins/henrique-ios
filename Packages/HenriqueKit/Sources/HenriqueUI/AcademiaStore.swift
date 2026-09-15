@@ -31,6 +31,7 @@ public final class AcademiaStore {
   public private(set) var phase: Phase = .idle
   public private(set) var dashboard: Dashboard?
   public private(set) var inFlight: Set<SetKey> = []
+  private var deletingWorkoutIds: Set<String> = []
   public private(set) var isSignedIn: Bool = false
   public var selectedDate: CalendarDate = .today
   public var banner: String?
@@ -182,6 +183,25 @@ public final class AcademiaStore {
   @discardableResult
   public func saveWorkout(_ input: SaveWorkoutInput) async -> Bool {
     await apply { try await self.client.saveWorkout(input) }
+  }
+
+  /// O plano sem os treinos que estão sendo apagados. O card some no toque, sem
+  /// esperar o servidor apagar as sessões e recalcular o painel.
+  public var weekPlan: [WeekPlanItem] {
+    (dashboard?.weekPlan ?? []).filter { !deletingWorkoutIds.contains($0.id) }
+  }
+
+  /// Volta a mostrar o treino se o servidor recusar. No sucesso o painel novo
+  /// chega na mesma volta do laço, já sem ele, e o card não pisca.
+  public func deleteWorkout(workoutTemplateId: String) {
+    guard deletingWorkoutIds.insert(workoutTemplateId).inserted else { return }
+    let date = selectedDate
+    Task {
+      defer { deletingWorkoutIds.remove(workoutTemplateId) }
+      await apply {
+        try await self.client.deleteWorkout(.init(date: date, workoutTemplateId: workoutTemplateId))
+      }
+    }
   }
 
   @discardableResult

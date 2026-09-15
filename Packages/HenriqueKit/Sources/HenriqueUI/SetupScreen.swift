@@ -54,6 +54,10 @@ struct SetupScreen: View {
   @State private var savedGoal: SetStrengthGoalInput?
   private let days = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"]
 
+  private func catalogItem(_ id: String) -> ExerciseCatalogItem? {
+    store.dashboard?.exerciseCatalog.first { $0.id == id }
+  }
+
   var body: some View {
     NavigationStack {
       ScrollView {
@@ -90,8 +94,11 @@ struct SetupScreen: View {
       .interactiveDismissDisabled(saving)
       .sheet(isPresented: $picking) {
         ExercisePicker(catalog: store.dashboard?.exerciseCatalog ?? [], chosen: Set(exercises.map(\.exerciseId))) { item in
+          let known = (store.dashboard?.exerciseCatalog ?? []).contains(where: { $0.id == item.id })
           exercises.append(PlanExercise(exerciseId: item.id, prepSets: 2, workSets: 2,
-            repsMin: 8, repsMax: 12, workToFailure: true, startingWeightKg: 0))
+            repsMin: 8, repsMax: 12, workToFailure: true, startingWeightKg: 0,
+            name: known ? nil : item.name, muscleGroup: known ? nil : item.muscleGroup,
+            equipment: known ? nil : item.equipment, imageUrl: known ? nil : item.imageUrl))
         }
       }
       .onAppear {
@@ -141,7 +148,11 @@ struct SetupScreen: View {
         ForEach($exercises) { $exercise in
           VStack(alignment: .leading) {
             PlanExerciseRow(exercise: $exercise,
-              name: store.dashboard?.exerciseCatalog.first { $0.id == exercise.exerciseId }?.name ?? exercise.exerciseId)
+              name: catalogItem(exercise.exerciseId)?.name ?? exercise.exerciseId,
+              subtitle: catalogItem(exercise.exerciseId).map {
+                "\($0.muscleGroup.lowercased()) · \($0.equipment.lowercased())"
+              },
+              imageUrl: catalogItem(exercise.exerciseId)?.imageUrl)
             Button("remover", role: .destructive) { exercises.removeAll { $0.exerciseId == exercise.exerciseId } }
               .font(.caption)
           }.padding(18).paperCard()
@@ -176,6 +187,12 @@ struct SetupScreen: View {
     }
   }
 
+  /// O treino que já cai no dia escolhido. Salvar por ele mantém os outros dias
+  /// desse treino em vez de criar um treino novo só para esse dia.
+  private var plannedWorkout: WeekPlanItem? {
+    store.dashboard?.weekPlan.first { $0.weekdays.contains(weekday) }
+  }
+
   private func loadWorkout() {
     if let draft = workoutDrafts[weekday] {
       name = draft.name
@@ -184,7 +201,7 @@ struct SetupScreen: View {
       exercises = draft.exercises
       return
     }
-    let item = store.dashboard?.weekPlan.first { $0.weekday == weekday }
+    let item = plannedWorkout
     name = item?.name ?? ""
     focus = item?.focus ?? ""
     minutes = item?.estimatedMinutes ?? 55
@@ -216,7 +233,9 @@ struct SetupScreen: View {
         error = "Adicione um exercício e confira as séries, repetições e cargas."; return
       }
       let groups = exercises.compactMap { exercise in store.dashboard?.exerciseCatalog.first { $0.id == exercise.exerciseId }?.muscleGroup }
-      let input = SaveWorkoutInput(date: store.selectedDate, weekday: weekday, name: name,
+      let planned = plannedWorkout
+      let input = SaveWorkoutInput(date: store.selectedDate, workoutTemplateId: planned?.id,
+        weekdays: planned?.weekdays ?? [weekday], name: name,
         focus: focus.isEmpty ? Array(Set(groups)).sorted().joined(separator: ", ") : focus, estimatedMinutes: minutes, exercises: exercises)
       if input != savedWorkout {
         guard await store.saveWorkout(input) else { error = store.banner; return }

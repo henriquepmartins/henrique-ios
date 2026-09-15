@@ -80,18 +80,23 @@ public struct AddMeasurementInput: Hashable, Sendable, Encodable {
 
 public struct SaveWorkoutInput: Hashable, Sendable, Encodable {
   public var date: CalendarDate
-  public var weekday: Int
+  /// Nulo cria um treino novo. Com id, atualiza esse treino.
+  public var workoutTemplateId: String?
+  /// Os dias que passam a ser desse treino. Outro treino que tinha algum deles
+  /// perde só esses dias.
+  public var weekdays: [Int]
   public var name: String
   public var focus: String
   public var estimatedMinutes: Int
   public var exercises: [PlanExercise]
 
   public init(
-    date: CalendarDate, weekday: Int, name: String, focus: String, estimatedMinutes: Int,
-    exercises: [PlanExercise]
+    date: CalendarDate, workoutTemplateId: String?, weekdays: [Int], name: String, focus: String,
+    estimatedMinutes: Int, exercises: [PlanExercise]
   ) {
     self.date = date
-    self.weekday = weekday
+    self.workoutTemplateId = workoutTemplateId
+    self.weekdays = weekdays
     self.name = name
     self.focus = focus
     self.estimatedMinutes = estimatedMinutes
@@ -114,4 +119,14 @@ public struct SetStrengthGoalInput: Hashable, Sendable, Encodable {
 public struct DateInput: Hashable, Sendable, Encodable {
   public var date: CalendarDate
   public init(date: CalendarDate) { self.date = date }
+}
+
+public struct DeleteWorkoutInput: Hashable, Sendable, Encodable {
+  public var date: CalendarDate
+  public var workoutTemplateId: String
+
+  public init(date: CalendarDate, workoutTemplateId: String) {
+    self.date = date
+    self.workoutTemplateId = workoutTemplateId
+  }
 }

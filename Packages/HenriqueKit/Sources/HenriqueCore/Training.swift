@@ -67,6 +67,7 @@ public struct DashboardExercise: Codable, Hashable, Sendable, Identifiable {
   public var name: String
   public var muscleGroup: String
   public var equipment: String
+  public var imageUrl: String?
   public var order: Int
   public var prescription: ExercisePrescription
   public var previous: PreviousWorkSets?
@@ -135,12 +136,19 @@ public struct PlanExercise: Codable, Hashable, Sendable, Identifiable {
   public var repsMax: Int
   public var workToFailure: Bool
   public var startingWeightKg: Double
+  /// O que o servidor precisa para criar o exercício quando o id ainda não
+  /// existe no banco. Nulo quando o exercício já é do catálogo.
+  public var name: String?
+  public var muscleGroup: String?
+  public var equipment: String?
+  public var imageUrl: String?
 
   public var id: String { exerciseId }
 
   public init(
     exerciseId: String, prepSets: Int, workSets: Int, repsMin: Int, repsMax: Int,
-    workToFailure: Bool, startingWeightKg: Double
+    workToFailure: Bool, startingWeightKg: Double, name: String? = nil,
+    muscleGroup: String? = nil, equipment: String? = nil, imageUrl: String? = nil
   ) {
     self.exerciseId = exerciseId
     self.prepSets = prepSets
@@ -149,17 +157,96 @@ public struct PlanExercise: Codable, Hashable, Sendable, Identifiable {
     self.repsMax = repsMax
     self.workToFailure = workToFailure
     self.startingWeightKg = startingWeightKg
+    self.name = name
+    self.muscleGroup = muscleGroup
+    self.equipment = equipment
+    self.imageUrl = imageUrl
   }
 }
 
 public struct WeekPlanItem: Codable, Hashable, Sendable, Identifiable {
   public var id: String
-  public var weekday: Int
+  /// Em ordem crescente e nunca vazio. Treino sem dia não entra no plano.
+  public var weekdays: [Int]
   public var name: String
   public var focus: String
   public var exerciseCount: Int
   public var exercises: [PlanExercise]
   public var estimatedMinutes: Int
+
+  /// O dia desse treino mais perto de `today`, andando para a frente. Hoje
+  /// conta como distância zero, então quem treina hoje fica em hoje.
+  public func nextWeekday(from today: Int) -> Int {
+    weekdays.min { ($0 - today + 7) % 7 < ($1 - today + 7) % 7 } ?? today
+  }
+}
+
+extension WeekPlanItem {
+  /// Lista vazia é recusada aqui, na entrada, para a tela poder ler `weekdays[0]`
+  /// sem guarda. Fica na extensão para o init memberwise continuar existindo.
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    id = try container.decode(String.self, forKey: .id)
+    weekdays = try container.decode([Int].self, forKey: .weekdays)
+    guard !weekdays.isEmpty else {
+      throw DecodingError.dataCorruptedError(
+        forKey: .weekdays, in: container, debugDescription: "treino sem nenhum dia")
+    }
+    name = try container.decode(String.self, forKey: .name)
+    focus = try container.decode(String.self, forKey: .focus)
+    exerciseCount = try container.decode(Int.self, forKey: .exerciseCount)
+    exercises = try container.decode([PlanExercise].self, forKey: .exercises)
+    estimatedMinutes = try container.decode(Int.self, forKey: .estimatedMinutes)
+  }
+}
+
+/// Os dias que um treino perde quando outro é salvo com eles.
+public struct WeekdayHandoff: Hashable, Sendable {
+  public var workoutName: String
+  public var weekdays: [Int]
+  /// Perdeu todos os dias, então sai do plano. As sessões e séries continuam no
+  /// banco.
+  public var leavesPlan: Bool
+
+  public init(workoutName: String, weekdays: [Int], leavesPlan: Bool) {
+    self.workoutName = workoutName
+    self.weekdays = weekdays
+    self.leavesPlan = leavesPlan
+  }
+}
+
+/// Quem ocupa cada dia da semana, sem contar o treino que está sendo editado.
+/// O plano tem no máximo um treino por dia, então o mapa nunca perde dono.
+public struct WeekdayOwners: Sendable {
+  private let byWeekday: [Int: WeekPlanItem]
+
+  public init(plan: some Sequence<WeekPlanItem>, excluding workoutId: String?) {
+    var byWeekday: [Int: WeekPlanItem] = [:]
+    for item in plan where item.id != workoutId {
+      for day in item.weekdays { byWeekday[day] = item }
+    }
+    self.byWeekday = byWeekday
+  }
+
+  public subscript(weekday: Int) -> WeekPlanItem? { byWeekday[weekday] }
+
+  /// O que salvar com `selection` tira dos outros treinos, na ordem do primeiro
+  /// dia tirado de cada um.
+  public func handoffs(to selection: Set<Int>) -> [WeekdayHandoff] {
+    var handoffs: [(id: String, handoff: WeekdayHandoff)] = []
+    for day in selection.sorted() {
+      guard let owner = byWeekday[day] else { continue }
+      if let index = handoffs.firstIndex(where: { $0.id == owner.id }) {
+        handoffs[index].handoff.weekdays.append(day)
+      } else {
+        let handoff = WeekdayHandoff(
+          workoutName: owner.name, weekdays: [day],
+          leavesPlan: Set(owner.weekdays).isSubset(of: selection))
+        handoffs.append((owner.id, handoff))
+      }
+    }
+    return handoffs.map(\.handoff)
+  }
 }
 
 public struct ExerciseCatalogItem: Codable, Hashable, Sendable, Identifiable {
@@ -167,6 +254,19 @@ public struct ExerciseCatalogItem: Codable, Hashable, Sendable, Identifiable {
   public var name: String
   public var muscleGroup: String
   public var equipment: String
+  public var imageUrl: String?
+
+  public init(id: String, name: String, muscleGroup: String, equipment: String, imageUrl: String? = nil) {
+    self.id = id
+    self.name = name
+    self.muscleGroup = muscleGroup
+    self.equipment = equipment
+    self.imageUrl = imageUrl
+  }
+
+  /// De onde veio a linha, para o seletor separar o catálogo local da base
+  /// pública sem precisar de outro tipo.
+  public var isRemote: Bool { id.hasPrefix("wger-") }
 }
 
 public struct StrengthGoal: Codable, Hashable, Sendable {

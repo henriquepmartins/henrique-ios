@@ -34,7 +34,7 @@ extension WorkoutStreak {
   /// como feito. Esconder a fita inteira é decisão da tela.
   public init(dashboard: Dashboard, today: CalendarDate = .today) {
     let done = Set(dashboard.sessionDates ?? [])
-    let plannedWeekdays = Set(dashboard.weekPlan.map(\.weekday))
+    let plannedWeekdays = Set(dashboard.weekPlan.flatMap(\.weekdays))
 
     let days = (0..<7).map { offset in
       let date = today.adding(days: offset - 6)

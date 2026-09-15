@@ -106,6 +106,70 @@ struct ContractTests {
     #expect(json["setIndex"] as? Int == 2)
   }
 
+  @Test("apagar treino manda data e id do treino")
+  func deleteWorkoutEncodesKeys() throws {
+    let input = DeleteWorkoutInput(
+      date: try #require(CalendarDate(iso: "2026-09-08")), workoutTemplateId: "tpl-terca")
+    let json = try #require(
+      JSONSerialization.jsonObject(with: JSONEncoder().encode(input)) as? [String: Any])
+    #expect(json["date"] as? String == "2026-09-08")
+    #expect(json["workoutTemplateId"] as? String == "tpl-terca")
+  }
+
+  static func planItem(_ json: String) throws -> WeekPlanItem {
+    try JSONDecoder.henrique().decode(WeekPlanItem.self, from: Data(json.utf8))
+  }
+
+  @Test("o treino do plano decodifica todos os dias")
+  func planItemDecodesWeekdays() throws {
+    let item = try Self.planItem(
+      """
+      {"id": "tpl-1", "weekdays": [1, 4], "weekday": 1, "name": "Superiores",
+       "focus": "peito e costas", "exerciseCount": 0, "exercises": [], "estimatedMinutes": 55}
+      """)
+    #expect(item.weekdays == [1, 4])
+  }
+
+  @Test("treino com a lista de dias vazia é recusado")
+  func planItemRejectsEmptyWeekdays() {
+    #expect(throws: DecodingError.self) {
+      try Self.planItem(
+        """
+        {"id": "tpl-1", "weekdays": [], "name": "Superiores", "focus": "peito",
+         "exerciseCount": 0, "exercises": [], "estimatedMinutes": 55}
+        """)
+    }
+  }
+
+  @Test("salvar treino manda o id e os dias, sem o weekday antigo")
+  func saveWorkoutEncodesWeekdays() throws {
+    let input = SaveWorkoutInput(
+      date: try #require(CalendarDate(iso: "2026-09-15")), workoutTemplateId: "tpl-1",
+      weekdays: [1, 4], name: "Superiores", focus: "peito e costas", estimatedMinutes: 55,
+      exercises: [])
+    let json = try #require(
+      JSONSerialization.jsonObject(with: JSONEncoder().encode(input)) as? [String: Any])
+    #expect(
+      Set(json.keys) == [
+        "date", "workoutTemplateId", "weekdays", "name", "focus", "estimatedMinutes", "exercises",
+      ])
+    #expect(json["workoutTemplateId"] as? String == "tpl-1")
+    #expect(json["weekdays"] as? [Int] == [1, 4])
+    #expect(json["date"] as? String == "2026-09-15")
+  }
+
+  @Test("treino novo sai sem workoutTemplateId")
+  func newWorkoutOmitsTemplateId() throws {
+    let input = SaveWorkoutInput(
+      date: try #require(CalendarDate(iso: "2026-09-15")), workoutTemplateId: nil,
+      weekdays: [2], name: "Pernas", focus: "quadríceps", estimatedMinutes: 45, exercises: [])
+    let json = try #require(
+      JSONSerialization.jsonObject(with: JSONEncoder().encode(input)) as? [String: Any])
+    #expect(
+      Set(json.keys) == ["date", "weekdays", "name", "focus", "estimatedMinutes", "exercises"])
+    #expect(json["weekdays"] as? [Int] == [2])
+  }
+
   @Test("a estimativa de 1RM bate com a do servidor")
   func oneRepMaxMatchesServer() {
     #expect(estimateOneRepMax(weightKg: 42.5, reps: 9) == 42.5 * (1 + 9.0 / 30))
@@ -138,6 +202,11 @@ struct CapturedResponseTests {
     #expect(dashboard.workout != nil)
     #expect(!dashboard.exerciseCatalog.isEmpty)
     #expect(!dashboard.weekPlan.isEmpty)
+  }
+
+  @Test("o painel do servidor traz os dias de cada treino")
+  func serverPlanDecodesWeekdays() throws {
+    #expect(try Self.dashboard().weekPlan.map(\.weekdays) == [[0], [1], [3], [5]])
   }
 
   @Test("o instante gravado pelo Postgres decodifica")

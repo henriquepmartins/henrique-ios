@@ -109,6 +109,7 @@
   "weekPlan": [
     {
       "id": "ea628b55-9e7d-4dbd-9db0-6f01a58a7fed",
+      "weekdays": [0],
       "weekday": 0,
       "name": "treino sonda",
       "focus": "Quadríceps",
@@ -137,6 +138,7 @@
     },
     {
       "id": "treino-pernas-a",
+      "weekdays": [1],
       "weekday": 1,
       "name": "Pernas e glúteos",
       "focus": "Quadríceps, posterior e glúteos",
@@ -174,6 +176,7 @@
     },
     {
       "id": "treino-superiores-a",
+      "weekdays": [3],
       "weekday": 3,
       "name": "Superiores",
       "focus": "Peito, costas e ombros",
@@ -211,6 +214,7 @@
     },
     {
       "id": "treino-costas-bracos",
+      "weekdays": [5],
       "weekday": 5,
       "name": "lower 2",
       "focus": "Costas, bíceps e estabilidade",
