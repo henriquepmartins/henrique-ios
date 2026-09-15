@@ -7,13 +7,16 @@ extension Color {
   static let surfaceMuted = Color(hex: 0xf0efed)
 }
 
-/// A paleta dos cards de treino. Um card não tem cor própria, ele herda a vaga
-/// que calhou na lista, então o par vem endereçado por índice e não por nome do
-/// treino. O tom escuro é o único legível sobre os dois extremos do degradê.
+/// A paleta dos cards de treino. Um treino sem cor escolhida herda o tom do seu
+/// primeiro dia, então o par também vem endereçado por índice. O tom escuro é o
+/// único legível sobre os dois extremos do degradê.
 struct WorkoutTone: Sendable, Hashable {
   let top: Color
   let bottom: Color
   let ink: Color
+  /// `#rrggbb` do topo. Um treino novo nasce com o primeiro hex da paleta que
+  /// nenhum outro treino usa.
+  let hex: String
 
   static let all: [WorkoutTone] = [
     WorkoutTone(top: 0xf9_7316, bottom: 0xfd_ba74, ink: 0x43_1407),
@@ -30,10 +33,102 @@ struct WorkoutTone: Sendable, Hashable {
     all[((index % all.count) + all.count) % all.count]
   }
 
+  /// O tom de uma cor qualquer do servidor. Nulo quando a string não é `#rrggbb`.
+  static func from(hex: String) -> WorkoutTone? {
+    WorkoutColor(hex: hex)?.tone
+  }
+
+  /// O primeiro tom da paleta fora de `used`. Com a paleta esgotada, dá a volta.
+  static func unused(among used: [String]) -> WorkoutTone {
+    let taken = Set(used.map { $0.lowercased() })
+    return all.first { !taken.contains($0.hex) } ?? at(used.count)
+  }
+
   private init(top: UInt32, bottom: UInt32, ink: UInt32) {
     self.top = Color(hex: top)
     self.bottom = Color(hex: bottom)
     self.ink = Color(hex: ink)
+    hex = String(format: "#%06x", top)
+  }
+
+  fileprivate init(top: Color, bottom: Color, ink: Color, hex: String) {
+    self.top = top
+    self.bottom = bottom
+    self.ink = ink
+    self.hex = hex
+  }
+}
+
+/// A cor do treino como o seletor mexe nela. Fica em matiz, saturação e brilho
+/// porque é isso que o dedo arrasta; o hex só entra e sai na borda do servidor.
+struct WorkoutColor: Hashable, Sendable {
+  var hue: Double
+  var saturation: Double
+  var brightness: Double
+
+  init(hue: Double, saturation: Double, brightness: Double) {
+    self.hue = hue
+    self.saturation = saturation
+    self.brightness = brightness
+  }
+
+  init?(hex: String) {
+    var digits = Substring(hex)
+    if digits.hasPrefix("#") { digits = digits.dropFirst() }
+    guard digits.count == 6, let rgb = UInt32(digits, radix: 16) else { return nil }
+    let r = Double((rgb >> 16) & 0xff) / 255
+    let g = Double((rgb >> 8) & 0xff) / 255
+    let b = Double(rgb & 0xff) / 255
+    let high = max(r, g, b)
+    let low = min(r, g, b)
+    let delta = high - low
+    brightness = high
+    saturation = high == 0 ? 0 : delta / high
+    if delta == 0 {
+      hue = 0
+    } else if high == r {
+      hue = ((g - b) / delta).truncatingRemainder(dividingBy: 6) / 6
+    } else if high == g {
+      hue = ((b - r) / delta + 2) / 6
+    } else {
+      hue = ((r - g) / delta + 4) / 6
+    }
+    if hue < 0 { hue += 1 }
+  }
+
+  var hex: String {
+    let (r, g, b) = rgb
+    return String(format: "#%02x%02x%02x", Int((r * 255).rounded()), Int((g * 255).rounded()), Int((b * 255).rounded()))
+  }
+
+  /// O par de degradê e a tinta, com a mesma fórmula que gerou a paleta fixa.
+  /// Abaixo de 0.4 de brilho a tinta vira branca, porque tinta escura sobre
+  /// bloco escuro some.
+  var tone: WorkoutTone {
+    WorkoutTone(
+      top: Color(hue: hue, saturation: saturation, brightness: brightness),
+      bottom: Color(hue: hue, saturation: saturation * 0.55, brightness: min(1, brightness * 0.25 + 0.75)),
+      ink: brightness < 0.4
+        ? .white
+        : Color(hue: hue, saturation: min(1, saturation * 1.1), brightness: brightness * 0.26),
+      hex: hex)
+  }
+
+  private var rgb: (Double, Double, Double) {
+    let c = brightness * saturation
+    let sector = hue * 6
+    let x = c * (1 - abs(sector.truncatingRemainder(dividingBy: 2) - 1))
+    let m = brightness - c
+    let (r, g, b): (Double, Double, Double) =
+      switch Int(sector) % 6 {
+      case 0: (c, x, 0)
+      case 1: (x, c, 0)
+      case 2: (0, c, x)
+      case 3: (0, x, c)
+      case 4: (x, 0, c)
+      default: (c, 0, x)
+      }
+    return (r + m, g + m, b + m)
   }
 }
 
