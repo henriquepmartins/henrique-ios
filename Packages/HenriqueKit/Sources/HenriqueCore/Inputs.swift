@@ -22,9 +22,9 @@ public enum RecordSetInput: Hashable, Sendable, Encodable {
       self.date = date
       self.workoutTemplateId = workoutTemplateId
       self.exerciseId = exerciseId
-      self.setIndex = setIndex
-      self.weightKg = weightKg
-      self.reps = reps
+      self.setIndex = setIndex.clamped(to: Limits.setIndex)
+      self.weightKg = weightKg.clamped(to: Limits.setWeightKg)
+      self.reps = reps.clamped(to: Limits.reps)
       self.completed = completed
     }
   }
@@ -69,12 +69,12 @@ public struct AddMeasurementInput: Hashable, Sendable, Encodable {
     chestCm: Double? = nil, armCm: Double? = nil, thighCm: Double? = nil
   ) {
     self.date = date
-    self.weightKg = weightKg
-    self.bodyFatPercent = bodyFatPercent
-    self.waistCm = waistCm
-    self.chestCm = chestCm
-    self.armCm = armCm
-    self.thighCm = thighCm
+    self.weightKg = weightKg.clamped(to: Limits.bodyWeightKg)
+    self.bodyFatPercent = bodyFatPercent?.clamped(to: Limits.bodyFatPercent)
+    self.waistCm = waistCm?.clamped(to: Limits.waistCm)
+    self.chestCm = chestCm?.clamped(to: Limits.chestCm)
+    self.armCm = armCm?.clamped(to: Limits.armCm)
+    self.thighCm = thighCm?.clamped(to: Limits.thighCm)
   }
 }
 
@@ -99,11 +99,31 @@ public struct SaveWorkoutInput: Hashable, Sendable, Encodable {
     self.date = date
     self.workoutTemplateId = workoutTemplateId
     self.weekdays = weekdays
-    self.name = name
-    self.focus = focus
-    self.estimatedMinutes = estimatedMinutes
+    self.name = name.trimmingCharacters(in: .whitespaces).cut(to: Limits.workoutNameLength)
+    self.focus = focus.trimmingCharacters(in: .whitespaces).cut(to: Limits.workoutFocusLength)
+    self.estimatedMinutes = estimatedMinutes.clamped(to: Limits.estimatedMinutes)
     self.color = color
-    self.exercises = exercises
+    self.exercises = exercises.map(\.withinLimits)
+  }
+}
+
+extension PlanExercise {
+  /// O mesmo exercício com cada campo dentro da faixa do servidor. O topo das
+  /// repetições sobe até a base quando ficou abaixo dela, porque o servidor
+  /// recusa a faixa invertida.
+  fileprivate var withinLimits: PlanExercise {
+    var copy = self
+    copy.exerciseId = exerciseId.cut(to: Limits.exerciseIdLength)
+    copy.prepSets = prepSets.clamped(to: Limits.prepSets)
+    copy.workSets = workSets.clamped(to: Limits.workSets)
+    copy.repsMin = repsMin.clamped(to: Limits.planReps)
+    copy.repsMax = max(repsMax.clamped(to: Limits.planReps), copy.repsMin)
+    copy.startingWeightKg = startingWeightKg.clamped(to: Limits.startingWeightKg)
+    copy.name = name?.cut(to: Limits.exerciseNameLength)
+    copy.muscleGroup = muscleGroup?.cut(to: Limits.muscleGroupLength)
+    copy.equipment = equipment?.cut(to: Limits.equipmentLength)
+    copy.imageUrl = imageUrl?.cut(to: Limits.imageUrlLength)
+    return copy
   }
 }
 
@@ -125,7 +145,7 @@ public struct SetStrengthGoalInput: Hashable, Sendable, Encodable {
   public init(date: CalendarDate, exerciseId: String, targetValue: Double) {
     self.date = date
     self.exerciseId = exerciseId
-    self.targetValue = targetValue
+    self.targetValue = targetValue.clamped(to: Limits.strengthTarget)
   }
 }
 
@@ -137,7 +157,7 @@ public struct SetStreakGoalInput: Hashable, Sendable, Encodable {
   public init(date: CalendarDate, kind: StreakKind, target: Int) {
     self.date = date
     self.kind = kind
-    self.target = target
+    self.target = target.clamped(to: Limits.streakTarget)
   }
 }
 
