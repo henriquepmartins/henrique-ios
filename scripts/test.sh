@@ -14,6 +14,7 @@
 set -euo pipefail
 
 export DEVELOPER_DIR="${DEVELOPER_DIR:-$HOME/Downloads/Xcode-beta.app/Contents/Developer}"
+if [ ! -d "$DEVELOPER_DIR" ]; then unset DEVELOPER_DIR; fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT/Packages/HenriqueKit"
 

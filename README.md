@@ -1,6 +1,6 @@
-# Academia
+# h&nrique
 
-O módulo Academia do life hub, nativo em SwiftUI para iOS 26, com Liquid Glass.
+App h&nrique, nativo em SwiftUI para iOS 26, com Liquid Glass.
 Fala com a mesma API do app web, então treino, séries, medidas e metas são os
 mesmos dados nos dois lugares.
 
@@ -25,6 +25,47 @@ mesmos dados nos dois lugares.
 
 O endereço da API vem de `HENRIQUE_API_BASE_URL` nas configurações de build:
 `http://localhost:3000` no Debug e o domínio de produção no Release.
+
+## Instalar o app nativo com AltStore
+
+O iPhone precisa de iOS 26 ou superior. O AltStore Classic usa a conta gratuita
+da Apple para assinar o app por 7 dias e tenta renovar a assinatura em segundo
+plano. Deixe o AltServer aberto no Mac e os dois aparelhos na mesma rede Wi-Fi.
+A renovação depende dessa conexão e da execução em segundo plano no iPhone.
+
+Gere o arquivo de instalação no Mac com Xcode e o SDK do iOS 26:
+
+```sh
+./scripts/package-ipa.sh
+```
+
+O script compila o alvo `Henrique` em Release para arm64, confere o endereço
+`https://hnrq.vercel.app` e gera `output/Henrique.ipa`. O arquivo sai sem
+assinatura. O AltStore assina quando instala. O script aceita `DEVELOPER_DIR`
+e usa `~/Downloads/Xcode-beta.app` se ele existir e a variável não estiver definida.
+Cada execução substitui o IPA anterior depois de conferir o novo arquivo.
+
+1. Instale o [AltServer para macOS](https://faq.altstore.io/altstore-classic/how-to-install-altstore-macos)
+   e deixe-o aberto.
+2. Conecte o iPhone ao Mac por cabo e confirme a confiança no computador.
+   No Finder, selecione o iPhone e ative "Mostrar este iPhone quando em Wi-Fi".
+3. No menu do AltServer, escolha "Install AltStore" e selecione o iPhone.
+   Digite sua conta da Apple diretamente na janela do AltServer.
+4. No iPhone, confie no desenvolvedor em Ajustes > Geral > VPN e Gerenciamento
+   de Dispositivo. Ative o Modo de Desenvolvedor em Ajustes > Privacidade e Segurança.
+5. Transfira `output/Henrique.ipa` para o app Arquivos do iPhone, por exemplo
+   por AirDrop. No AltStore, abra "My Apps", toque em "+" e escolha o IPA.
+6. Ative a atualização em segundo plano para o AltStore. Com o AltServer aberto,
+   confira em "My Apps" se "Refresh All" renova a assinatura pela rede Wi-Fi.
+
+O AltStore também ocupa uma das vagas da conta gratuita. Consulte os
+[limites e a renovação do AltStore Classic](https://faq.altstore.io/altstore-classic/your-altstore).
+Se a assinatura vencer, renove pelo AltStore e AltServer. Não apague o app para
+renovar. Ao instalar uma atualização, use a mesma conta da Apple e o mesmo app.
+
+Os registros que a API confirmou ficam no servidor. Renovar a assinatura não
+substitui backup do banco, nem garante o envio de alterações que ainda não
+foram salvas. O IPA não inclui um backup dos dados da conta.
 
 ## Ver as telas sem servidor
 

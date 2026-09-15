@@ -3,6 +3,7 @@
 set -euo pipefail
 
 export DEVELOPER_DIR="${DEVELOPER_DIR:-$HOME/Downloads/Xcode-beta.app/Contents/Developer}"
+if [ ! -d "$DEVELOPER_DIR" ]; then unset DEVELOPER_DIR; fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEVICE="${1:-iPhone 17 Pro}"
 BUNDLE=app.henrique.academia
@@ -20,6 +21,7 @@ xcodebuild build \
   -destination "platform=iOS Simulator,name=$DEVICE" \
   -derivedDataPath "$ROOT/.derived" \
   -skipMacroValidation \
+  CODE_SIGNING_ALLOWED=NO \
   | grep -E 'error:|BUILD SUCCEEDED|BUILD FAILED'
 
 xcrun simctl boot "$DEVICE" 2>/dev/null || true

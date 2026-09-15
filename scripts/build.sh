@@ -6,6 +6,7 @@
 set -euo pipefail
 
 export DEVELOPER_DIR="${DEVELOPER_DIR:-$HOME/Downloads/Xcode-beta.app/Contents/Developer}"
+if [ ! -d "$DEVELOPER_DIR" ]; then unset DEVELOPER_DIR; fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DESTINATION="${DESTINATION:-platform=iOS Simulator,name=iPhone 17 Pro}"
 
@@ -14,4 +15,5 @@ xcodebuild build \
   -destination "$DESTINATION" \
   -derivedDataPath "$ROOT/.derived" \
   -skipMacroValidation \
+  CODE_SIGNING_ALLOWED=NO \
   "$@" | grep -vE '^\s*$' | tail -40

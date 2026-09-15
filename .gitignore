@@ -1,5 +1,6 @@
 .build/
 .derived/
+output/
 .swiftpm/
 *.xcuserdatad
 xcuserdata/
