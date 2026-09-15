@@ -11,8 +11,6 @@ struct WeekScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
-        PageHeading(eyebrow: "sua semana", title: "plano de treino",
-                    subtitle: "Distribua o esforço e deixe espaço para recuperar.")
         Button("novo treino", systemImage: "plus") { editor = .new(weekdays: newWorkoutWeekdays) }
           .buttonStyle(.glassProminent)
           .controlSize(.large)
@@ -153,8 +151,8 @@ private struct WorkoutTile: View {
   private var menuLayer: some View {
     VStack(alignment: .trailing, spacing: 0) {
       Menu {
-        Button("editar treino", systemImage: "pencil", action: onEdit)
-        Button("apagar treino", systemImage: "trash", role: .destructive) { confirmDelete = true }
+        Button("editar", systemImage: "pencil", action: onEdit)
+        Button("apagar", systemImage: "trash", role: .destructive) { confirmDelete = true }
       } label: {
         // O espaço invisível no corpo do nome dá a altura da linha, então os
         // três pontos caem no meio dela em qualquer tamanho de texto.
@@ -262,18 +260,14 @@ struct WorkoutEditor: View {
       Form {
         WorkoutDaysSection(selection: $weekdays, workoutId: workoutId)
 
-        Section("Treino") {
+        Section {
           TextField("nome", text: $name)
           TextField("foco", text: $focus)
-          TextField("duração em minutos", value: $estimatedMinutes, format: .number)
+          TextField("minutos", value: $estimatedMinutes, format: .number)
             .decimalInput()
         }
 
         Section {
-          if exercises.isEmpty {
-            Text("Adicione um exercício para montar o treino.")
-              .foregroundStyle(Color.mutedInk)
-          }
           ForEach($exercises) { $exercise in
             let exerciseId = exercise.exerciseId
             let info = exerciseInfo[exerciseId]
@@ -298,17 +292,17 @@ struct WorkoutEditor: View {
             }
           }
 
-          Button("Adicionar exercício", systemImage: "plus") {
+          Button("adicionar", systemImage: "plus") {
             isPickingExercise = true
           }
           .disabled(exercises.count >= 12)
         } header: {
           HStack {
-            Text("Exercícios")
+            Text("exercícios")
             Spacer()
             #if os(iOS)
             if !exercises.isEmpty || isOrganizing {
-              Button(isOrganizing ? "Concluir" : "Organizar") {
+              Button(isOrganizing ? "ok" : "ordenar") {
                 withAnimation(editAnimation) {
                   editMode = isOrganizing ? .inactive : .active
                 }
@@ -323,14 +317,6 @@ struct WorkoutEditor: View {
             }
             #endif
           }
-        } footer: {
-          #if os(iOS)
-          Text(isOrganizing
-            ? "Arraste pelas alças à direita para trocar a ordem. Toque em Concluir para ajustar as séries. As alterações só entram ao salvar."
-            : "Use a lixeira para remover um exercício ou Organizar para trocar a ordem. As alterações só entram ao salvar.")
-          #else
-          Text("Use a lixeira para remover um exercício. As alterações só entram ao salvar.")
-          #endif
         }
 
         if workoutId != nil {
@@ -350,15 +336,15 @@ struct WorkoutEditor: View {
       .transaction { transaction in
         if reduceMotion { transaction.disablesAnimations = true }
       }
-      .navigationTitle(name.isEmpty ? "Treino" : name)
+      .navigationTitle(name.isEmpty ? "novo treino" : name)
       .toolbarTitleDisplayMode(.inline)
       .interactiveDismissDisabled(isSaving)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button("Cancelar") { dismiss() }.disabled(isSaving)
+          Button("cancelar") { dismiss() }.disabled(isSaving)
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button(isSaving ? "Salvando" : "Salvar") { save() }.disabled(!canSave || isSaving)
+          Button("salvar") { save() }.disabled(!canSave || isSaving)
         }
       }
       .sheet(isPresented: $isPickingExercise) {
@@ -444,9 +430,8 @@ private struct WorkoutDaysSection: View {
   private static func note(_ handoff: WeekdayHandoff) -> String {
     let days = spokenWeekdays(handoff.weekdays)
     let verb = handoff.weekdays.count == 1 ? "sai" : "saem"
-    guard handoff.leavesPlan else { return "\(days) \(verb) de \(handoff.workoutName)." }
-    return "\(days) \(verb) de \(handoff.workoutName), que fica sem dia e sai do plano. "
-      + "As séries já registradas nele continuam no progresso."
+    guard handoff.leavesPlan else { return "\(days) \(verb) de \(handoff.workoutName)" }
+    return "\(handoff.workoutName) sai do plano"
   }
 }
 
@@ -491,7 +476,7 @@ private extension View {
       Button("apagar", role: .destructive, action: onDelete)
       Button("cancelar", role: .cancel) {}
     } message: {
-      Text("As séries já registradas nesse treino somem junto.")
+      Text("as séries somem junto")
     }
   }
 }
@@ -523,7 +508,7 @@ struct PlanExerciseRow: View {
         VStack(alignment: .leading, spacing: 3) {
           Text(name.lowercased()).font(.headline.weight(.semibold))
           if isOrganizing {
-            Text("\(exercise.workSets) séries · \(exercise.repsMin) a \(exercise.repsMax) reps")
+            Text("\(exercise.workSets) × \(exercise.repsMin)-\(exercise.repsMax)")
               .font(.caption).foregroundStyle(Color.mutedInk).monospacedDigit()
           } else if let subtitle {
             Text(subtitle).font(.caption).foregroundStyle(Color.mutedInk)
@@ -543,14 +528,13 @@ struct PlanExerciseRow: View {
       .padding(.top, isOrganizing ? 0 : 6)
       if !isOrganizing {
         Divider()
-        ExerciseStepperRow(
-          label: "séries de aquecimento", value: $exercise.prepSets, range: 0...6)
+        ExerciseStepperRow(label: "aquecimento", value: $exercise.prepSets, range: 0...6)
         Divider()
-        ExerciseStepperRow(label: "séries de trabalho", value: $exercise.workSets, range: 1...10)
+        ExerciseStepperRow(label: "valendo", value: $exercise.workSets, range: 1...10)
         Divider()
-        ExerciseStepperRow(label: "reps mínimas", value: $exercise.repsMin, range: 1...50)
+        ExerciseStepperRow(label: "reps mín.", value: $exercise.repsMin, range: 1...50)
         Divider()
-        ExerciseStepperRow(label: "reps máximas", value: $exercise.repsMax, range: 1...50)
+        ExerciseStepperRow(label: "reps máx.", value: $exercise.repsMax, range: 1...50)
         Divider()
         WeightStepper(weightKg: $exercise.startingWeightKg)
         Divider()
@@ -668,9 +652,9 @@ struct ExercisePicker: View {
               }
               if !remote.isEmpty {
                 HStack {
-                  Text("da base pública").font(.caption).foregroundStyle(Color.mutedInk)
+                  Text("wger").font(.caption).foregroundStyle(Color.mutedInk)
                   Spacer()
-                  Text("nomes em inglês").font(.caption2).foregroundStyle(Color.mutedInk.opacity(0.7))
+                  Text("em inglês").font(.caption2).foregroundStyle(Color.mutedInk.opacity(0.7))
                 }
                 .padding(.horizontal, 16).padding(.top, 18).padding(.bottom, 4)
                 ForEach(Array(remote.enumerated()), id: \.element.id) { index, item in
@@ -681,15 +665,13 @@ struct ExercisePicker: View {
                   .staggeredEntrance(index: index, isReady: remotePhase == .done)
                   Divider().padding(.leading, 76).opacity(0.6)
                 }
-                Text("Fotos da base pública wger.de, licença CC-BY-SA.")
+                Text("fotos wger.de, CC-BY-SA")
                   .font(.caption2).foregroundStyle(Color.mutedInk.opacity(0.7))
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .padding(.horizontal, 16).padding(.vertical, 10)
               } else if remotePhase == .loading {
-                HStack(spacing: 10) {
-                  ProgressView().controlSize(.small)
-                  Text("buscando na base pública…").font(.caption).foregroundStyle(Color.mutedInk)
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                ProgressView().controlSize(.small)
+                  .frame(maxWidth: .infinity, alignment: .leading).padding(16)
               }
               if !search.trimmingCharacters(in: .whitespaces).isEmpty, !exactMatch {
                 Button { createCustom() } label: {
@@ -697,9 +679,9 @@ struct ExercisePicker: View {
                     Circle().fill(Color.surfaceMuted).frame(width: 56, height: 56)
                       .overlay { Image(systemName: "plus").foregroundStyle(Color.mutedInk) }
                     VStack(alignment: .leading, spacing: 2) {
-                      Text("Criar \"\(search.trimmingCharacters(in: .whitespaces))\"")
+                      Text("criar \"\(search.trimmingCharacters(in: .whitespaces))\"")
                         .font(.body.weight(.medium)).foregroundStyle(Color.ink)
-                      Text("\(muscle ?? "geral") · entra no treino e no catálogo")
+                      Text(muscle ?? "geral")
                         .font(.caption).foregroundStyle(Color.mutedInk)
                     }
                     Spacer(minLength: 0)
@@ -715,7 +697,7 @@ struct ExercisePicker: View {
                 Image(systemName: "magnifyingglass")
                   .foregroundStyle(Color.mutedInk)
                   .padding(.leading, 2)
-                TextField("buscar exercício, músculo ou aparelho", text: $search)
+                TextField("buscar", text: $search)
                   .focused($searchFocused)
                   .textInputAutocapitalization(.never)
                   .autocorrectionDisabled()
@@ -744,11 +726,6 @@ struct ExercisePicker: View {
                   }
                 }.padding(.horizontal, 16).padding(.vertical, 2)
               }
-              HStack {
-                Text(local.isEmpty ? "nada por aqui" : "\(local.count) no catálogo")
-                  .font(.caption).foregroundStyle(Color.mutedInk).monospacedDigit()
-                Spacer(minLength: 0)
-              }.padding(.horizontal, 16)
             }
             .padding(.top, 8).padding(.bottom, 6)
             .background(Color.canvas)
@@ -756,11 +733,11 @@ struct ExercisePicker: View {
         }
       }
       .background(Color.canvas)
-      .navigationTitle("Exercícios")
+      .navigationTitle("exercícios")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button("Fechar") { dismiss() }
+          Button("fechar") { dismiss() }
         }
       }
       .onAppear { searchFocused = true }

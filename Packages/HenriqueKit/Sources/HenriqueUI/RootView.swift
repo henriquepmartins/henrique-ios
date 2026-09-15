@@ -104,12 +104,12 @@ public struct RootView: View {
     .onChange(of: store.isSignedIn) {
       if !store.isSignedIn { estudos.reset() }
     }
-    .alert("Aviso", isPresented: .init(get: { store.banner != nil }, set: { if !$0 { store.banner = nil } })) {
-      Button("Ok") { store.banner = nil }
-    } message: { Text(store.banner ?? "") }
-    .alert("Aviso", isPresented: .init(get: { estudos.banner != nil }, set: { if !$0 { estudos.banner = nil } })) {
-      Button("Ok") { estudos.banner = nil }
-    } message: { Text(estudos.banner ?? "") }
+    .alert(store.banner ?? "", isPresented: .init(get: { store.banner != nil }, set: { if !$0 { store.banner = nil } })) {
+      Button("ok") { store.banner = nil }
+    }
+    .alert(estudos.banner ?? "", isPresented: .init(get: { estudos.banner != nil }, set: { if !$0 { estudos.banner = nil } })) {
+      Button("ok") { estudos.banner = nil }
+    }
   }
 }
 
@@ -181,16 +181,15 @@ struct AcademiaTabs: View {
           }.sharedBackgroundVisibility(.hidden)
           ToolbarItem(placement: .primaryAction) {
             Menu {
-              Button("Primeiros passos", systemImage: "slider.horizontal.3") { showingSetup = true }
-              Picker("cor do app", selection: $accent) {
+              Button("primeiros passos", systemImage: "slider.horizontal.3") { showingSetup = true }
+              Picker("cor", selection: $accent) {
                 ForEach(Accent.allCases) { color in Text(color.label).tag(color) }
               }
-              Button("Editar plano", systemImage: "list.clipboard") { tab = .semana }
             } label: { Label("configurar", systemImage: "gearshape") }
           }
           ToolbarItem(placement: .primaryAction) {
             Menu {
-              Button("Sair da conta", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
+              Button("sair", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
                 Task { await store.signOut() }
               }
             } label: { Image(systemName: "person.crop.circle") }
@@ -325,22 +324,20 @@ struct OverviewScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
-        PageHeading(eyebrow: "seu ritmo agora", title: "consistência que dá para enxergar",
-          subtitle: "O objetivo é chegar ao próximo treino sabendo o que fazer e por quê.")
         if let data = store.dashboard {
           VStack(alignment: .leading, spacing: 10) {
             Text("\(data.consistencyPercent)%").font(.system(size: 48, weight: .medium)).monospacedDigit()
-            Text("de constância em quatro semanas").font(.subheadline)
+            Text("constância, 4 semanas").font(.subheadline)
           }
           .foregroundStyle(.white).frame(maxWidth: .infinity, alignment: .leading)
           .padding(22).background(accent.deep, in: .rect(cornerRadius: 28))
           .staggeredEntrance(index: 0, isReady: true)
           HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 10) {
-              Text("próxima ação").font(.caption).foregroundStyle(accent.base)
-              Text(data.workout?.name.lowercased() ?? "recuperar e preparar").font(.title2.weight(.medium))
-              Text(data.workout?.focus ?? "A semana continua no próximo treino programado.")
-                .font(.subheadline).foregroundStyle(Color.mutedInk)
+              Text(data.workout?.name.lowercased() ?? "descanso").font(.title2.weight(.medium))
+              if let focus = data.workout?.focus {
+                Text(focus).font(.subheadline).foregroundStyle(Color.mutedInk)
+              }
             }
             Spacer(minLength: 0)
             Button("Abrir treino", systemImage: "arrow.right", action: onWorkout)

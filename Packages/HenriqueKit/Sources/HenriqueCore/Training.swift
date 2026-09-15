@@ -109,14 +109,6 @@ public struct BodyMeasurement: Codable, Hashable, Sendable, Identifiable {
 
 public enum ProjectionConfidence: String, Codable, Hashable, Sendable {
   case low, medium, high
-
-  public var label: String {
-    switch self {
-    case .low: "estimativa fraca"
-    case .medium: "estimativa razoável"
-    case .high: "estimativa firme"
-    }
-  }
 }
 
 public struct Projection: Codable, Hashable, Sendable {

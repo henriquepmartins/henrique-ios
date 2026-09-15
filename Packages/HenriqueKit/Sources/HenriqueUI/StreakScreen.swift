@@ -83,9 +83,13 @@ struct StreakScreen: View {
           if let week = snapshot.week {
             StreakRibbon(days: week, entered: entered)
           }
-          Text("\(streak.weeklyCompleted) de \(streak.weeklyPlanned) nesta semana")
+          Text("\(streak.weeklyCompleted)/\(streak.weeklyPlanned) na semana")
             .font(.subheadline).foregroundStyle(Color.mutedInk)
-          keepGoing
+          Text("até 5 dias entre treinos")
+            .font(.subheadline).foregroundStyle(Color.mutedInk)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .paperCard()
         }
         .padding(20)
         .padding(.top, 8)
@@ -93,30 +97,16 @@ struct StreakScreen: View {
         .frame(maxWidth: .infinity)
       }
       .background(Color.canvas.ignoresSafeArea())
-      .navigationTitle("sua sequência")
+      .navigationTitle("sequência")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
-          Button("Fechar") { dismiss() }
+          Button("fechar") { dismiss() }
         }
       }
     }
     .presentationDragIndicator(.visible)
     .onAppear { entered = true }
-  }
-
-  private var keepGoing: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text("como manter").font(.caption).foregroundStyle(streakTone.ink)
-      Text(
-        "A sequência segue de pé enquanto não passarem mais de cinco dias entre um treino e o outro. Treinou, a contagem anda."
-      )
-      .font(.subheadline).foregroundStyle(Color.mutedInk)
-      .fixedSize(horizontal: false, vertical: true)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
-    .paperCard()
   }
 }
 
@@ -162,7 +152,7 @@ private struct StreakRing: View {
     .padding(.bottom, badge / 2)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(
-      "\(streak.attendance.count) treinos seguidos, \(streak.complete.count) completos")
+      "\(streak.attendance.count) treinos, \(streak.complete.count) completos")
   }
 
   private var shownProgress: Double { entered || reduceMotion ? streak.weekProgress : 0 }
@@ -217,7 +207,7 @@ private struct StreakCount: View {
         }
       }
       .monospacedDigit()
-      Text("treinos seguidos").font(.caption).foregroundStyle(Color.mutedInk)
+      Text("treinos").font(.caption).foregroundStyle(Color.mutedInk)
       Label {
         Text(complete.target.map { "\(complete.count)/\($0) completos" } ?? "\(complete.count) completos")
       } icon: {

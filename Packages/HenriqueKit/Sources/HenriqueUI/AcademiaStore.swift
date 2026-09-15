@@ -101,7 +101,7 @@ public final class AcademiaStore {
     } catch let error as APIError {
       phase = .failed(error.message)
     } catch {
-      phase = .failed("Não consegui entrar.")
+      phase = .failed("não entrou")
     }
   }
 
@@ -253,7 +253,7 @@ public final class AcademiaStore {
       isSignedIn = false
       dashboard = nil
       phase = .idle
-      banner = "Sua sessão expirou. Entre de novo."
+      banner = "sessão expirou"
     case let error as APIError:
       if dashboard == nil {
         phase = .failed(error.message)
@@ -261,7 +261,7 @@ public final class AcademiaStore {
         banner = error.message
       }
     default:
-      banner = "Algo deu errado."
+      banner = "erro"
     }
   }
 }

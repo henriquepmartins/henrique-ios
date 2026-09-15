@@ -45,24 +45,14 @@ extension View {
 }
 
 struct PageHeading: View {
-  @Environment(\.accent) private var accent
   @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 40.0
-  let eyebrow: String
   let title: String
-  let subtitle: String
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text(eyebrow).font(.caption).foregroundStyle(accent.base)
-      Text(title).font(.system(size: titleSize, weight: .medium)).tracking(-titleSize * 0.055)
-        .fixedSize(horizontal: false, vertical: true)
-        .accessibilityAddTraits(.isHeader)
-      if !subtitle.isEmpty {
-        Text(subtitle).font(.subheadline).foregroundStyle(Color.mutedInk)
-          .fixedSize(horizontal: false, vertical: true)
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
+    Text(title).font(.system(size: titleSize, weight: .medium)).tracking(-titleSize * 0.055)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityAddTraits(.isHeader)
+      .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 

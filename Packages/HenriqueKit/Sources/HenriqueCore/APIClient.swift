@@ -8,11 +8,10 @@ public enum APIError: Error, Equatable, Sendable {
 
   public var message: String {
     switch self {
-    case .unauthorized: "Sua sessão expirou. Entre de novo."
+    case .unauthorized: "sessão expirou"
     case .http(_, let message): message
-    case .transport(let host, _):
-      "Não consegui falar com \(host). O servidor está no ar?"
-    case .decoding: "O servidor respondeu num formato que eu não entendi."
+    case .transport(let host, _): "sem conexão com \(host)"
+    case .decoding: "resposta inválida"
     }
   }
 }
@@ -84,7 +83,7 @@ public actor APIClient {
     }
     let (_, response) = try await send(.signIn, body: Body(username: username, password: password))
     guard let cookie = Self.sessionCookie(from: response, url: baseURL) else {
-      throw APIError.http(status: response.statusCode, message: "O servidor não abriu a sessão.")
+      throw APIError.http(status: response.statusCode, message: "login falhou")
     }
     tokenStore.write(cookie)
   }
@@ -260,9 +259,9 @@ public actor APIClient {
       let error: String?
     }
     guard let failure = try? JSONDecoder().decode(Failure.self, from: data) else {
-      return "O servidor recusou a chamada."
+      return "servidor recusou"
     }
-    return failure.message ?? failure.error ?? "O servidor recusou a chamada."
+    return failure.message ?? failure.error ?? "servidor recusou"
   }
 
   static func sessionCookie(from response: HTTPURLResponse, url: URL) -> String? {

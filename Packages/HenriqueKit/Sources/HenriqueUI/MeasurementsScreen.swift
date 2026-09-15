@@ -14,14 +14,13 @@ struct MeasurementsScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
-        PageHeading(eyebrow: "seu corpo", title: "medidas",
-          subtitle: "Registre nas mesmas condições para enxergar a tendência, não o ruído do dia.")
+        PageHeading(title: "medidas")
         Button("nova medida", systemImage: "plus") { isAdding = true }
           .buttonStyle(.glassProminent).controlSize(.large)
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: textSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
           MeasurementMetric(title: "peso", value: measurements.first?.weightKg, unit: "kg", symbol: "scalemass")
             .staggeredEntrance(index: 0, isReady: true)
-          MeasurementMetric(title: "gordura corporal", value: measurements.first?.bodyFatPercent, unit: "%", symbol: "figure")
+          MeasurementMetric(title: "gordura", value: measurements.first?.bodyFatPercent, unit: "%", symbol: "figure")
             .staggeredEntrance(index: 1, isReady: true)
           MeasurementMetric(title: "cintura", value: measurements.first?.waistCm, unit: "cm", symbol: "ruler")
             .staggeredEntrance(index: 2, isReady: true)
@@ -29,9 +28,9 @@ struct MeasurementsScreen: View {
             .staggeredEntrance(index: 3, isReady: true)
         }
         VStack(alignment: .leading, spacing: 16) {
-          Text("peso corporal").font(.title2.weight(.medium))
+          Text("peso").font(.title2.weight(.medium))
           if measurements.isEmpty {
-            Text("Nenhuma medida registrada.").foregroundStyle(Color.mutedInk).frame(height: 220)
+            Text("sem medidas").foregroundStyle(Color.mutedInk).frame(height: 220)
           } else {
             WeightChart(measurements: measurements.sorted { $0.date < $1.date }).frame(height: 220)
           }
@@ -71,7 +70,7 @@ struct MeasurementsLink: View {
     } label: {
       HStack(alignment: .top, spacing: 16) {
         VStack(alignment: .leading, spacing: 10) {
-          Text("suas medidas").font(.caption).foregroundStyle(accent.base)
+          Text("medidas").font(.caption).foregroundStyle(accent.base)
           if let latest {
             HStack(alignment: .firstTextBaseline, spacing: 14) {
               value(weightLabel(latest.weightKg), caption: "peso")
@@ -81,12 +80,12 @@ struct MeasurementsLink: View {
               }
             }
           } else {
-            Text("nenhuma medida registrada").font(.title3.weight(.medium))
+            Text("sem medidas").font(.title3.weight(.medium))
           }
-          Text(latest.map { "última em \($0.date.date().formatted(.dateTime.day().month(.wide)))" }
-            ?? "Registre a primeira para o gráfico começar.")
-            .font(.subheadline).foregroundStyle(Color.mutedInk)
-            .fixedSize(horizontal: false, vertical: true)
+          if let latest {
+            Text(latest.date.date(), format: .dateTime.day().month(.wide))
+              .font(.subheadline).foregroundStyle(Color.mutedInk)
+          }
         }
         Spacer(minLength: 0)
         Image(systemName: "arrow.right")
@@ -196,8 +195,8 @@ struct MeasurementEditor: View {
   var body: some View {
     NavigationStack {
       Form {
-        Section("Peso") {
-          TextField("peso em kg", value: $weightKg, format: .number.precision(.fractionLength(0...2)))
+        Section("peso") {
+          TextField("kg", value: $weightKg, format: .number.precision(.fractionLength(0...2)))
             .decimalInput()
         }
         Section {
@@ -206,21 +205,17 @@ struct MeasurementEditor: View {
           OptionalField(label: "peito", unit: "cm", range: 30...300, value: $chestCm)
           OptionalField(label: "braço", unit: "cm", range: 10...100, value: $armCm)
           OptionalField(label: "coxa", unit: "cm", range: 20...150, value: $thighCm)
-        } header: {
-          Text("Opcionais")
-        } footer: {
-          Text("Deixe de fora o que você não mediu. Só o peso é obrigatório.")
         }
       }
       .interactiveDismissDisabled(isSaving)
-      .navigationTitle("Nova medida")
+      .navigationTitle("nova medida")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button("Cancelar") { dismiss() }
+          Button("cancelar") { dismiss() }
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button(isSaving ? "Salvando" : "Salvar") { save() }.disabled(isSaving || weightKg == nil || (weightKg ?? 0) <= 0)
+          Button("salvar") { save() }.disabled(isSaving || weightKg == nil || (weightKg ?? 0) <= 0)
         }
       }
     }
@@ -252,7 +247,7 @@ struct OptionalField: View {
     HStack {
       Text(label)
       Spacer()
-      TextField("não medido", value: $value, format: .number.precision(.fractionLength(0...2)))
+      TextField("", value: $value, format: .number.precision(.fractionLength(0...2)))
         .decimalInput().multilineTextAlignment(.trailing)
         .accessibilityLabel(label)
       Text(unit).font(.caption).foregroundStyle(Color.mutedInk)

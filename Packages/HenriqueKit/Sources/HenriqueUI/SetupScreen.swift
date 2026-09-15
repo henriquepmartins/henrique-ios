@@ -6,22 +6,12 @@ private enum SetupStep: Int, CaseIterable {
 
   var title: String {
     switch self {
-    case .welcome: "seu treino começa aqui."
-    case .body: "comece por você."
-    case .workout: "um treino de cada vez."
-    case .exercises: "o que vamos treinar?"
-    case .goal: "algo para alcançar."
-    case .done: "pronto para começar."
-    }
-  }
-  var subtitle: String {
-    switch self {
-    case .welcome: "Seu plano, suas medidas e cada pequena evolução. Vamos deixar tudo pronto para o primeiro treino."
-    case .body: "Uma primeira medida ajuda a acompanhar as mudanças. Registre apenas o que souber agora."
-    case .workout: "Escolha um dia e dê um nome ao treino. Depois, você pode organizar o restante da semana."
-    case .exercises: "Adicione os exercícios do seu plano. Você pode conferir as séries e ajustar cada um antes de salvar."
-    case .goal: "Se já tiver uma meta de carga, registre aqui. Se ainda não souber, deixe para depois do primeiro treino."
-    case .done: "O que você salvou já está no app. O restante pode ser preenchido quando fizer sentido para você."
+    case .welcome: "começar"
+    case .body: "medidas"
+    case .workout: "treino"
+    case .exercises: "exercícios"
+    case .goal: "meta"
+    case .done: "pronto"
     }
   }
 }
@@ -62,7 +52,7 @@ struct SetupScreen: View {
     NavigationStack {
       ScrollView {
         VStack(alignment: .leading, spacing: 28) {
-          PageHeading(eyebrow: "primeiros passos", title: step.title, subtitle: step.subtitle)
+          PageHeading(title: step.title)
           fields
           if let error { Text(error).font(.subheadline).foregroundStyle(.red).accessibilityAddTraits(.updatesFrequently) }
           HStack {
@@ -71,12 +61,12 @@ struct SetupScreen: View {
                 .buttonStyle(.glass)
             }
             Spacer()
-            Button(saving ? "salvando" : step == .done ? "abrir meu treino" : "continuar") {
+            Button(saving ? "salvando" : step == .done ? "abrir treino" : "continuar") {
               Task { await advance() }
             }.buttonStyle(.glassProminent).controlSize(.large)
           }
           if step != .welcome && step != .done {
-            Button("deixar para depois") {
+            Button("pular") {
               step = step == .body ? .workout : step == .workout || step == .exercises ? .goal : .done
               error = nil
             }.font(.subheadline).frame(maxWidth: .infinity)
@@ -89,7 +79,7 @@ struct SetupScreen: View {
       .navigationTitle("h&")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
-        ToolbarItem(placement: .cancellationAction) { Button("Fechar") { dismiss() }.disabled(saving) }
+        ToolbarItem(placement: .cancellationAction) { Button("fechar") { dismiss() }.disabled(saving) }
       }
       .interactiveDismissDisabled(saving)
       .sheet(isPresented: $picking) {
@@ -122,7 +112,7 @@ struct SetupScreen: View {
     case .body:
       VStack(spacing: 18) {
         measurement("peso", unit: "kg", value: $weight)
-        measurement("gordura corporal", unit: "%", value: $fat)
+        measurement("gordura", unit: "%", value: $fat)
         measurement("cintura", unit: "cm", value: $waist)
         measurement("peito", unit: "cm", value: $chest)
         measurement("braço", unit: "cm", value: $arm)
@@ -130,16 +120,16 @@ struct SetupScreen: View {
       }.padding(20).paperCard()
     case .workout:
       VStack(alignment: .leading, spacing: 18) {
-        Picker("dia do treino", selection: $weekday) {
+        Picker("dia", selection: $weekday) {
           ForEach(0..<7, id: \.self) { Text(days[$0]).tag($0) }
         }.onChange(of: weekday) { oldDay, _ in
           workoutDrafts[oldDay] = SetupWorkoutDraft(name: name, focus: focus, minutes: minutes, exercises: exercises)
           loadWorkout()
         }
-        TextField("nome do treino", text: $name).textFieldStyle(.roundedBorder)
-        TextField("foco do treino", text: $focus).textFieldStyle(.roundedBorder)
+        TextField("nome", text: $name).textFieldStyle(.roundedBorder)
+        TextField("foco", text: $focus).textFieldStyle(.roundedBorder)
         HStack {
-          Text("duração em minutos")
+          Text("minutos")
           TextField("55", value: $minutes, format: .number).decimalInput().multilineTextAlignment(.trailing)
         }
       }.padding(20).paperCard()
@@ -157,21 +147,21 @@ struct SetupScreen: View {
               .font(.caption)
           }.padding(18).paperCard()
         }
-        Button("adicionar exercício", systemImage: "plus") { picking = true }
+        Button("adicionar", systemImage: "plus") { picking = true }
           .buttonStyle(.glass).disabled(exercises.count >= 12)
       }
     case .goal:
       VStack(alignment: .leading, spacing: 18) {
-        Picker("exercício da meta", selection: $goalExercise) {
+        Picker("exercício", selection: $goalExercise) {
           ForEach(store.dashboard?.exerciseCatalog ?? []) { Text($0.name).tag($0.id) }
         }
-        measurement("força estimada desejada", unit: "kg", value: $target)
+        measurement("meta", unit: "kg", value: $target)
       }.padding(20).paperCard()
     case .done:
       VStack(alignment: .leading, spacing: 16) {
-        if savedBody != nil { Label("medidas registradas", systemImage: "checkmark.circle") }
-        if savedWorkout != nil { Label("treino salvo", systemImage: "checkmark.circle") }
-        if savedGoal != nil { Label("meta registrada", systemImage: "checkmark.circle") }
+        if savedBody != nil { Label("medidas", systemImage: "checkmark.circle") }
+        if savedWorkout != nil { Label("treino", systemImage: "checkmark.circle") }
+        if savedGoal != nil { Label("meta", systemImage: "checkmark.circle") }
       }.foregroundStyle(accent.base)
     }
   }
@@ -180,7 +170,7 @@ struct SetupScreen: View {
     VStack(alignment: .leading, spacing: 8) {
       Text(title).font(.caption).foregroundStyle(Color.mutedInk)
       HStack {
-        TextField("não informado", value: value, format: .number.precision(.fractionLength(0...2)))
+        TextField("", value: value, format: .number.precision(.fractionLength(0...2)))
           .decimalInput().accessibilityLabel(title)
         Text(unit).foregroundStyle(Color.mutedInk)
       }
@@ -216,7 +206,7 @@ struct SetupScreen: View {
     switch step {
     case .welcome: step = .body
     case .body:
-      guard let weight, weight > 0, weight <= 500 else { error = "Confira o peso ou deixe esta etapa para depois."; return }
+      guard let weight, weight > 0, weight <= 500 else { error = "peso inválido"; return }
       let input = AddMeasurementInput(date: .today, weightKg: weight, bodyFatPercent: fat, waistCm: waist, chestCm: chest, armCm: arm, thighCm: thigh)
       if input != savedBody {
         guard await store.addMeasurement(input) else { error = store.banner; return }
@@ -225,12 +215,12 @@ struct SetupScreen: View {
       step = .workout
     case .workout:
       guard name.trimmingCharacters(in: .whitespaces).count >= 2, (15...180).contains(minutes) else {
-        error = "Dê um nome ao treino e use uma duração de 15 a 180 minutos."; return
+        error = "nome e 15 a 180 min"; return
       }
       step = .exercises
     case .exercises:
       guard !exercises.isEmpty, exercises.allSatisfy({ $0.repsMin <= $0.repsMax && $0.startingWeightKg >= 0 }) else {
-        error = "Adicione um exercício e confira as séries, repetições e cargas."; return
+        error = "confira os exercícios"; return
       }
       let groups = exercises.compactMap { exercise in store.dashboard?.exerciseCatalog.first { $0.id == exercise.exerciseId }?.muscleGroup }
       let planned = plannedWorkout
@@ -243,7 +233,7 @@ struct SetupScreen: View {
       }
       step = .goal
     case .goal:
-      guard let target, target > 0, !goalExercise.isEmpty else { error = "Confira a meta ou deixe esta etapa para depois."; return }
+      guard let target, target > 0, !goalExercise.isEmpty else { error = "meta inválida"; return }
       let input = SetStrengthGoalInput(date: store.selectedDate, exerciseId: goalExercise, targetValue: target)
       if input != savedGoal {
         guard await store.setStrengthGoal(input) else { error = store.banner; return }

@@ -41,9 +41,7 @@ struct ProgressScreen: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 20) {
-        PageHeading(eyebrow: "evolução", title: "força, volume e direção",
-          subtitle: "O gráfico usa as séries valendo concluídas. Preparação e peso digitado sem marcar a série não entram na conta.")
-        NavigationLink("detalhe da métrica") { MetricDetailScreen(onWorkout: onWorkout) }
+        NavigationLink("detalhes") { MetricDetailScreen(onWorkout: onWorkout) }
           .frame(maxWidth: .infinity, alignment: .trailing).font(.subheadline)
         if let dashboard = store.dashboard {
           let streakGoals = dashboard.streakGoals ?? []
@@ -61,16 +59,14 @@ struct ProgressScreen: View {
               .staggeredEntrance(index: cards - streakGoals.count + index, isReady: true)
           }
 
-          Button(dashboard.strengthGoal == nil ? "criar meta" : "atualizar meta") {
+          Button("nova meta") {
             editing = newGoalKind(in: dashboard)
           }
             .buttonStyle(.glassProminent).controlSize(.large)
             .disabled(dashboard.exerciseCatalog.isEmpty)
             .staggeredEntrance(index: cards, isReady: true)
           if dashboard.progress.isEmpty {
-            ContentUnavailableView(
-              "Sem histórico ainda", systemImage: "chart.xyaxis.line",
-              description: Text("O gráfico aparece depois da primeira série de trabalho gravada."))
+            ContentUnavailableView("sem histórico", systemImage: "chart.xyaxis.line")
               .padding(.vertical, 40)
               .staggeredEntrance(index: cards + 1, isReady: true)
           } else {
@@ -160,7 +156,7 @@ struct GoalCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Text("Meta em \(exerciseName)").font(.headline)
+      Label(exerciseName, systemImage: "target").font(.headline)
       HStack(alignment: .firstTextBaseline, spacing: 6) {
         Text(weightLabel(projection?.current ?? 0))
           .font(.largeTitle.weight(.semibold))
@@ -173,9 +169,9 @@ struct GoalCard: View {
       if let projection {
         ProgressView(value: min(projection.current / max(projection.target, 1), 1))
           .tint(accent.signal)
-        Text(projectionSentence(projection))
-          .font(.footnote)
-          .foregroundStyle(.secondary)
+        if let sentence = projectionSentence(projection) {
+          Text(sentence).font(.footnote).foregroundStyle(.secondary)
+        }
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -183,13 +179,10 @@ struct GoalCard: View {
     .background(accent.pale, in: .rect(cornerRadius: 32))
   }
 
-  private func projectionSentence(_ projection: Projection) -> String {
-    guard let weeks = projection.weeksRemaining else {
-      return "Ainda não dá para projetar quando você chega lá, \(projection.confidence.label)."
-    }
-    if weeks == 0 { return "Meta batida." }
-    let plural = weeks == 1 ? "semana" : "semanas"
-    return "Nesse ritmo você chega em \(weeks) \(plural), \(projection.confidence.label)."
+  private func projectionSentence(_ projection: Projection) -> String? {
+    guard let weeks = projection.weeksRemaining else { return nil }
+    if weeks == 0 { return "meta batida" }
+    return "em \(weeks) \(weeks == 1 ? "semana" : "semanas")"
   }
 }
 
@@ -199,7 +192,7 @@ struct OneRepMaxChart: View {
   let target: Double?
 
   var body: some View {
-    ChartCard(title: "Força estimada", caption: "1RM calculado pela fórmula de Epley") {
+    ChartCard(title: "força") {
       Chart {
         ForEach(points) { point in
           LineMark(
@@ -232,7 +225,7 @@ struct VolumeChart: View {
   let points: [ProgressPoint]
 
   var body: some View {
-    ChartCard(title: "Volume por treino", caption: "carga vezes repetições, somando as séries") {
+    ChartCard(title: "volume") {
       Chart(points) { point in
         AreaMark(x: .value("dia", point.date.date()), y: .value("volume", point.volumeKg))
           .interpolationMethod(.monotone)
@@ -247,15 +240,11 @@ struct VolumeChart: View {
 
 struct ChartCard<Content: View>: View {
   let title: String
-  let caption: String
   @ViewBuilder let content: Content
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      VStack(alignment: .leading, spacing: 2) {
-        Text(title).font(.headline)
-        Text(caption).font(.caption).foregroundStyle(.secondary)
-      }
+      Text(title).font(.headline)
       content
         .frame(height: 220)
     }
@@ -316,7 +305,7 @@ struct GoalEditor: View {
                 get: { streakTargets[streak] ?? 7 }, set: { streakTargets[streak] = $0 }))
           }
         } else {
-          Section("Exercício") {
+          Section {
             Picker("exercício", selection: $exerciseId) {
               ForEach(catalog) { item in
                 Text(item.name).tag(item.id)
@@ -325,20 +314,20 @@ struct GoalEditor: View {
             .labelsHidden()
             .pickerStyle(.inline)
           }
-          Section("Alvo") {
+          Section {
             WeightStepper(weightKg: $targetValue)
           }
         }
       }
       .interactiveDismissDisabled(isSaving)
-      .navigationTitle("Meta de força")
+      .navigationTitle("meta")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button("Cancelar") { dismiss() }
+          Button("cancelar") { dismiss() }
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button(isSaving ? "Salvando" : "Salvar") { save() }.disabled(isSaving || !canSave)
+          Button("salvar") { save() }.disabled(isSaving || !canSave)
         }
       }
     }
@@ -422,28 +411,25 @@ struct MetricDetailScreen: View {
           Text("corpo").tag(true)
         }.pickerStyle(.segmented)
         VStack(spacing: 18) {
-          Text(bodyTrack ? "massa magra" : "força estimada").font(.caption).foregroundStyle(Color.mutedInk)
+          Text(bodyTrack ? "massa magra" : "força").font(.caption).foregroundStyle(Color.mutedInk)
           if let latest = window.last {
             Text(latest.date.date(), format: .dateTime.day().month(.wide).year()).font(.caption)
             Text(weightLabel(latest.value)).font(.system(size: 64, weight: .medium)).tracking(-3).monospacedDigit()
               .minimumScaleFactor(0.6).lineLimit(1)
             if let first = window.first, first.date != latest.date {
               let weeks = max(1, Int((latest.date.date().timeIntervalSince(first.date.date()) / 604800).rounded()))
-              Text("\((latest.value - first.value).formatted(.number.sign(strategy: .always()).precision(.fractionLength(1)))) kg em \(weeks) semanas")
+              Text("\((latest.value - first.value).formatted(.number.sign(strategy: .always()).precision(.fractionLength(1)))) kg em \(weeks) sem")
                 .font(.subheadline).foregroundStyle(accent.base)
-            } else {
-              Text("tendência a partir da segunda medida").font(.caption).foregroundStyle(Color.mutedInk)
             }
           } else {
-            Text(bodyTrack ? "sem medida com gordura" : "sem série valendo registrada").font(.title2)
-            Text("O número aparece assim que existir registro.").font(.subheadline).foregroundStyle(Color.mutedInk)
+            Text(bodyTrack ? "sem % de gordura" : "sem séries").font(.title2)
           }
         }.frame(maxWidth: .infinity, minHeight: 230).padding(.vertical, 24)
         HStack(alignment: .top, spacing: 8) {
           action("registrar", symbol: "square.and.pencil") {
             if bodyTrack { isAddingMeasurement = true } else { onWorkout() }
           }
-          action(allHistory ? "tudo" : "8 semanas", symbol: "calendar") { allHistory.toggle() }
+          action(allHistory ? "tudo" : "8 sem", symbol: "calendar") { allHistory.toggle() }
           action("meta", symbol: "target") { isEditingGoal = true }
         }
         if !bodyTrack, let last = store.dashboard?.strengthGoal?.lastSession {
@@ -454,8 +440,8 @@ struct MetricDetailScreen: View {
               Text(last.date.date(), format: .dateTime.day().month(.abbreviated)).font(.caption)
             }
             HStack(alignment: .top) {
-              sessionValue("reps na falha", value: last.reps.map(String.init).joined(separator: ", "))
-              sessionValue("melhor carga", value: weightLabel(last.weightKg))
+              sessionValue("reps", value: last.reps.map(String.init).joined(separator: ", "))
+              sessionValue("carga", value: weightLabel(last.weightKg))
               sessionValue("volume", value: weightLabel(last.volumeKg))
             }
           }.padding(22).paperCard(radius: 28)
@@ -463,7 +449,7 @@ struct MetricDetailScreen: View {
         }
       }.padding(16)
     }.background(Color.canvas.ignoresSafeArea())
-      .navigationTitle(bodyTrack ? "composição" : (store.dashboard?.strengthGoal?.exerciseName.lowercased() ?? "força"))
+      .navigationTitle(bodyTrack ? "corpo" : (store.dashboard?.strengthGoal?.exerciseName.lowercased() ?? "força"))
       .toolbarTitleDisplayMode(.inline)
       .sheet(isPresented: $isAddingMeasurement) { MeasurementEditor(previous: store.dashboard?.measurements.first) }
       .sheet(isPresented: $isEditingGoal) {

@@ -32,25 +32,27 @@ struct ExerciseCard: View {
       if isOpen {
         VStack(spacing: 8) {
           HStack {
-            Text("série").frame(width: 34, alignment: .leading)
-            Text("peso").frame(maxWidth: .infinity)
+            Color.clear.frame(width: 34, height: 1)
+            Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
             Text("reps").frame(maxWidth: .infinity)
-            Text("feita").frame(width: 44)
+            Color.clear.frame(width: 44, height: 1)
           }.font(.caption2).foregroundStyle(Color.mutedInk)
           if !exercise.sets.prep.isEmpty {
-            group("preparação", color: .mutedInk)
+            group("aquecimento", color: .mutedInk)
             ForEach(exercise.sets.prep) { set in
               TrainingSetRow(exercise: exercise, kind: .prep, index: set.index,
                 weight: set.weightKg, repetitions: set.reps, done: set.isDone, failure: false)
             }
           }
-          group(exercise.prescription.workToFailure ? "valendo, até a falha" : "valendo", color: accent.base)
+          group(exercise.prescription.workToFailure ? "valendo · falha" : "valendo", color: accent.base)
           ForEach(exercise.sets.work) { set in
             TrainingSetRow(exercise: exercise, kind: .work, index: set.index,
               weight: set.weightKg, repetitions: set.reps, done: set.isDone, failure: set.toFailure)
           }
-          Text(previous).font(.caption).foregroundStyle(Color.mutedInk)
-            .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
+          if let previous {
+            Text(previous).font(.caption).foregroundStyle(Color.mutedInk)
+              .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
+          }
         }.padding(14).background(.white, in: .rect(cornerRadius: 24)).padding(6)
           .transition(.opacity)
       }
@@ -61,15 +63,12 @@ struct ExerciseCard: View {
 
   private var prescription: String {
     let p = exercise.prescription
-    let prep = p.prepSets > 0 ? "\(p.prepSets) prep + " : ""
-    let work = p.workToFailure ? "\(p.workSets) até a falha" : "\(p.workSets) valendo de \(p.repsMin) a \(p.repsMax)"
-    return "\(prep)\(work) · \(weightLabel(exercise.previous?.weightKg ?? p.startingWeightKg))"
+    let reps = p.workToFailure ? "falha" : "\(p.repsMin)-\(p.repsMax)"
+    return "\(p.workSets) × \(reps) · \(weightLabel(exercise.previous?.weightKg ?? p.startingWeightKg))"
   }
-  private var previous: String {
-    guard let previous = exercise.previous else {
-      return "comece com \(weightLabel(exercise.prescription.startingWeightKg)) e ajuste pela execução"
-    }
-    return "última vez: \(previous.reps.map(String.init).joined(separator: ", ")) reps com \(weightLabel(previous.weightKg))"
+  private var previous: String? {
+    guard let previous = exercise.previous else { return nil }
+    return "última: \(previous.reps.map(String.init).joined(separator: ", ")) × \(weightLabel(previous.weightKg))"
   }
   private func group(_ title: String, color: Color) -> some View {
     HStack(spacing: 6) {

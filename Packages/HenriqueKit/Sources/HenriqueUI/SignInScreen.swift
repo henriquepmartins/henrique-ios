@@ -23,9 +23,6 @@ struct SignInScreen: View {
       VStack(spacing: 24) {
         VStack(spacing: 6) {
           Text("h&").font(.system(size: 64, weight: .medium)).tracking(-4).foregroundStyle(accent.deep)
-          Text("entre para continuar")
-            .font(.callout)
-            .foregroundStyle(.secondary)
         }
 
         GlassEffectContainer(spacing: 10) {
