@@ -128,10 +128,10 @@ public struct WriteScreen: View {
       }
       .modifier(WriteKeybar(insert: insert))
       .confirmationDialog(
-        "há alterações sem salvar nesta nota.", isPresented: $askLeave, titleVisibility: .visible
+        "descartar nota?", isPresented: $askLeave, titleVisibility: .visible
       ) {
-        Button("descartar o texto", role: .destructive) { dismiss() }
-        Button("continuar escrevendo", role: .cancel) {}
+        Button("descartar", role: .destructive) { dismiss() }
+        Button("continuar", role: .cancel) {}
       }
       .task {
         await store.loadNotes()
@@ -153,7 +153,7 @@ public struct WriteScreen: View {
             .font(.system(size: 20))
             .foregroundStyle(Color.subjectInk(for: subject?.color)))
 
-      TextField("sem título", text: $draft.title, axis: .vertical)
+      TextField("título", text: $draft.title, axis: .vertical)
         .font(.system(size: titleSize, weight: .semibold).leading(.tight))
         .tracking(-titleSize * 0.03)
         .lineLimit(1...4)
@@ -165,9 +165,8 @@ public struct WriteScreen: View {
         VStack(alignment: .leading, spacing: 8) {
           StudyCallout(
             icon: "arrow.triangle.2.circlepath", tone: .yellow,
-            title: "não deu para salvar a nota no app",
-            detail: "o texto continua aqui. tente salvar novamente.")
-          Button("tentar salvar") { Task { _ = await savePending() } }
+            title: "nota não salva")
+          Button("tentar de novo") { Task { _ = await savePending() } }
             .buttonStyle(.glass)
             .tint(Color.studyInk)
             .disabled(saving)
@@ -175,7 +174,7 @@ public struct WriteScreen: View {
       }
 
       if dirty, draft.trimmedTitle.isEmpty {
-        Text("dê um título para salvar esta nota.")
+        Text("falta título")
           .font(.footnote)
           .foregroundStyle(Color.studyGraphite)
       }
@@ -193,10 +192,8 @@ public struct WriteScreen: View {
           }
         }
       }
-      WritePropRow(icon: "tag", label: "tags") {
-        if draft.tags.isEmpty {
-          StudyPill(tone: .outline, text: "sem tags")
-        } else {
+      if !draft.tags.isEmpty {
+        WritePropRow(icon: "tag", label: "tags") {
           ForEach(draft.tags, id: \.self) { tag in
             StudyPill(text: tag)
           }
@@ -218,7 +215,7 @@ public struct WriteScreen: View {
       .scrollContentBackground(.hidden)
       .overlay(alignment: .topLeading) {
         if draft.body.isEmpty {
-          Text("Escreva a aula com suas palavras. Use / para um bloco e [[ para ligar outra nota.")
+          Text("escreva")
             .font(.system(size: 16))
             .foregroundStyle(Color.studyInk20)
             .padding(.top, 8)
@@ -228,14 +225,10 @@ public struct WriteScreen: View {
       }
   }
 
-  private var recent: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      StudySectionHeading(title: "notas recentes")
-      if notes.isEmpty {
-        StudyEmptyState(
-          icon: "doc.text", title: "nenhuma nota salva",
-          detail: "Escreva a aula de hoje e dê um título para salvar sua primeira nota no app.")
-      } else {
+  @ViewBuilder private var recent: some View {
+    if !notes.isEmpty {
+      VStack(alignment: .leading, spacing: 0) {
+        StudySectionHeading(title: "recentes")
         StudyDbList {
           ForEach(Array(notes.enumerated()), id: \.element.id) { index, note in
             StudyDbRow(
@@ -259,9 +252,8 @@ public struct WriteScreen: View {
 
   private var savedLabel: String {
     if saving { return "salvando…" }
-    if dirty { return "alterações sem salvar" }
-    guard let savedAt else { return "ainda não salvo" }
-    return "salvo \(StudyFormat.relative(savedAt, now: .now)) no app"
+    guard !dirty, let savedAt else { return "não salvo" }
+    return StudyFormat.relative(savedAt, now: .now)
   }
 
   // MARK: Salvar
@@ -386,6 +378,7 @@ private struct WriteKeybar: ViewModifier {
               .overlay(Capsule().strokeBorder(Color.studyInk20))
           }
           .buttonStyle(StudyPressStyle())
+          .accessibilityLabel("bloco")
           ForEach(WriteAction.all) { action in
             Button { insert(action.insert) } label: {
               Image(systemName: action.icon)

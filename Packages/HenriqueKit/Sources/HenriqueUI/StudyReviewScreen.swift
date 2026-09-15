@@ -41,18 +41,10 @@ private enum StudyReviewState {
   }
 
   static func intervalHint(_ interval: Int) -> String {
-    if interval <= 0 { return "volta ainda hoje" }
-    return interval == 1 ? "volta amanhã" : "volta em \(interval) dias"
+    if interval <= 0 { return "hoje" }
+    return interval == 1 ? "amanhã" : "\(interval) dias"
   }
 }
-
-/// Antes da primeira nota o intervalo ainda é promessa. O agendador só devolve
-/// um número depois que o cartão é classificado.
-private let studyReviewFirstHint: [FlashcardRating: String] = [
-  .errei: "volta ainda hoje",
-  .dificil: "volta em poucos dias",
-  .facil: "volta lá na frente",
-]
 
 private enum StudyReviewSwipe {
   static let distance: CGFloat = 80
@@ -70,7 +62,7 @@ public struct StudyReviewScreen: View {
 
   /// A fila da tela é uma cópia. `grade` tira o cartão de `store.queue` assim
   /// que o servidor responde, e um índice apontando para o array vivo pularia o
-  /// cartão seguinte a cada nota. O web congela a fila do loader pelo mesmo
+  /// cartão seguinte a cada resposta. O web congela a fila do loader pelo mesmo
   /// motivo, e só a solta num refresh.
   @State private var deck: ReviewQueue?
   @State private var state: StudyReviewState = .empty
@@ -88,7 +80,7 @@ public struct StudyReviewScreen: View {
   public var body: some View {
     ScrollView {
       VStack(spacing: 20) {
-        StudyHeading(eyebrow: "repetição espaçada", title: "revisar", subtitle: subtitle)
+        StudyHeading(title: "revisar")
         switch store.queue {
         case .idle, .loading:
           StudyLoadingState().transition(.opacity)
@@ -117,30 +109,13 @@ public struct StudyReviewScreen: View {
     }
   }
 
-  private var subtitle: String? {
-    guard let deck else { return nil }
-    if deck.cards.isEmpty { return "Nenhum cartão vence hoje." }
-    if deck.cards.count == 1 { return "1 cartão vence hoje. Todos saíram das suas notas." }
-    return "\(deck.cards.count) cartões vencem hoje. Todos saíram das suas notas."
-  }
-
   @ViewBuilder private var ready: some View {
     if let deck {
       switch state {
       case .empty:
-        StudyEmptyState(
-          icon: "rectangle.on.rectangle",
-          title: "sem cartões na fila",
-          detail:
-            "Os cartões nascem das suas notas. Escreva uma aula em escrever, marque o trecho que você quer lembrar e ele volta aqui no dia certo."
-        )
+        StudyEmptyState(icon: "rectangle.on.rectangle", title: "sem cartões")
       case .done:
-        StudyEmptyState(
-          icon: "checkmark.circle",
-          title: "fila limpa",
-          detail:
-            "Você fechou a fila do dia. Os cartões voltam sozinhos conforme o agendador, e cada nota nova traz mais gente para cá."
-        )
+        StudyEmptyState(icon: "checkmark.circle", title: "fila limpa")
       case .card(let index, let phase, let hints, let failed):
         if deck.cards.indices.contains(index) {
           let card = deck.cards[index]
@@ -149,35 +124,21 @@ public struct StudyReviewScreen: View {
           grades(phase: phase, hints: hints)
         }
       }
-      queueList(deck.bySubject)
+      if !deck.bySubject.isEmpty { queueList(deck.bySubject) }
     }
   }
 
-  // MARK: Fila do dia
+  // MARK: Por matéria
 
   /// O respiro entre o título da seção e a lista já mora no próprio título, por
   /// isso os dois ficam numa pilha sem espaçamento.
   private func queueList(_ rows: [SubjectCount]) -> some View {
     VStack(spacing: 0) {
-      StudySectionHeading(title: "fila de hoje")
-      if rows.isEmpty {
-        StudyEmptyState(
-          icon: "book",
-          title: "nenhuma matéria com cartão vencido",
-          detail:
-            "Quando as matérias tiverem cartões vencidos, elas aparecem aqui com a contagem do dia."
-        )
-      } else {
-        StudyDbList {
-          ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-            StudyDbRow(
-              dot: row.color, title: row.name,
-              end: {
-                Text("\(row.count) \(row.count == 1 ? "cartão" : "cartões")").monospacedDigit()
-              }
-            )
+      StudySectionHeading(title: "por matéria")
+      StudyDbList {
+        ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+          StudyDbRow(dot: row.color, title: row.name, end: { Text("\(row.count)").monospacedDigit() })
             .staggeredEntrance(index: index, isReady: true)
-          }
         }
       }
     }
@@ -190,12 +151,10 @@ public struct StudyReviewScreen: View {
       StudyCallout(
         icon: "arrow.triangle.2.circlepath",
         tone: .yellow,
-        title: "não deu para registrar a última nota",
-        detail: conflict
-          ? "este cartão já mudou no servidor. atualize a fila para continuar."
-          : "o cartão continua aqui. tente registrar a nota novamente.")
+        title: "resposta não salva",
+        detail: conflict ? "cartão mudou" : "tente de novo")
       if conflict {
-        Button("atualizar fila") { Task { await refreshQueue() } }
+        Button("atualizar") { Task { await refreshQueue() } }
           .buttonStyle(.glass)
           .tint(Color.studyInk)
       }
@@ -230,9 +189,11 @@ public struct StudyReviewScreen: View {
       Color.clear.frame(minHeight: 300)
       VStack(alignment: .leading, spacing: 0) {
         HStack(spacing: 8) {
-          StudyPill(color: card.subjectColor, text: card.subjectName ?? "sem matéria")
+          if let name = card.subjectName {
+            StudyPill(color: card.subjectColor, text: name)
+          }
           Spacer(minLength: 8)
-          Text("\(index + 1) de \(total)")
+          Text("\(index + 1)/\(total)")
             .font(.footnote)
             .monospacedDigit()
             .foregroundStyle(Color.studyInk40)
@@ -251,11 +212,7 @@ public struct StudyReviewScreen: View {
             .modifier(StudyReviewAnswerEntrance())
         }
         Spacer(minLength: 28)
-        Text(
-          phase == .front
-            ? "toque para virar"
-            : "arraste para a esquerda se errou, para a direita se foi fácil"
-        )
+        Text(phase == .front ? "toque para virar" : "← errei · fácil →")
           .font(.system(size: 13))
           .foregroundStyle(Color.studyInk40)
           .multilineTextAlignment(.center)
@@ -286,7 +243,7 @@ public struct StudyReviewScreen: View {
       ForEach(FlashcardRating.allCases, id: \.self) { rating in
         StudyReviewGradeButton(
           rating: rating,
-          hint: hints[rating] ?? studyReviewFirstHint[rating] ?? "",
+          hint: hints[rating],
           isDisabled: phase == .front || grading || conflict
         ) {
           Task { await grade(rating, fling: nil) }
@@ -365,7 +322,7 @@ public struct StudyReviewScreen: View {
     }
   }
 
-  // MARK: Nota
+  // MARK: Resposta
 
   private func grade(_ rating: FlashcardRating, fling: CGFloat?) async {
     guard case .card(let index, let phase, _, _) = state, phase == .back, !grading, !conflict,
@@ -480,7 +437,7 @@ private struct StudyReviewAnswerEntrance: ViewModifier {
 
 private struct StudyReviewGradeButton: View {
   let rating: FlashcardRating
-  let hint: String
+  let hint: String?
   let isDisabled: Bool
   let action: () -> Void
 
@@ -488,10 +445,12 @@ private struct StudyReviewGradeButton: View {
     Button(action: action) {
       VStack(spacing: 2) {
         Text(rating.label).font(.system(size: 14, weight: .semibold))
-        Text(hint)
-          .font(.system(size: 11))
-          .monospacedDigit()
-          .foregroundStyle(hintColor)
+        if let hint {
+          Text(hint)
+            .font(.system(size: 11))
+            .monospacedDigit()
+            .foregroundStyle(hintColor)
+        }
       }
       .multilineTextAlignment(.center)
       .foregroundStyle(labelColor)

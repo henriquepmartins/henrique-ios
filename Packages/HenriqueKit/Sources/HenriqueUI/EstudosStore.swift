@@ -397,7 +397,7 @@ public final class EstudosStore {
   private func handle(_ error: any Error) async {
     if case APIError.unauthorized = error {
       reset()
-      banner = "Sua sessão expirou. Entre de novo."
+      banner = "sessão expirou"
       await onUnauthorized?()
       return
     }
@@ -405,7 +405,7 @@ public final class EstudosStore {
   }
 
   private static func message(for error: any Error) -> String {
-    (error as? APIError)?.message ?? "Algo deu errado."
+    (error as? APIError)?.message ?? "erro"
   }
 }
 

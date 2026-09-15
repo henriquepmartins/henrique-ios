@@ -39,7 +39,7 @@ struct EstudosTabs: View {
   var body: some View {
     TabView(selection: appSwitcherSelection($tab, isPresented: $showingApps, bubble: .apps)) {
       Tab("hoje", systemImage: "house", value: EstudosTab.hoje) {
-        shell("hoje") {
+        shell {
           StudyTodayScreen(
             onSession: { showingSession = true },
             onAssignments: { tab = .entregas },
@@ -47,13 +47,13 @@ struct EstudosTabs: View {
         }
       }
       Tab("matérias", systemImage: "book", value: EstudosTab.materias) {
-        shell("matérias") { StudySubjectsScreen() }
+        shell { StudySubjectsScreen() }
       }
       Tab("entregas", systemImage: "calendar", value: EstudosTab.entregas) {
-        shell("entregas") { StudyAssignmentsScreen() }
+        shell { StudyAssignmentsScreen() }
       }
       Tab("revisar", systemImage: "rectangle.on.rectangle", value: EstudosTab.revisar) {
-        shell("revisar") { StudyReviewScreen() }
+        shell { StudyReviewScreen() }
       }
       // A bolha é o botão do painel, então ela mostra o x enquanto o painel
       // está aberto.
@@ -78,9 +78,7 @@ struct EstudosTabs: View {
     .task { await store.prefetchAll() }
   }
 
-  private func shell<Content: View>(
-    _ label: String, @ViewBuilder content: () -> Content
-  ) -> some View {
+  private func shell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
     NavigationStack {
       content()
         .scrollEdgeEffectStyle(.soft, for: .top)
@@ -88,27 +86,19 @@ struct EstudosTabs: View {
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
-          ToolbarItem(placement: .navigationLeading) {
-            VStack(alignment: .leading, spacing: 2) {
-              Text("estudos").font(.caption2).foregroundStyle(Color.studyBlue)
-              Text(label).font(.headline.weight(.medium))
-            }.fixedSize(horizontal: true, vertical: false)
-          }.sharedBackgroundVisibility(.hidden)
           ToolbarItem(placement: .primaryAction) {
             Menu {
               Button("escrever", systemImage: "square.and.pencil") { showingWrite = true }
-              Picker("cor do app", selection: $accent) {
+              Picker("cor", selection: $accent) {
                 ForEach(Accent.allCases) { color in Text(color.label).tag(color) }
               }
-              Button("começar sessão", systemImage: "play.fill") { showingSession = true }
+              Button("sessão", systemImage: "play.fill") { showingSession = true }
             } label: { Label("configurar", systemImage: "gearshape") }
           }
           ToolbarItem(placement: .primaryAction) {
             Menu {
-              Button(
-                "Sair da conta", systemImage: "rectangle.portrait.and.arrow.right",
-                role: .destructive
-              ) {
+              Button("sair", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive)
+              {
                 Task { await academia.signOut() }
               }
             } label: { Image(systemName: "person.crop.circle") }

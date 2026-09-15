@@ -156,7 +156,6 @@ public struct FocusSessionScreen: View {
             metaLine(banner)
           }
           rule
-          materialRow
           noteCard
           if noteFailed {
             noteRetry
@@ -179,10 +178,10 @@ public struct FocusSessionScreen: View {
     }
     .onDisappear { keepScreenAwake(false) }
     .confirmationDialog(
-      "há uma sessão ou anotação sem salvar.", isPresented: $askLeave, titleVisibility: .visible
+      "descartar sessão?", isPresented: $askLeave, titleVisibility: .visible
     ) {
-      Button("sair e descartar", role: .destructive) { dismiss() }
-      Button("continuar no bloco", role: .cancel) {}
+      Button("descartar", role: .destructive) { dismiss() }
+      Button("continuar", role: .cancel) {}
     }
   }
 
@@ -199,11 +198,7 @@ public struct FocusSessionScreen: View {
       }
       .buttonStyle(StudyPressStyle())
       .accessibilityLabel("sair do foco")
-      Spacer(minLength: 8)
-      StudyEyebrow(
-        state.phase == .idle ? "antes de começar" : "bloco de \(state.minutes) min", cream: true)
-      Spacer(minLength: 8)
-      Color.clear.frame(width: 44, height: 44)
+      Spacer(minLength: 0)
     }
   }
 
@@ -222,8 +217,7 @@ public struct FocusSessionScreen: View {
 
   private var idleSection: some View {
     VStack(alignment: .leading, spacing: 0) {
-      label("foco", color: .studyMarigold)
-      title("O que você vai estudar agora?")
+      title("matéria")
       subjectPicker
         .padding(.top, 28)
       StudyWrap(spacing: 8, lineSpacing: 8) {
@@ -238,12 +232,12 @@ public struct FocusSessionScreen: View {
       }
       .padding(.top, 28)
       FocusSessionGradientButton(
-        title: "começar o bloco", systemImage: "play.fill",
+        title: "começar", systemImage: "play.fill",
         action: { Task { await start() } })
         .disabled(busy)
         .padding(.top, 28)
       if startFailed {
-        metaLine("o bloco não abriu no servidor. Tente de novo em um instante.")
+        metaLine("não abriu, tente de novo")
           .padding(.top, 10)
       }
     }
@@ -258,12 +252,7 @@ public struct FocusSessionScreen: View {
     case .failed(let message):
       metaLine(message)
     case .ready(let list) where list.isEmpty:
-      StudyEmptyState(
-        icon: "book",
-        title: "sem matérias para escolher",
-        detail:
-          "Nenhuma matéria chegou do portal ainda. Rode a sincronização em estudos e as suas disciplinas aparecem aqui para escolher.",
-        cream: true)
+      StudyEmptyState(icon: "book", title: "sem matérias", cream: true)
     case .ready(let list):
       StudyWrap(spacing: 8, lineSpacing: 8) {
         ForEach(list) { item in
@@ -291,8 +280,8 @@ public struct FocusSessionScreen: View {
   private func timingReadout(now: Date) -> some View {
     let remaining = state.remaining(at: now)
     return VStack(alignment: .leading, spacing: 0) {
-      label(subjectName ?? "foco livre", color: .studyMarigold)
-      title(isPaused ? "pausado" : "bloco de \(state.minutes) min")
+      if let subjectName { label(subjectName, color: .studyMarigold) }
+      title(isPaused ? "pausado" : "\(state.minutes) min")
       Text(StudyFormat.clock(remaining))
         .font(.system(size: timerSize, weight: .semibold).leading(.tight))
         .monospacedDigit()
@@ -306,7 +295,7 @@ public struct FocusSessionScreen: View {
       HStack(spacing: 12) {
         Text("\(StudyFormat.minutes(Int(state.elapsed(at: now) / 60))) feitos")
         Spacer(minLength: 0)
-        Text("termina às \(StudyFormat.hour(now.addingTimeInterval(remaining)))")
+        Text("até \(StudyFormat.hour(now.addingTimeInterval(remaining)))")
       }
       .font(.system(size: metaSize))
       .monospacedDigit()
@@ -332,7 +321,7 @@ public struct FocusSessionScreen: View {
       }
       .padding(.top, 28)
       if finishFailed {
-        metaLine("não deu para salvar o bloco. o tempo está pausado. tente concluir de novo.")
+        metaLine("não salvou, tempo pausado")
           .padding(.top, 10)
       }
     }
@@ -344,8 +333,8 @@ public struct FocusSessionScreen: View {
 
   private var doneSection: some View {
     VStack(alignment: .leading, spacing: 0) {
-      label(subjectName ?? "foco livre", color: .studyMarigold)
-      title("bloco concluído")
+      if let subjectName { label(subjectName, color: .studyMarigold) }
+      title("concluído")
       Text(StudyFormat.minutes(completedMinutes))
         .font(.system(size: timerSize, weight: .semibold).leading(.tight))
         .monospacedDigit()
@@ -353,13 +342,14 @@ public struct FocusSessionScreen: View {
         .lineLimit(1)
         .minimumScaleFactor(0.4)
         .padding(.top, 28)
-      Text(noteStatus)
-        .font(.system(size: metaSize))
-        .monospacedDigit()
-        .foregroundStyle(Color.studyCream50)
-        .padding(.top, 10)
+      if let noteStatus {
+        Text(noteStatus)
+          .font(.system(size: metaSize))
+          .foregroundStyle(Color.studyCream50)
+          .padding(.top, 10)
+      }
       FocusSessionCapsule(action: { dismiss() }) {
-        Text("voltar para estudos")
+        Text("voltar")
       }
       .padding(.top, 28)
     }
@@ -372,32 +362,12 @@ public struct FocusSessionScreen: View {
     Rectangle().fill(Color.studyCream25).frame(height: 1)
   }
 
-  private var materialRow: some View {
-    HStack(alignment: .top, spacing: 12) {
-      Image(systemName: "doc.richtext")
-        .font(.system(size: 20))
-        .foregroundStyle(Color.studyCream50)
-        .frame(width: 22)
-      VStack(alignment: .leading, spacing: 2) {
-        Text("sem material aberto")
-          .font(.system(size: rowSize))
-          .foregroundStyle(Color.studyCream)
-        Text("escolha um slide na matéria e a sessão abre na página onde você parou")
-          .font(.system(size: metaSize))
-          .foregroundStyle(Color.studyCream50)
-          .fixedSize(horizontal: false, vertical: true)
-      }
-      Spacer(minLength: 0)
-    }
-    .padding(.vertical, 4)
-  }
-
   private var noteCard: some View {
     VStack(alignment: .leading, spacing: 10) {
       HStack(spacing: 12) {
-        StudyEyebrow("anotação rápida", cream: true)
+        StudyEyebrow("nota", cream: true)
         Spacer(minLength: 0)
-        StudyPill(tone: .cream, text: subjectName ?? "sem matéria")
+        if let subjectName { StudyPill(tone: .cream, text: subjectName) }
       }
       TextEditor(text: $quickNote)
         .font(.system(size: rowSize))
@@ -406,7 +376,7 @@ public struct FocusSessionScreen: View {
         .frame(minHeight: 72)
         .overlay(alignment: .topLeading) {
           if quickNote.isEmpty {
-            Text("O que ficou claro, o que ficou confuso, uma pergunta para a próxima aula.")
+            Text("nota")
               .font(.system(size: rowSize))
               .foregroundStyle(Color.studyCream50)
               .padding(.top, 8)
@@ -415,13 +385,6 @@ public struct FocusSessionScreen: View {
           }
         }
         .disabled(busy || savingNote || (state.phase == .done && noteSaved))
-      HStack(spacing: 12) {
-        Text("salva no app quando o bloco fecha")
-        Spacer(minLength: 0)
-        Image(systemName: "arrow.right").font(.system(size: 16))
-      }
-      .font(.system(size: metaSize))
-      .foregroundStyle(Color.studyCream50)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(16)
@@ -430,9 +393,9 @@ public struct FocusSessionScreen: View {
 
   private var noteRetry: some View {
     VStack(alignment: .leading, spacing: 12) {
-      metaLine("a anotação não foi salva. o texto continua aqui.")
+      metaLine("nota não salva")
       FocusSessionCapsule(action: { Task { await retryNote() } }) {
-        Text("tentar salvar anotação")
+        Text("tentar de novo")
       }
       .disabled(savingNote || noteSession == nil)
     }
@@ -444,15 +407,9 @@ public struct FocusSessionScreen: View {
       onReview()
     } label: {
       HStack(spacing: 12) {
-        VStack(alignment: .leading, spacing: 2) {
-          Text("depois daqui, os cartões do dia")
-            .font(.system(size: rowSize))
-            .foregroundStyle(Color.studyCream)
-          Text("a fila de revisão fecha o ciclo da aula")
-            .font(.system(size: metaSize))
-            .foregroundStyle(Color.studyCream50)
-        }
-        .multilineTextAlignment(.leading)
+        Text("revisar cartões")
+          .font(.system(size: rowSize))
+          .foregroundStyle(Color.studyCream)
         Spacer(minLength: 0)
         Image(systemName: "arrow.right")
           .font(.system(size: 20))
@@ -521,14 +478,14 @@ public struct FocusSessionScreen: View {
   }
 
   private var finishTitle: String {
-    if busy { return "salvando bloco…" }
-    return finishFailed ? "tentar concluir de novo" : "concluir bloco"
+    if busy { return "salvando…" }
+    return finishFailed ? "tentar de novo" : "concluir"
   }
 
-  private var noteStatus: String {
-    if savingNote { return "salvando anotação…" }
-    if noteSaved { return "anotação salva no app" }
-    return trimmedNote.isEmpty ? "sem anotação nesta sessão" : "anotação ainda não salva"
+  private var noteStatus: String? {
+    if savingNote { return "salvando…" }
+    if noteSaved { return "nota salva" }
+    return trimmedNote.isEmpty ? nil : "nota não salva"
   }
 
   private var trimmedNote: String {

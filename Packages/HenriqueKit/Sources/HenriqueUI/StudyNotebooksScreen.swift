@@ -6,9 +6,9 @@ public struct NotebookPageRoute: Hashable, Sendable {
   public init(id: String) { self.id = id }
 }
 
-private func pageCountLabel(_ total: Int) -> String {
+private func pageCountLabel(_ total: Int) -> String? {
   switch total {
-  case 0: "nenhuma página"
+  case 0: nil
   case 1: "1 página"
   default: "\(total) páginas"
   }
@@ -29,7 +29,7 @@ public struct SubjectNotebookSection: View {
     VStack(alignment: .leading, spacing: 12) {
       switch store.notebooks {
       case .idle, .loading:
-        StudyLoadingState(phase: "carregando o caderno").transition(.opacity)
+        StudyLoadingState().transition(.opacity)
       case .failed(let message):
         StudyFailedState(message: message) { Task { await store.loadNotebooks(force: true) } }
           .transition(.opacity)
@@ -46,9 +46,11 @@ public struct SubjectNotebookSection: View {
   @ViewBuilder
   private func pages(_ pages: [NotebookPageSummary]) -> some View {
     HStack(spacing: 12) {
-      Text(pageCountLabel(pages.count))
-        .font(.footnote)
-        .foregroundStyle(Color.studyInk40)
+      if let count = pageCountLabel(pages.count) {
+        Text(count)
+          .font(.footnote)
+          .foregroundStyle(Color.studyInk40)
+      }
       Spacer(minLength: 0)
       Button(newPageLabel, systemImage: "plus") { Task { await create() } }
         .font(.footnote)
@@ -58,11 +60,7 @@ public struct SubjectNotebookSection: View {
     }
 
     if pages.isEmpty {
-      StudyEmptyState(
-        icon: "doc.text", title: "nenhuma página ainda",
-        detail:
-          "o caderno desta matéria começa vazio. a primeira página abre em branco e o texto dos blocos é editado no web por enquanto."
-      )
+      StudyEmptyState(icon: "doc.text", title: "sem páginas")
     } else {
       StudyDbList {
         ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
@@ -79,9 +77,7 @@ public struct SubjectNotebookSection: View {
   }
 
   private var newPageLabel: String {
-    if creating { return "criando..." }
-    if failed { return "não criou, tentar de novo" }
-    return "nova página"
+    failed ? "tentar de novo" : "nova"
   }
 
   private func create() async {
@@ -122,14 +118,14 @@ public struct NotebookPageScreen: View {
   /// O rótulo do salvamento. Estado próprio porque a tela precisa distinguir
   /// "ainda não mandei" de "mandei e não voltou".
   enum SaveState: Equatable {
-    case clean(Date)
+    case clean
     case pending
     case saving
     case failed
 
-    func label(now: Date) -> String {
+    var label: String {
       switch self {
-      case .clean(let at): "salvo \(StudyFormat.relative(at, now: now))"
+      case .clean: "salvo"
       case .pending: "alterado"
       case .saving: "salvando..."
       case .failed: "não salvou"
@@ -149,7 +145,7 @@ public struct NotebookPageScreen: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 8) {
         if page != nil {
-          TextField("sem título", text: Binding(get: { title }, set: { touch($0) }))
+          TextField("título", text: Binding(get: { title }, set: { touch($0) }))
             .font(.system(size: titleSize, weight: .bold))
             .tracking(-titleSize * 0.035)
             .textFieldStyle(.plain)
@@ -157,14 +153,14 @@ public struct NotebookPageScreen: View {
             .accessibilityLabel("título da página")
           NotebookBody(blocks: blocks)
             .padding(.top, 8)
-          Text("o texto dos blocos é editado no web por enquanto")
+          Text("só leitura")
             .font(.footnote)
             .foregroundStyle(Color.studyInk40)
             .padding(.top, 24)
         } else if let failed {
           StudyFailedState(message: failed) { Task { await load(force: true) } }
         } else {
-          StudyLoadingState(phase: "abrindo a página")
+          StudyLoadingState()
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -179,14 +175,14 @@ public struct NotebookPageScreen: View {
         StudyPill(color: subject?.color, text: subject?.name ?? "caderno")
       }
       ToolbarItem(placement: .primaryAction) {
-        Text(page == nil ? "" : save.label(now: Date()))
+        Text(page == nil ? "" : save.label)
           .font(.caption)
-          .monospacedDigit()
           .foregroundStyle(save.color)
-          // Largura fixa: o rótulo troca entre "salvo há 3 min" e "salvando..."
-          // sem empurrar o botão do lado.
-          .frame(width: 96, alignment: .trailing)
-          .accessibilityLabel("estado do salvamento")
+          // Largura fixa: o rótulo troca entre "salvo" e "salvando..." sem
+          // empurrar o botão do lado.
+          .frame(width: 72, alignment: .trailing)
+          .accessibilityLabel("salvamento")
+          .accessibilityValue(page == nil ? "" : save.label)
       }
       ToolbarItem(placement: .primaryAction) {
         Button("apagar página", systemImage: "trash") { confirmingDelete = true }
@@ -195,7 +191,7 @@ public struct NotebookPageScreen: View {
       }
     }
     .confirmationDialog(
-      "apagar esta página?", isPresented: $confirmingDelete, titleVisibility: .visible
+      "apagar página?", isPresented: $confirmingDelete, titleVisibility: .visible
     ) {
       Button("apagar", role: .destructive) { Task { await remove() } }
       Button("cancelar", role: .cancel) {}
@@ -216,7 +212,7 @@ public struct NotebookPageScreen: View {
   private func load(force: Bool) async {
     if page != nil, !force { return }
     guard let loaded = await store.notebookPage(id: id, force: force) else {
-      if page == nil { failed = "essa página não abriu." }
+      if page == nil { failed = "não abriu" }
       return
     }
     page = loaded
@@ -226,7 +222,7 @@ public struct NotebookPageScreen: View {
     // subiu, então o campo só recebe o título do servidor quando está limpo.
     if version == sent {
       title = loaded.title
-      save = .clean(loaded.updatedAt)
+      save = .clean
     }
   }
 
@@ -256,11 +252,11 @@ public struct NotebookPageScreen: View {
     if report { save = .saving }
     Task {
       do {
-        let saved = try await store.saveNotebookPage(
+        _ = try await store.saveNotebookPage(
           SaveNotebookPageInput(
             id: page.id, subjectId: page.subjectId, title: draft, content: page.content))
         sent = attempt
-        if report, version == attempt { save = .clean(saved.updatedAt) }
+        if report, version == attempt { save = .clean }
       } catch {
         if report, version == attempt { save = .failed }
       }

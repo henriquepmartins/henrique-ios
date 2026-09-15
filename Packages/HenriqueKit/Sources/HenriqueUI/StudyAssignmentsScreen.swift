@@ -13,7 +13,7 @@ public struct StudyAssignmentsScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         switch store.assignments {
         case .idle, .loading:
-          StudyLoadingState(phase: "carregando as entregas").transition(.opacity)
+          StudyLoadingState().transition(.opacity)
         case .failed(let message):
           StudyFailedState(message: message) { Task { await store.loadAssignments(force: true) } }
             .transition(.opacity)
@@ -46,14 +46,7 @@ public struct StudyAssignmentsScreen: View {
   private func content(_ groups: [AssignmentGroup]) -> some View {
     let now = today.date(in: StudyFormat.calendar)
 
-    StudyHeading(
-      eyebrow: "portal da faculdade", title: "entregas",
-      subtitle: "Tudo que o portal lança cai aqui em até 15 minutos, com prazo e matéria já preenchidos."
-    )
-
-    StudyCallout(
-      icon: "arrow.triangle.2.circlepath", tone: .sky, title: "o portal chega sozinho",
-      detail: "a varredura roda de quinze em quinze minutos e só cria o que ainda não existe.")
+    StudyHeading(title: "entregas")
 
     ScrollView(.horizontal) {
       HStack(spacing: 6) {
@@ -75,14 +68,11 @@ public struct StudyAssignmentsScreen: View {
     VStack(alignment: .leading, spacing: 20) {
       let visible = visibleGroups(groups, now: now)
       if visible.isEmpty {
-        StudyEmptyState(
-          icon: "checkmark.circle", title: filter.emptyTitle, detail: filter.emptyDetail)
+        StudyEmptyState(icon: "checkmark.circle", title: filter.emptyTitle)
       } else {
         ForEach(visible, id: \.group.id) { entry in
           VStack(alignment: .leading, spacing: 0) {
-            StudyGroupLabel(
-              left: StudyFormat.dayLabel(entry.group.date, today: today),
-              right: entry.group.items.count == 1 ? "1 entrega" : "\(entry.group.items.count) entregas")
+            StudyGroupLabel(left: StudyFormat.dayLabel(entry.group.date, today: today))
             VStack(spacing: 8) {
               ForEach(Array(entry.group.items.enumerated()), id: \.element.id) { index, item in
                 StudyTaskCard(assignment: item, now: now) { next in
@@ -127,7 +117,7 @@ private struct VisibleGroup {
   let start: Int
 }
 
-/// Os cinco filtros da tela, com a regra e o texto do vazio no mesmo lugar. Um
+/// Os cinco filtros da tela, com a regra e o título do vazio no mesmo lugar. Um
 /// filtro novo entra aqui inteiro e a barra de chips o mostra sem mais nada.
 enum AssignmentFilter: String, Hashable, CaseIterable, Identifiable {
   case todas, atrasadas, semana, mes, feitas
@@ -138,8 +128,8 @@ enum AssignmentFilter: String, Hashable, CaseIterable, Identifiable {
     switch self {
     case .todas: "todas"
     case .atrasadas: "atrasadas"
-    case .semana: "esta semana"
-    case .mes: "este mês"
+    case .semana: "semana"
+    case .mes: "mês"
     case .feitas: "feitas"
     }
   }
@@ -156,26 +146,11 @@ enum AssignmentFilter: String, Hashable, CaseIterable, Identifiable {
 
   var emptyTitle: String {
     switch self {
-    case .todas: "nenhuma entrega no radar"
+    case .todas: "sem entregas"
     case .atrasadas: "nada atrasado"
-    case .semana: "a semana está limpa"
-    case .mes: "o mês está limpo"
-    case .feitas: "nenhuma entrega marcada como feita"
-    }
-  }
-
-  var emptyDetail: String {
-    switch self {
-    case .todas:
-      "o portal sincroniza sozinho a cada 15 minutos, e o que ele achar aparece aqui. até lá, esta tela fica em branco de propósito."
-    case .atrasadas:
-      "nenhum prazo vencido esperando por você. o que passar da hora sem estar riscado cai nesta aba."
-    case .semana:
-      "nenhuma entrega vence nos próximos sete dias. dá para puxar leitura de aula ou adiantar cartão."
-    case .mes:
-      "nada vence nos próximos trinta dias. se o portal lançar algo, a entrega aparece aqui em até 15 minutos."
-    case .feitas:
-      "toque no quadrado à esquerda de uma entrega para riscá-la. as riscadas ficam guardadas nesta aba."
+    case .semana: "semana livre"
+    case .mes: "mês livre"
+    case .feitas: "nada feito"
     }
   }
 }

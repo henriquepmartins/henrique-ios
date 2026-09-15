@@ -220,7 +220,7 @@ struct StudyEyebrow: View {
   }
 
   var body: some View {
-    Text("{ \(text) }")
+    Text(text)
       .font(.caption.weight(.medium))
       .tracking(0.12)
       .foregroundStyle(cream ? Color.studyCream50 : Color.studyInk60)
@@ -231,16 +231,11 @@ struct StudyHeading<Trailing: View>: View {
   @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 32.0
   let eyebrow: String?
   let title: String
-  let subtitle: String?
   let trailing: Trailing
 
-  init(
-    eyebrow: String? = nil, title: String, subtitle: String? = nil,
-    @ViewBuilder trailing: () -> Trailing
-  ) {
+  init(eyebrow: String? = nil, title: String, @ViewBuilder trailing: () -> Trailing) {
     self.eyebrow = eyebrow
     self.title = title
-    self.subtitle = subtitle
     self.trailing = trailing()
   }
 
@@ -253,12 +248,6 @@ struct StudyHeading<Trailing: View>: View {
           .tracking(-titleSize * 0.03)
           .fixedSize(horizontal: false, vertical: true)
           .accessibilityAddTraits(.isHeader)
-        if let subtitle {
-          Text(subtitle)
-            .font(.subheadline)
-            .foregroundStyle(Color.studyGraphite)
-            .fixedSize(horizontal: false, vertical: true)
-        }
       }
       Spacer(minLength: 0)
       trailing
@@ -269,8 +258,8 @@ struct StudyHeading<Trailing: View>: View {
 }
 
 extension StudyHeading where Trailing == EmptyView {
-  init(eyebrow: String? = nil, title: String, subtitle: String? = nil) {
-    self.init(eyebrow: eyebrow, title: title, subtitle: subtitle) { EmptyView() }
+  init(eyebrow: String? = nil, title: String) {
+    self.init(eyebrow: eyebrow, title: title) { EmptyView() }
   }
 }
 
@@ -300,18 +289,14 @@ struct StudySectionHeading: View {
 
 struct StudyGroupLabel: View {
   let left: String
-  var right: String?
 
   var body: some View {
-    HStack(spacing: 8) {
-      Text(left)
-      Spacer(minLength: 0)
-      if let right { Text(right).monospacedDigit() }
-    }
-    .font(.caption.weight(.medium))
-    .foregroundStyle(Color.studyInk40)
-    .padding(.vertical, 4)
-    .padding(.horizontal, 2)
+    Text(left)
+      .font(.caption.weight(.medium))
+      .foregroundStyle(Color.studyInk40)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.vertical, 4)
+      .padding(.horizontal, 2)
   }
 }
 
@@ -514,7 +499,7 @@ struct StudyCallout: View {
 struct StudyEmptyState: View {
   let icon: String
   let title: String
-  let detail: String
+  var detail: String?
   var cream = false
   var action: (label: String, perform: () -> Void)?
 
@@ -528,10 +513,12 @@ struct StudyEmptyState: View {
       Text(title)
         .font(.callout.weight(.semibold))
         .foregroundStyle(cream ? Color.studyCream : Color.studyInk)
-      Text(detail)
-        .font(.footnote)
-        .foregroundStyle(cream ? Color.studyCream50 : Color.studyGraphite)
-        .fixedSize(horizontal: false, vertical: true)
+      if let detail {
+        Text(detail)
+          .font(.footnote)
+          .foregroundStyle(cream ? Color.studyCream50 : Color.studyGraphite)
+          .fixedSize(horizontal: false, vertical: true)
+      }
       if let action {
         Button(action.label, action: action.perform)
           .buttonStyle(.glass)
@@ -599,7 +586,6 @@ struct StudyTaskCard: View {
           .lineLimit(2)
           .strikethrough(done)
         StudyWrap(spacing: 6, lineSpacing: 6) {
-          StudyPill(tone: assignment.status.pillTone, text: assignment.status.label)
           StudyPill(tone: assignment.source == "ava" ? .neutral : .outline, text: assignment.source)
           if let name = assignment.subjectName {
             StudyPill(color: assignment.subjectColor, text: name)
@@ -695,16 +681,8 @@ extension View {
 }
 
 struct StudyLoadingState: View {
-  var phase: String?
-
   var body: some View {
-    VStack(spacing: 10) {
-      ProgressView()
-      if let phase {
-        Text(phase).font(.footnote).foregroundStyle(Color.studyInk60)
-      }
-    }
-    .frame(maxWidth: .infinity, minHeight: 160)
+    ProgressView().frame(maxWidth: .infinity, minHeight: 160)
   }
 }
 
@@ -715,7 +693,7 @@ struct StudyFailedState: View {
   var body: some View {
     StudyEmptyState(
       icon: "exclamationmark.triangle",
-      title: "não deu para carregar",
+      title: "não carregou",
       detail: message,
       action: (label: "tentar de novo", perform: retry))
   }
