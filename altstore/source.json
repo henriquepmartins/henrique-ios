@@ -14,7 +14,18 @@
         "entitlements": [],
         "privacy": []
       },
-      "versions": []
+      "versions": [
+        {
+          "version": "0.1",
+          "buildVersion": "5",
+          "date": "2026-09-15T13:32:34-03:00",
+          "localizedDescription": "Primeiro build publicado pela fonte do AltStore.",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-5/Henrique.ipa",
+          "size": 3350341,
+          "sha256": "14f702e9b1628e86ce9824bb76dc326114e882fdb3b7689093c0dcc9d762b01f",
+          "minOSVersion": "26.0"
+        }
+      ]
     }
   ],
   "news": []
