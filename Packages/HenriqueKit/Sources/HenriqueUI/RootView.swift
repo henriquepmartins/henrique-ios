@@ -325,6 +325,10 @@ struct OverviewScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
+        AttendanceMap(attendance: store.attendance) { from, to in
+          await store.loadAttendance(from: from, to: to)
+        }
+        .staggeredEntrance(index: 0, isReady: true)
         if let data = store.dashboard {
           VStack(alignment: .leading, spacing: 10) {
             Text("\(data.consistencyPercent)%").font(.system(size: 48, weight: .medium)).monospacedDigit()
@@ -332,7 +336,7 @@ struct OverviewScreen: View {
           }
           .foregroundStyle(.white).frame(maxWidth: .infinity, alignment: .leading)
           .padding(22).background(accent.deep, in: .rect(cornerRadius: 28))
-          .staggeredEntrance(index: 0, isReady: true)
+          .staggeredEntrance(index: 1, isReady: true)
           HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 10) {
               Text(data.workout?.name.lowercased() ?? "descanso").font(.title2.weight(.medium))
@@ -344,7 +348,7 @@ struct OverviewScreen: View {
             Button("Abrir treino", systemImage: "arrow.right", action: onWorkout)
               .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
           }.padding(22).paperCard(radius: 32)
-            .staggeredEntrance(index: 1, isReady: true)
+            .staggeredEntrance(index: 2, isReady: true)
         }
       }.padding(16).padding(.bottom, 24)
     }

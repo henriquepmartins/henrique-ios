@@ -1,0 +1,264 @@
+import HenriqueCore
+import SwiftUI
+
+/// O mapa de frequência da tela "hoje", no estilo do GitHub. Recebe a
+/// frequência já carregada e pede o intervalo do período visível a quem tem
+/// o servidor; assim o preview roda com dados fabricados.
+struct AttendanceMap: View {
+  @Environment(\.locale) private var locale
+  @State private var period: AttendancePeriod = .month(containing: .today)
+  @State private var grid = AttendanceGrid(period: .month(containing: .today), attendance: [:])
+  @State private var answered = false
+  let attendance: [CalendarDate: AttendanceDay]
+  let load: (CalendarDate, CalendarDate) async -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      AttendanceHeader(period: $period, title: period.title(locale: locale))
+      AttendanceCount(total: grid.total, name: period.name(locale: locale), answered: answered)
+      switch period {
+      case .month: MonthGrid(grid: grid)
+      case .year: YearGrid(grid: grid)
+      }
+      if grid.total > 0 {
+        AttendanceLegend()
+      }
+    }
+    .padding(22).paperCard(radius: 32)
+    .onChange(of: period) { grid = AttendanceGrid(period: period, attendance: attendance) }
+    .onChange(of: attendance, initial: true) { grid = AttendanceGrid(period: period, attendance: attendance) }
+    .task(id: period) {
+      let range = period.range()
+      await load(range.lowerBound, range.upperBound)
+      answered = true
+    }
+  }
+}
+
+private enum AttendanceScope: Hashable {
+  case month, year
+}
+
+private struct AttendanceHeader: View {
+  @Binding var period: AttendancePeriod
+  let title: String
+
+  private var scope: Binding<AttendanceScope> {
+    Binding {
+      if case .month = period { .month } else { .year }
+    } set: { scope in
+      switch (scope, period) {
+      case (.month, .year(let year)):
+        let today = CalendarDate.today
+        period = year == today.year ? .month(containing: today) : .month(year: year, month: 12)
+      case (.year, .month(let year, _)):
+        period = .year(year)
+      default:
+        break
+      }
+    }
+  }
+
+  private var nextIsFuture: Bool {
+    period.next.range().lowerBound > .today
+  }
+
+  var body: some View {
+    HStack(spacing: 8) {
+      Text(title).font(.subheadline).foregroundStyle(Color.ink)
+        .lineLimit(1).minimumScaleFactor(0.8)
+      Spacer(minLength: 4)
+      Button("Período anterior", systemImage: "chevron.left") { period = period.previous }
+      Button("Próximo período", systemImage: "chevron.right") { period = period.next }
+        .disabled(nextIsFuture)
+      Picker("Escala", selection: scope) {
+        Text("mês").tag(AttendanceScope.month)
+        Text("ano").tag(AttendanceScope.year)
+      }
+      .pickerStyle(.segmented).labelsHidden().frame(width: 112)
+    }
+    .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.small)
+  }
+}
+
+private struct AttendanceCount: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  let total: Int
+  let name: String
+  let answered: Bool
+
+  var body: some View {
+    Text(text)
+      .font(.title2.weight(.medium)).monospacedDigit().foregroundStyle(Color.ink)
+      .contentTransition(.numericText(value: Double(total)))
+      .animation(reduceMotion ? nil : .default, value: total)
+      .opacity(answered || total > 0 ? 1 : 0)
+  }
+
+  private var text: String {
+    switch total {
+    case 0: "nenhum treino ainda"
+    case 1: "1 treino em \(name)"
+    default: "\(total) treinos em \(name)"
+    }
+  }
+}
+
+private struct MonthGrid: View {
+  @Environment(\.locale) private var locale
+  let grid: AttendanceGrid
+
+  /// As iniciais repetem letra em pt-BR ("S" de segunda e de sábado), então a
+  /// identidade é o número do dia, não o texto.
+  private var weekdayInitials: [(weekday: Int, initial: String)] {
+    var calendar = Calendar.autoupdatingCurrent
+    calendar.locale = locale
+    let symbols = calendar.veryShortStandaloneWeekdaySymbols
+    let first = calendar.firstWeekday - 1
+    return (0..<7).map { weekday in ((first + weekday) % 7, symbols[(first + weekday) % 7]) }
+  }
+
+  var body: some View {
+    VStack(spacing: 4) {
+      HStack(spacing: 4) {
+        ForEach(weekdayInitials, id: \.weekday) { _, initial in
+          Text(initial).font(.caption2).foregroundStyle(Color.mutedInk).frame(maxWidth: .infinity)
+        }
+      }
+      .accessibilityHidden(true)
+      ForEach(Array(grid.weeks.enumerated()), id: \.element.id) { index, week in
+        HStack(spacing: 4) {
+          ForEach(week.cells) { cell in
+            DaySquare(cell: cell, radius: 6)
+              .aspectRatio(1, contentMode: .fit).frame(maxWidth: .infinity)
+          }
+        }
+        .staggeredEntrance(index: index, isReady: true)
+      }
+    }
+  }
+}
+
+private struct YearGrid: View {
+  @Environment(\.locale) private var locale
+  let grid: AttendanceGrid
+  private let side: CGFloat = 13
+
+  var body: some View {
+    ScrollView(.horizontal) {
+      HStack(alignment: .top, spacing: 3) {
+        ForEach(Array(grid.weeks.enumerated()), id: \.element.id) { index, week in
+          VStack(spacing: 3) {
+            Text(monthInitial(for: week)).font(.caption2).foregroundStyle(Color.mutedInk)
+              .frame(width: side, height: 14, alignment: .leading).accessibilityHidden(true)
+            ForEach(week.cells) { cell in
+              DaySquare(cell: cell, radius: 3).frame(width: side, height: side)
+            }
+          }
+          .staggeredEntrance(index: index, isReady: true)
+        }
+      }
+    }
+    .scrollIndicators(.hidden)
+    .defaultScrollAnchor(.trailing)
+  }
+
+  private func monthInitial(for week: AttendanceGrid.Week) -> String {
+    guard let first = week.cells.first(where: { $0.date?.day == 1 })?.date else { return "" }
+    return first.date().formatted(Date.FormatStyle(locale: locale).month(.narrow))
+  }
+}
+
+private struct DaySquare: View {
+  @Environment(\.accent) private var accent
+  @Environment(\.locale) private var locale
+  let cell: AttendanceGrid.Cell
+  let radius: CGFloat
+
+  var body: some View {
+    ZStack {
+      if let date = cell.date {
+        RoundedRectangle(cornerRadius: radius)
+          .fill(AttendanceFill.color(level: cell.level, accent: accent))
+          .overlay {
+            if date == .today {
+              RoundedRectangle(cornerRadius: radius + 1.5)
+                .strokeBorder(accent.deep, lineWidth: 1.5)
+                .padding(-3)
+            }
+          }
+          .accessibilityElement()
+          .accessibilityLabel(label(for: date))
+      } else {
+        Color.clear.accessibilityHidden(true)
+      }
+    }
+  }
+
+  private func label(for date: CalendarDate) -> String {
+    let day = date.date().formatted(Date.FormatStyle(locale: locale).day().month(.wide))
+    switch cell.workSets {
+    case 0: return "\(day), sem treino"
+    case 1: return "\(day), 1 série"
+    default: return "\(day), \(cell.workSets) séries"
+    }
+  }
+}
+
+private enum AttendanceFill {
+  static func color(level: Int, accent: Accent) -> Color {
+    switch level {
+    case 0: Color.ink.opacity(0.06)
+    case 1: accent.base.opacity(0.28)
+    case 2: accent.base.opacity(0.5)
+    case 3: accent.base.opacity(0.75)
+    default: accent.base
+    }
+  }
+}
+
+private struct AttendanceLegend: View {
+  @Environment(\.accent) private var accent
+
+  var body: some View {
+    HStack(spacing: 4) {
+      Text("menos")
+      ForEach(0..<5, id: \.self) { level in
+        RoundedRectangle(cornerRadius: 3)
+          .fill(AttendanceFill.color(level: level, accent: accent))
+          .frame(width: 11, height: 11)
+      }
+      Text("mais")
+    }
+    .font(.caption2).foregroundStyle(Color.mutedInk)
+    .frame(maxWidth: .infinity, alignment: .trailing)
+    .accessibilityHidden(true)
+  }
+}
+
+#if DEBUG
+  #Preview("Mapa com dados") {
+    ScrollView {
+      AttendanceMap(attendance: AttendancePreview.sample) { _, _ in }
+        .padding(16)
+    }
+    .environment(\.locale, Locale(identifier: "pt_BR"))
+    .environment(\.accent, Accent.verde)
+  }
+
+  private enum AttendancePreview {
+    static var sample: [CalendarDate: AttendanceDay] {
+      let today = CalendarDate.today
+      var days: [CalendarDate: AttendanceDay] = [:]
+      for back in 0..<400 {
+        let date = today.adding(days: -back)
+        // segunda, quarta e sexta treinam; o volume cresce com a semana.
+        let weekday = date.weekday()
+        guard [1, 3, 5].contains(weekday) else { continue }
+        let sets = (back / 7 % 4 + 1) * 4 + weekday
+        days[date] = AttendanceDay(date: date, workSets: sets, completed: true)
+      }
+      return days
+    }
+  }
+#endif
