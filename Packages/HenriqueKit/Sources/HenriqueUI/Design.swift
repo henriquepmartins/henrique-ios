@@ -17,6 +17,8 @@ struct WorkoutTone: Sendable, Hashable {
   /// `#rrggbb` do topo. Um treino novo nasce com o primeiro hex da paleta que
   /// nenhum outro treino usa.
   let hex: String
+  /// O topo em matiz, saturação e brilho, o ponto de partida do seletor.
+  let color: WorkoutColor
 
   static let all: [WorkoutTone] = [
     WorkoutTone(top: 0xf9_7316, bottom: 0xfd_ba74, ink: 0x43_1407),
@@ -49,13 +51,15 @@ struct WorkoutTone: Sendable, Hashable {
     self.bottom = Color(hex: bottom)
     self.ink = Color(hex: ink)
     hex = String(format: "#%06x", top)
+    color = WorkoutColor(rgb: top)
   }
 
-  fileprivate init(top: Color, bottom: Color, ink: Color, hex: String) {
+  fileprivate init(top: Color, bottom: Color, ink: Color, color: WorkoutColor) {
     self.top = top
     self.bottom = bottom
     self.ink = ink
-    self.hex = hex
+    self.color = color
+    hex = color.hex
   }
 }
 
@@ -76,6 +80,10 @@ struct WorkoutColor: Hashable, Sendable {
     var digits = Substring(hex)
     if digits.hasPrefix("#") { digits = digits.dropFirst() }
     guard digits.count == 6, let rgb = UInt32(digits, radix: 16) else { return nil }
+    self.init(rgb: rgb)
+  }
+
+  init(rgb: UInt32) {
     let r = Double((rgb >> 16) & 0xff) / 255
     let g = Double((rgb >> 8) & 0xff) / 255
     let b = Double(rgb & 0xff) / 255
@@ -111,7 +119,7 @@ struct WorkoutColor: Hashable, Sendable {
       ink: brightness < 0.4
         ? .white
         : Color(hue: hue, saturation: min(1, saturation * 1.1), brightness: brightness * 0.26),
-      hex: hex)
+      color: self)
   }
 
   private var rgb: (Double, Double, Double) {

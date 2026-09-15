@@ -35,6 +35,7 @@ struct WeekScreen: View {
     .sheet(item: $editor) { destination in
       WorkoutEditor(
         item: destination.item, weekdays: destination.weekdays,
+        tone: destination.item?.tone ?? .unused(among: store.weekPlan.map(\.tone.hex)),
         catalog: store.dashboard?.exerciseCatalog ?? [])
     }
   }
@@ -58,13 +59,21 @@ private enum PlanEditorDestination: Identifiable {
   }
 }
 
-private let planWeekdays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"]
-private let planWeekdaysShort = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"]
+let planWeekdays = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"]
+let planWeekdaysShort = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"]
 
 /// "segunda e quinta". O locale fica preso no português porque o resto da tela
 /// também é, e senão um aparelho em inglês lia "segunda and quinta".
-private func spokenWeekdays(_ weekdays: [Int]) -> String {
+func spokenWeekdays(_ weekdays: [Int]) -> String {
   weekdays.map { planWeekdays[$0] }.formatted(.list(type: .and).locale(StudyFormat.locale))
+}
+
+extension WeekPlanItem {
+  /// Sem cor escolhida, a cor vem do dia e não da posição na grade. Pela
+  /// posição, apagar um card repintava todos os que vinham depois.
+  var tone: WorkoutTone {
+    color.flatMap(WorkoutTone.from(hex:)) ?? .at(weekdays.first ?? 0)
+  }
 }
 
 private struct WorkoutTile: View {
@@ -74,15 +83,9 @@ private struct WorkoutTile: View {
   let onStart: () -> Void
   @State private var confirmDelete = false
 
-  /// Sem cor escolhida, a cor vem do dia e não da posição na grade. Pela
-  /// posição, apagar um card repintava todos os que vinham depois.
-  private var tone: WorkoutTone {
-    item.color.flatMap(WorkoutTone.from(hex:)) ?? .at(item.weekdays.first ?? 0)
-  }
-
   var body: some View {
     Button(action: item.weekdays.isEmpty ? onEdit : onStart) {
-      WorkoutFolderCard(name: item.name, tone: tone, hasDays: !item.weekdays.isEmpty)
+      WorkoutFolderCard(name: item.name, tone: item.tone, hasDays: !item.weekdays.isEmpty)
     }
     .buttonStyle(StudyPressStyle())
     .accessibilityLabel(item.weekdays.isEmpty ? "editar \(item.name), sem dia" : "iniciar \(item.name), \(spokenWeekdays(item.weekdays))")
@@ -233,288 +236,6 @@ private struct WorkoutWave: Shape {
       path.closeSubpath()
     }
     return path
-  }
-}
-
-struct WorkoutEditor: View {
-  @Environment(AcademiaStore.self) private var store
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  #if os(iOS)
-  @State private var editMode: EditMode = .inactive
-  #endif
-  @State private var name: String
-  @State private var focus: String
-  @State private var estimatedMinutes: Int
-  @State private var exercises: [PlanExercise]
-  @State private var isPickingExercise = false
-  @State private var isSaving = false
-  @State private var confirmDelete = false
-  @State private var weekdays: Set<Int>
-  /// O catálogo por id, montado uma vez. Cada tecla no nome roda o body de novo
-  /// e cada linha de exercício lê daqui, então a busca não pode varrer a lista.
-  @State private var exerciseInfo: [String: ExerciseCatalogItem]
-
-  private let catalog: [ExerciseCatalogItem]
-  private let workoutId: String?
-
-  init(item: WeekPlanItem?, weekdays: Set<Int>, catalog: [ExerciseCatalogItem]) {
-    workoutId = item?.id
-    self.weekdays = weekdays
-    self.catalog = catalog
-    exerciseInfo = Dictionary(catalog.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    name = item?.name ?? ""
-    focus = item?.focus ?? ""
-    estimatedMinutes = item?.estimatedMinutes ?? 55
-    exercises = item?.exercises ?? []
-  }
-
-  private var canSave: Bool {
-    name.trimmingCharacters(in: .whitespaces).count >= 2
-      && focus.trimmingCharacters(in: .whitespaces).count >= 2
-      && !exercises.isEmpty && exercises.count <= 12 && (15...180).contains(estimatedMinutes)
-      && exercises.allSatisfy { $0.repsMin <= $0.repsMax && $0.startingWeightKg >= 0 }
-  }
-
-  private var isOrganizing: Bool {
-    #if os(iOS)
-    editMode.isEditing
-    #else
-    false
-    #endif
-  }
-
-  private var editAnimation: Animation? {
-    reduceMotion ? nil : .spring(duration: 0.25, bounce: 0)
-  }
-
-  var body: some View {
-    NavigationStack {
-      Form {
-        WorkoutDaysSection(selection: $weekdays, workoutId: workoutId)
-
-        Section {
-          TextField("nome", text: $name)
-            .submitLabel(.done)
-          TextField("foco", text: $focus)
-            .submitLabel(.done)
-          TextField("minutos", value: $estimatedMinutes, format: .number)
-            .submitLabel(.done)
-            .decimalInput()
-        }
-
-        Section {
-          ForEach($exercises) { $exercise in
-            let exerciseId = exercise.exerciseId
-            let info = exerciseInfo[exerciseId]
-            PlanExerciseRow(
-              exercise: $exercise, name: info?.name ?? exercise.exerciseId,
-              subtitle: info.map { "\($0.muscleGroup.lowercased()) · \($0.equipment.lowercased())" },
-              imageUrl: info?.imageUrl, isOrganizing: isOrganizing,
-              onRemove: {
-                withAnimation(editAnimation) {
-                  exercises.removeAll { $0.exerciseId == exerciseId }
-                }
-              })
-              .deleteDisabled(isSaving)
-              .moveDisabled(isSaving)
-          }
-          .onDelete { offsets in
-            withAnimation(editAnimation) { exercises.remove(atOffsets: offsets) }
-          }
-          .onMove { offsets, destination in
-            withAnimation(editAnimation) {
-              exercises.move(fromOffsets: offsets, toOffset: destination)
-            }
-          }
-
-          Button("adicionar", systemImage: "plus") {
-            isPickingExercise = true
-          }
-          .disabled(exercises.count >= 12)
-        } header: {
-          HStack {
-            Text("exercícios")
-            Spacer()
-            #if os(iOS)
-            if !exercises.isEmpty || isOrganizing {
-              Button(isOrganizing ? "ok" : "ordenar") {
-                withAnimation(editAnimation) {
-                  editMode = isOrganizing ? .inactive : .active
-                }
-              }
-              .font(.subheadline.weight(.semibold))
-              .textCase(nil)
-              .frame(minHeight: 44)
-              .buttonStyle(.borderless)
-              .accessibilityHint(isOrganizing
-                ? "Voltar aos ajustes dos exercícios"
-                : "Mostrar alças para arrastar os exercícios")
-            }
-            #endif
-          }
-        }
-
-        if workoutId != nil {
-          Section {
-            Button("apagar treino", systemImage: "trash", role: .destructive) {
-              confirmDelete = true
-            }
-            .disabled(isSaving)
-            .deleteWorkoutConfirmation(isPresented: $confirmDelete, name: name, onDelete: remove)
-          }
-        }
-      }
-      .keyboardDone()
-      .disabled(isSaving)
-      #if os(iOS)
-      .environment(\.editMode, $editMode)
-      #endif
-      .transaction { transaction in
-        if reduceMotion { transaction.disablesAnimations = true }
-      }
-      .navigationTitle(name.isEmpty ? "novo treino" : name)
-      .toolbarTitleDisplayMode(.inline)
-      .interactiveDismissDisabled(isSaving)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("cancelar") { dismiss() }.disabled(isSaving)
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button("salvar") { save() }.disabled(!canSave || isSaving)
-        }
-      }
-      .sheet(isPresented: $isPickingExercise) {
-        ExercisePicker(catalog: catalog, chosen: Set(exercises.map(\.exerciseId))) { item in
-          let known = catalog.contains(where: { $0.id == item.id })
-          exerciseInfo[item.id] = item
-          exercises.append(
-            PlanExercise(
-              exerciseId: item.id, prepSets: 2, workSets: 2, repsMin: 8, repsMax: 12,
-              workToFailure: true, startingWeightKg: 0, name: known ? nil : item.name,
-              muscleGroup: known ? nil : item.muscleGroup,
-              equipment: known ? nil : item.equipment,
-              imageUrl: known ? nil : item.imageUrl))
-        }
-      }
-    }
-  }
-
-  private func save() {
-    let input = SaveWorkoutInput(
-      date: store.selectedDate, workoutTemplateId: workoutId, weekdays: weekdays.sorted(),
-      name: name.trimmingCharacters(in: .whitespaces),
-      focus: focus.trimmingCharacters(in: .whitespaces), estimatedMinutes: estimatedMinutes,
-      exercises: exercises)
-    isSaving = true
-    Task {
-      let saved = await store.saveWorkout(input)
-      isSaving = false
-      if saved { dismiss() }
-    }
-  }
-
-  private func remove() {
-    guard let workoutId else { return }
-    store.deleteWorkout(workoutTemplateId: workoutId)
-    dismiss()
-  }
-}
-
-/// Os sete dias num toque cada, na ordem da semana do aparelho. O rodapé avisa
-/// quando um dia marcado sai de outro treino, antes de salvar.
-private struct WorkoutDaysSection: View {
-  @Environment(AcademiaStore.self) private var store
-  @Environment(\.dynamicTypeSize) private var textSize
-  @Binding var selection: Set<Int>
-  let workoutId: String?
-
-  private var orderedWeekdays: [Int] {
-    let first = Calendar.autoupdatingCurrent.firstWeekday - 1
-    return (0..<7).map { (first + $0) % 7 }
-  }
-
-  var body: some View {
-    let handoffs = WeekdayOwners(plan: store.weekPlan, excluding: workoutId).handoffs(to: selection)
-    Section {
-      // Nos tamanhos de acessibilidade sete círculos não cabem numa linha. Em
-      // quatro colunas cada círculo cresce com o texto e a semana quebra em duas.
-      LazyVGrid(
-        columns: Array(repeating: GridItem(.flexible(), spacing: 4),
-                       count: textSize.isAccessibilitySize ? 4 : 7),
-        spacing: 8
-      ) {
-        ForEach(orderedWeekdays, id: \.self) { day in
-          WeekdayToggle(
-            shortName: planWeekdaysShort[day], fullName: planWeekdays[day],
-            isOn: selection.contains(day)
-          ) {
-            if selection.contains(day) { selection.remove(day) } else { selection.insert(day) }
-          }
-        }
-      }
-      .padding(.vertical, 4)
-      .sensoryFeedback(.selection, trigger: selection)
-    } header: {
-      Text("dias")
-    } footer: {
-      if !handoffs.isEmpty {
-        Text(handoffs.map(Self.note).joined(separator: " "))
-      }
-    }
-  }
-
-  private static func note(_ handoff: WeekdayHandoff) -> String {
-    let days = spokenWeekdays(handoff.weekdays)
-    let verb = handoff.weekdays.count == 1 ? "sai" : "saem"
-    guard handoff.becomesUnscheduled else { return "\(days) \(verb) de \(handoff.workoutName)" }
-    return "\(handoff.workoutName) continua sem dia"
-  }
-}
-
-/// A troca de cor é imediata. Marcar dia é toque repetido, e esperar uma
-/// animação a cada toque deixa a fileira lenta.
-private struct WeekdayToggle: View {
-  let shortName: String
-  let fullName: String
-  let isOn: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      Circle()
-        .fill(isOn ? Color.ink : Color.surfaceMuted)
-        .overlay {
-          Text(shortName)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(isOn ? .white : Color.ink)
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .padding(4)
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .frame(maxWidth: .infinity, minHeight: 44)
-        .contentShape(.rect)
-    }
-    // Sem estilo próprio, o Form junta todos os botões da linha num toque só.
-    .buttonStyle(.plain)
-    .accessibilityLabel(fullName)
-    .accessibilityAddTraits(isOn ? .isSelected : [])
-  }
-}
-
-private extension View {
-  /// O treino leva junto as sessões e as séries registradas nele, então o
-  /// diálogo diz o nome e o que se perde.
-  func deleteWorkoutConfirmation(
-    isPresented: Binding<Bool>, name: String, onDelete: @escaping () -> Void
-  ) -> some View {
-    confirmationDialog("apagar \(name)?", isPresented: isPresented, titleVisibility: .visible) {
-      Button("apagar", role: .destructive, action: onDelete)
-      Button("cancelar", role: .cancel) {}
-    } message: {
-      Text("as séries somem junto")
-    }
   }
 }
 
