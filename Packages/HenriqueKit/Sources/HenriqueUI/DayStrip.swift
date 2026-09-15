@@ -108,9 +108,20 @@ struct DayChip: View {
                 .transition(.identity)
             }
           }
+          .overlay(alignment: .bottom) {
+            if day == .today {
+              Circle()
+                .fill(isSelected ? Color.white : accent.base)
+                .frame(width: 4, height: 4)
+                .offset(y: 3)
+                .accessibilityHidden(true)
+            }
+          }
       }.frame(maxWidth: .infinity).contentShape(.rect)
     }.buttonStyle(.plain)
-      .accessibilityLabel(Text(day.date(), format: .dateTime.weekday(.wide).day().month(.wide)))
+      .accessibilityLabel(
+        Text(day.date(), format: .dateTime.weekday(.wide).day().month(.wide))
+          + Text(day == .today ? ", hoje" : ""))
       .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
