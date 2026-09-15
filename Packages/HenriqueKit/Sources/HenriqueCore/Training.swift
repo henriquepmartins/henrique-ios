@@ -276,11 +276,30 @@ public struct StrengthGoal: Codable, Hashable, Sendable {
   public var lastSession: PreviousWorkSets?
 }
 
+public enum StreakKind: String, Codable, CaseIterable, Sendable {
+  case attendance, complete
+}
+
+public struct StreakGoal: Codable, Hashable, Sendable {
+  public var kind: StreakKind
+  public var target: Int
+
+  public init(kind: StreakKind, target: Int) {
+    self.kind = kind
+    self.target = target
+  }
+}
+
 public struct Dashboard: Codable, Hashable, Sendable {
   public var date: CalendarDate
   public var workout: WorkoutSummary?
   public var consistencyPercent: Int
+  /// Sequência de treinos completos: sessões com todas as séries valendo feitas.
   public var currentStreak: Int
+  /// Sequência de presença: dias com ao menos uma série valendo feita. Nulo no
+  /// servidor antigo, e aí a presença cai para `currentStreak`.
+  public var attendanceStreak: Int?
+  public var streakGoals: [StreakGoal]?
   public var weeklyCompleted: Int
   public var weeklyPlanned: Int
   public var weekPlan: [WeekPlanItem]
@@ -294,6 +313,26 @@ public struct Dashboard: Codable, Hashable, Sendable {
   public var measurements: [BodyMeasurement]
   public var projection: Projection?
   public var onboardingCompleted: Bool
+}
+
+extension Dashboard {
+  public func streak(_ kind: StreakKind) -> Int {
+    switch kind {
+    case .attendance: attendanceStreak ?? currentStreak
+    case .complete: currentStreak
+    }
+  }
+
+  public func goal(_ kind: StreakKind) -> StreakGoal? {
+    streakGoals?.first { $0.kind == kind }
+  }
+
+  /// `sessionDates` só lista dias já fechados, então a série marcada agora no
+  /// treino de hoje conta pelo próprio painel.
+  public func hasAttended(on today: CalendarDate) -> Bool {
+    if sessionDates?.contains(today) == true { return true }
+    return date == today && (workout?.completedWorkSetCount ?? 0) > 0
+  }
 }
 
 /// A fórmula de Epley, a mesma que o servidor usa para o gráfico de força.

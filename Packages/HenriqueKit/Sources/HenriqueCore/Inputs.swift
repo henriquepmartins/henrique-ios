@@ -116,6 +116,18 @@ public struct SetStrengthGoalInput: Hashable, Sendable, Encodable {
   }
 }
 
+public struct SetStreakGoalInput: Hashable, Sendable, Encodable {
+  public var date: CalendarDate
+  public var kind: StreakKind
+  public var target: Int
+
+  public init(date: CalendarDate, kind: StreakKind, target: Int) {
+    self.date = date
+    self.kind = kind
+    self.target = target
+  }
+}
+
 public struct DateInput: Hashable, Sendable, Encodable {
   public var date: CalendarDate
   public init(date: CalendarDate) { self.date = date }

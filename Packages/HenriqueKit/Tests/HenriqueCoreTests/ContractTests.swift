@@ -23,6 +23,15 @@ struct ContractTests {
     let dashboard = try Self.dashboard()
     #expect(dashboard.date.iso == "2026-09-08")
     #expect(dashboard.currentStreak == 4)
+    #expect(dashboard.attendanceStreak == 6)
+    #expect(
+      dashboard.streakGoals == [
+        StreakGoal(kind: .attendance, target: 10), StreakGoal(kind: .complete, target: 7),
+      ])
+    #expect(dashboard.streak(.attendance) == 6)
+    #expect(dashboard.streak(.complete) == 4)
+    #expect(dashboard.goal(.attendance)?.target == 10)
+    #expect(dashboard.goal(.complete)?.target == 7)
     #expect(dashboard.weeklyCompleted == 2)
     #expect(dashboard.weeklyPlanned == 4)
     #expect(dashboard.onboardingCompleted)
@@ -116,6 +125,36 @@ struct ContractTests {
     #expect(json["workoutTemplateId"] as? String == "tpl-terca")
   }
 
+  @Test("a meta de sequência manda data, tipo e alvo")
+  func streakGoalEncodesKeys() throws {
+    let input = SetStreakGoalInput(
+      date: try #require(CalendarDate(iso: "2026-09-08")), kind: .complete, target: 12)
+    let json = try #require(
+      JSONSerialization.jsonObject(with: JSONEncoder().encode(input)) as? [String: Any])
+    #expect(Set(json.keys) == ["date", "kind", "target"])
+    #expect(json["date"] as? String == "2026-09-08")
+    #expect(json["kind"] as? String == "complete")
+    #expect(json["target"] as? Int == 12)
+  }
+
+  @Test("a presença de hoje vem de sessionDates ou da série feita no treino do dia")
+  func hasAttendedToday() throws {
+    let hoje = try #require(CalendarDate(iso: "2026-09-08"))
+    let ontem = try #require(CalendarDate(iso: "2026-09-07"))
+    var dashboard = try Self.dashboard()
+
+    #expect(dashboard.hasAttended(on: hoje))
+    #expect(dashboard.hasAttended(on: ontem))
+
+    dashboard.sessionDates = []
+    #expect(dashboard.workout?.completedWorkSetCount == 1)
+    #expect(dashboard.hasAttended(on: hoje))
+    #expect(!dashboard.hasAttended(on: ontem))
+
+    dashboard.workout?.completedWorkSetCount = 0
+    #expect(!dashboard.hasAttended(on: hoje))
+  }
+
   static func planItem(_ json: String) throws -> WeekPlanItem {
     try JSONDecoder.henrique().decode(WeekPlanItem.self, from: Data(json.utf8))
   }
@@ -202,6 +241,16 @@ struct CapturedResponseTests {
     #expect(dashboard.workout != nil)
     #expect(!dashboard.exerciseCatalog.isEmpty)
     #expect(!dashboard.weekPlan.isEmpty)
+  }
+
+  @Test("sem os campos de sequência novos, a presença cai para currentStreak")
+  func oldServerHasNoStreakFields() throws {
+    let dashboard = try Self.dashboard()
+    #expect(dashboard.attendanceStreak == nil)
+    #expect(dashboard.streakGoals == nil)
+    #expect(dashboard.currentStreak == 0)
+    #expect(dashboard.streak(.attendance) == 0)
+    #expect(dashboard.goal(.attendance) == nil)
   }
 
   @Test("o painel do servidor traz os dias de cada treino")

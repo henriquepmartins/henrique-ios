@@ -70,6 +70,11 @@
   },
   "consistencyPercent": 75,
   "currentStreak": 4,
+  "attendanceStreak": 6,
+  "streakGoals": [
+    { "kind": "attendance", "target": 10 },
+    { "kind": "complete", "target": 7 }
+  ],
   "weeklyCompleted": 2,
   "weeklyPlanned": 4,
   "weekPlan": [

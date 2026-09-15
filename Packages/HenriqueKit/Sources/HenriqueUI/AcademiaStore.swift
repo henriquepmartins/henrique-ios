@@ -210,6 +210,11 @@ public final class AcademiaStore {
   }
 
   @discardableResult
+  public func setStreakGoal(_ input: SetStreakGoalInput) async -> Bool {
+    await apply { try await self.client.setStreakGoal(input) }
+  }
+
+  @discardableResult
   public func completeSetup() async -> Bool {
     await apply {
       try await self.client.completeOnboarding()
