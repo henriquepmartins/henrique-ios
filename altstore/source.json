@@ -1,0 +1,21 @@
+{
+  "name": "h&nrique",
+  "identifier": "app.henrique.source",
+  "apps": [
+    {
+      "name": "h&nrique",
+      "bundleIdentifier": "app.henrique.academia",
+      "developerName": "Henrique Martins",
+      "localizedDescription": "Treinos, séries, medidas e metas da academia. Usa a mesma conta e os mesmos dados do app web.",
+      "iconURL": "https://raw.githubusercontent.com/henriquepmartins/henrique-ios/main/App/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+      "tintColor": "097860",
+      "category": "utilities",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": []
+      },
+      "versions": []
+    }
+  ],
+  "news": []
+}
