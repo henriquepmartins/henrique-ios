@@ -27,6 +27,7 @@ public enum Route: String, Sendable {
   case setStrengthGoal = "/api/v1/goal/set-strength"
   case setStreakGoal = "/api/v1/goal/set-streak"
   case addMeasurement = "/api/v1/measurement/add"
+  case attendance = "/api/v1/training/attendance"
   case signIn = "/api/auth/sign-in/username"
   case signOut = "/api/auth/sign-out"
   case studyOverview = "/api/v1/estudos/overview/get"
@@ -119,6 +120,16 @@ public actor APIClient {
 
   public func addMeasurement(_ input: AddMeasurementInput) async throws -> Dashboard {
     try await call(.addMeasurement, body: input)
+  }
+
+  /// Só os dias com ao menos uma série valendo feita, em ordem crescente. O
+  /// servidor aceita no máximo 400 dias por chamada.
+  public func attendance(_ input: AttendanceRangeInput) async throws -> [AttendanceDay] {
+    struct Response: Decodable {
+      let days: [AttendanceDay]
+    }
+    let response: Response = try await call(.attendance, body: input)
+    return response.days
   }
 
   public func completeOnboarding() async throws {

@@ -169,6 +169,64 @@ struct ContractTests {
     #expect(item.weekdays == [1, 4])
   }
 
+  @Test("o treino do plano decodifica a cor, e sem ela fica nulo")
+  func planItemDecodesColor() throws {
+    let comCor = try Self.planItem(
+      """
+      {"id": "tpl-1", "weekdays": [1], "name": "Superiores", "focus": "peito",
+       "exerciseCount": 0, "exercises": [], "estimatedMinutes": 55, "color": "#FF8800"}
+      """)
+    let semCor = try Self.planItem(
+      """
+      {"id": "tpl-2", "weekdays": [2], "name": "Pernas", "focus": "quadríceps",
+       "exerciseCount": 0, "exercises": [], "estimatedMinutes": 45}
+      """)
+    #expect(comCor.color == "#FF8800")
+    #expect(semCor.color == nil)
+  }
+
+  @Test("salvar treino manda a cor só quando ela foi escolhida")
+  func saveWorkoutEncodesColorWhenPresent() throws {
+    let comCor = SaveWorkoutInput(
+      date: try #require(CalendarDate(iso: "2026-09-15")), workoutTemplateId: "tpl-1",
+      weekdays: [1], name: "Superiores", focus: "peito", estimatedMinutes: 55, color: "#FF8800",
+      exercises: [])
+    let json = try #require(
+      JSONSerialization.jsonObject(with: JSONEncoder().encode(comCor)) as? [String: Any])
+    #expect(json["color"] as? String == "#FF8800")
+  }
+
+  @Test("a frequência decodifica um dia por linha, com a data como id")
+  func attendanceDecodes() throws {
+    struct Response: Decodable {
+      let days: [AttendanceDay]
+    }
+    let response = try JSONDecoder.henrique().decode(
+      Response.self,
+      from: Data(
+        """
+        {"days": [{"date": "2026-09-14", "workSets": 12, "completed": true},
+                  {"date": "2026-09-15", "workSets": 3, "completed": false}]}
+        """.utf8))
+    #expect(response.days.count == 2)
+    #expect(response.days[0].id.iso == "2026-09-14")
+    #expect(response.days[0].workSets == 12)
+    #expect(response.days[0].completed)
+    #expect(!response.days[1].completed)
+  }
+
+  @Test("o intervalo de frequência manda from e to como AAAA-MM-DD")
+  func attendanceRangeEncodes() throws {
+    let input = AttendanceRangeInput(
+      from: try #require(CalendarDate(iso: "2026-01-01")),
+      to: try #require(CalendarDate(iso: "2026-12-31")))
+    let json = try #require(
+      JSONSerialization.jsonObject(with: JSONEncoder().encode(input)) as? [String: Any])
+    #expect(Set(json.keys) == ["from", "to"])
+    #expect(json["from"] as? String == "2026-01-01")
+    #expect(json["to"] as? String == "2026-12-31")
+  }
+
   @Test("dias fora da semana são recusados", arguments: [-1, 7])
   func planItemRejectsInvalidWeekdays(day: Int) {
     #expect(throws: DecodingError.self) {

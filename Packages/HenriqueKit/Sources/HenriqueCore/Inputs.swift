@@ -88,11 +88,13 @@ public struct SaveWorkoutInput: Hashable, Sendable, Encodable {
   public var name: String
   public var focus: String
   public var estimatedMinutes: Int
+  /// Hex `#RRGGBB`. Nulo some do corpo e o servidor mantém a cor que já tinha.
+  public var color: String?
   public var exercises: [PlanExercise]
 
   public init(
     date: CalendarDate, workoutTemplateId: String?, weekdays: [Int], name: String, focus: String,
-    estimatedMinutes: Int, exercises: [PlanExercise]
+    estimatedMinutes: Int, color: String? = nil, exercises: [PlanExercise]
   ) {
     self.date = date
     self.workoutTemplateId = workoutTemplateId
@@ -100,7 +102,18 @@ public struct SaveWorkoutInput: Hashable, Sendable, Encodable {
     self.name = name
     self.focus = focus
     self.estimatedMinutes = estimatedMinutes
+    self.color = color
     self.exercises = exercises
+  }
+}
+
+public struct AttendanceRangeInput: Hashable, Sendable, Encodable {
+  public var from: CalendarDate
+  public var to: CalendarDate
+
+  public init(from: CalendarDate, to: CalendarDate) {
+    self.from = from
+    self.to = to
   }
 }
 

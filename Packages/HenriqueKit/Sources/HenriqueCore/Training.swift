@@ -165,6 +165,8 @@ public struct WeekPlanItem: Codable, Hashable, Sendable, Identifiable {
   public var exerciseCount: Int
   public var exercises: [PlanExercise]
   public var estimatedMinutes: Int
+  /// Hex `#RRGGBB`. Nulo quando o treino não tem cor escolhida.
+  public var color: String?
 
   /// O dia desse treino mais perto de `today`, andando para a frente. Hoje
   /// conta como distância zero, então quem treina hoje fica em hoje.
@@ -187,6 +189,23 @@ extension WeekPlanItem {
     exerciseCount = try container.decode(Int.self, forKey: .exerciseCount)
     exercises = try container.decode([PlanExercise].self, forKey: .exercises)
     estimatedMinutes = try container.decode(Int.self, forKey: .estimatedMinutes)
+    color = try container.decodeIfPresent(String.self, forKey: .color)
+  }
+}
+
+/// Um dia com ao menos uma série valendo feita. `completed` é o dia em que
+/// todas as séries do treino saíram.
+public struct AttendanceDay: Codable, Hashable, Sendable, Identifiable {
+  public var date: CalendarDate
+  public var workSets: Int
+  public var completed: Bool
+
+  public var id: CalendarDate { date }
+
+  public init(date: CalendarDate, workSets: Int, completed: Bool) {
+    self.date = date
+    self.workSets = workSets
+    self.completed = completed
   }
 }
 
