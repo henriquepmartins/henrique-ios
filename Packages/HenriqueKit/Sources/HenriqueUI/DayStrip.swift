@@ -108,12 +108,15 @@ struct DayChip: View {
                 .transition(.identity)
             }
           }
+          // A bolinha cai inteira fora do círculo da seleção, então ela é sempre
+          // da cor do acento. Branca, ela só se veria no dia selecionado, e
+          // mesmo ali metade dela já estaria sobre o fundo da tela.
           .overlay(alignment: .bottom) {
             if day == .today {
               Circle()
-                .fill(isSelected ? Color.white : accent.base)
+                .fill(accent.base)
                 .frame(width: 4, height: 4)
-                .offset(y: 3)
+                .offset(y: 6)
                 .accessibilityHidden(true)
             }
           }
