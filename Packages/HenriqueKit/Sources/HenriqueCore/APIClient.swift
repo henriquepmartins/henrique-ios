@@ -264,14 +264,20 @@ public actor APIClient {
     return "\(host):\(port)"
   }
 
+  /// O corpo do 400 traz `data.issues`, a lista do zod com o campo e o motivo.
+  /// A frase nomeia o primeiro campo pelo nome que a tela usa, porque
+  /// "input validation failed" não diz o que corrigir.
   static func serverMessage(from data: Data) -> String {
     struct Failure: Decodable {
       let message: String?
       let error: String?
+      let data: Payload?
+      struct Payload: Decodable { let issues: [ValidationIssue]? }
     }
     guard let failure = try? JSONDecoder().decode(Failure.self, from: data) else {
       return "servidor recusou"
     }
+    if let issue = failure.data?.issues?.first { return issue.sentence }
     return failure.message ?? failure.error ?? "servidor recusou"
   }
 
@@ -281,5 +287,90 @@ public actor APIClient {
     let session = cookies.filter { $0.name.contains("session_token") }
     guard !session.isEmpty else { return nil }
     return session.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+  }
+}
+
+/// Um item de `data.issues` no formato do zod 4: `path` mistura nomes de campo
+/// e índices de array, `code` diz o tipo de falha e `minimum`/`maximum` trazem
+/// o limite quando a falha é de faixa.
+struct ValidationIssue: Decodable {
+  enum PathElement: Decodable {
+    case key(String)
+    case index(Int)
+
+    init(from decoder: any Decoder) throws {
+      let container = try decoder.singleValueContainer()
+      if let index = try? container.decode(Int.self) {
+        self = .index(index)
+      } else {
+        self = .key(try container.decode(String.self))
+      }
+    }
+  }
+
+  var path: [PathElement]
+  var message: String
+  var code: String?
+  var origin: String?
+  var minimum: Double?
+  var maximum: Double?
+
+  /// O nome técnico do campo e a palavra que a tela mostra para ele.
+  static let fieldLabels: [String: String] = [
+    "date": "data",
+    "workoutTemplateId": "treino",
+    "exerciseId": "exercício",
+    "setIndex": "série",
+    "weightKg": "peso",
+    "reps": "repetições",
+    "completed": "concluída",
+    "toFailure": "falha",
+    "bodyFatPercent": "gordura corporal",
+    "waistCm": "cintura",
+    "chestCm": "peito",
+    "armCm": "braço",
+    "thighCm": "coxa",
+    "weekdays": "dias",
+    "name": "nome",
+    "focus": "foco",
+    "estimatedMinutes": "minutos",
+    "exercises": "exercícios",
+    "prepSets": "aquecimento",
+    "workSets": "séries valendo",
+    "repsMin": "reps mín.",
+    "repsMax": "reps máx.",
+    "workToFailure": "até a falha",
+    "startingWeightKg": "carga",
+    "muscleGroup": "grupo muscular",
+    "equipment": "equipamento",
+    "imageUrl": "imagem",
+    "targetValue": "meta",
+    "target": "alvo",
+    "kind": "tipo",
+  ]
+
+  var field: String? {
+    for element in path.reversed() {
+      if case .key(let key) = element { return Self.fieldLabels[key] ?? key }
+    }
+    return nil
+  }
+
+  var reason: String {
+    let unit = origin == "string" ? " caracteres" : origin == "array" ? " itens" : ""
+    switch (code, minimum, maximum) {
+    case ("too_small", let bound?, _): return "no mínimo \(Self.number(bound))\(unit)"
+    case ("too_big", _, let bound?): return "no máximo \(Self.number(bound))\(unit)"
+    default: return message.lowercased()
+    }
+  }
+
+  var sentence: String {
+    guard let field else { return reason }
+    return "\(field): \(reason)"
+  }
+
+  private static func number(_ value: Double) -> String {
+    value.formatted(.number.precision(.fractionLength(0...2)).locale(Locale(identifier: "pt_BR")))
   }
 }
