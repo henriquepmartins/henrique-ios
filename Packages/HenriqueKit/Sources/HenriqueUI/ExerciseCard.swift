@@ -118,6 +118,9 @@ struct TrainingSetRow: View {
           .submitLabel(.done)
           .accessibilityIdentifier(fieldID + ".weight")
           .accessibilityLabel("Peso da série \(index)")
+          .onChange(of: weightDraft) { _, new in
+            if let new, new.isFinite, !Limits.setWeightKg.contains(new) { weightDraft = new.clamped(to: Limits.setWeightKg) }
+          }
         Text("kg").font(.caption2).foregroundStyle(Color.mutedInk)
       }.padding(8).background(.white, in: .rect(cornerRadius: 10))
       HStack(spacing: 2) {
@@ -129,6 +132,9 @@ struct TrainingSetRow: View {
           .submitLabel(.done)
           .accessibilityIdentifier(fieldID + ".reps")
           .accessibilityLabel("Repetições da série \(index)")
+          .onChange(of: repsDraft) { _, new in
+            if let new, new > Limits.reps.upperBound { repsDraft = Limits.reps.upperBound }
+          }
         if failure { Text("falha").font(.system(size: 9)).foregroundStyle(accent.base) }
       }.padding(8).background(.white, in: .rect(cornerRadius: 10))
       Button {
@@ -140,7 +146,7 @@ struct TrainingSetRow: View {
           .frame(width: 44, height: 44)
           .foregroundStyle(done ? accent.deep : Color.mutedInk.opacity(0.5))
           .background(done ? accent.acid : .white, in: .rect(cornerRadius: 12))
-      }.buttonStyle(SetCompletionStyle()).disabled((weightDraft ?? -1) < 0 || (repsDraft ?? 0) < 1)
+      }.buttonStyle(SetCompletionStyle()).disabled(!Limits.setWeightKg.contains(weightDraft ?? -1) || !Limits.reps.contains(repsDraft ?? 0))
         .accessibilityIdentifier(fieldID + ".completion")
         .animation(.easeOut(duration: 0.18), value: done)
         .accessibilityLabel(done ? "Desmarcar série \(index)" : "Concluir série \(index)")
@@ -160,7 +166,8 @@ struct TrainingSetRow: View {
   private func commit(completed: Bool) {
     let draft = SetDraft(weightKg: weightDraft ?? weight, reps: repsDraft ?? repetitions,
       completed: completed, toFailure: failure)
-    guard draft != submitted, draft.weightKg.isFinite, draft.weightKg >= 0, draft.reps > 0 else { return }
+    guard draft != submitted, draft.weightKg.isFinite, Limits.setWeightKg.contains(draft.weightKg),
+      Limits.reps.contains(draft.reps) else { return }
     let current = SetDraft(weightKg: weight, reps: repetitions, completed: currentDone, toFailure: failure)
     guard draft != current else { return }
     submitted = draft

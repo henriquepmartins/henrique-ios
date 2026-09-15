@@ -282,7 +282,7 @@ struct GoalEditor: View {
 
   private var canSave: Bool {
     switch kind {
-    case .strength: !exerciseId.isEmpty && targetValue >= 1
+    case .strength: !exerciseId.isEmpty && Limits.strengthTarget.contains(targetValue)
     case .attendance, .complete: true
     }
   }
@@ -315,7 +315,7 @@ struct GoalEditor: View {
             .pickerStyle(.inline)
           }
           Section {
-            WeightStepper(weightKg: $targetValue)
+            WeightStepper(weightKg: $targetValue, range: Limits.strengthTarget)
           }
         }
       }
@@ -372,7 +372,7 @@ private struct StreakGoalFields: View {
       Spacer(minLength: 8)
       Text("\(target)").font(.body.weight(.semibold)).monospacedDigit()
         .frame(minWidth: 32, alignment: .trailing)
-      Stepper("alvo", value: $target, in: 2...365)
+      Stepper("alvo", value: $target, in: Limits.streakTarget)
         .labelsHidden()
     }
     .frame(minHeight: 48)

@@ -199,13 +199,16 @@ struct MeasurementEditor: View {
           TextField("kg", value: $weightKg, format: .number.precision(.fractionLength(0...2)))
             .submitLabel(.done)
             .decimalInput()
+          if let weightKg, !Limits.bodyWeightKg.contains(weightKg) {
+            RangeHint(range: Limits.bodyWeightKg, unit: "kg")
+          }
         }
         Section {
-          OptionalField(label: "gordura corporal", unit: "%", range: 1...70, value: $bodyFatPercent)
-          OptionalField(label: "cintura", unit: "cm", range: 30...300, value: $waistCm)
-          OptionalField(label: "peito", unit: "cm", range: 30...300, value: $chestCm)
-          OptionalField(label: "braço", unit: "cm", range: 10...100, value: $armCm)
-          OptionalField(label: "coxa", unit: "cm", range: 20...150, value: $thighCm)
+          OptionalField(label: "gordura corporal", unit: "%", range: Limits.bodyFatPercent, value: $bodyFatPercent)
+          OptionalField(label: "cintura", unit: "cm", range: Limits.waistCm, value: $waistCm)
+          OptionalField(label: "peito", unit: "cm", range: Limits.chestCm, value: $chestCm)
+          OptionalField(label: "braço", unit: "cm", range: Limits.armCm, value: $armCm)
+          OptionalField(label: "coxa", unit: "cm", range: Limits.thighCm, value: $thighCm)
         }
       }
       .interactiveDismissDisabled(isSaving)
@@ -216,15 +219,25 @@ struct MeasurementEditor: View {
           Button("cancelar") { dismiss() }
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button("salvar") { save() }.disabled(isSaving || weightKg == nil || (weightKg ?? 0) <= 0)
+          Button("salvar") { save() }.disabled(isSaving || !allWithinLimits)
         }
       }
       .keyboardDone()
     }
   }
 
+  /// O peso é obrigatório; os outros só contam quando preenchidos.
+  private var allWithinLimits: Bool {
+    guard let weightKg, Limits.bodyWeightKg.contains(weightKg) else { return false }
+    let optionals: [(Double?, ClosedRange<Double>)] = [
+      (bodyFatPercent, Limits.bodyFatPercent), (waistCm, Limits.waistCm), (chestCm, Limits.chestCm),
+      (armCm, Limits.armCm), (thighCm, Limits.thighCm),
+    ]
+    return optionals.allSatisfy { value, range in value.map(range.contains) ?? true }
+  }
+
   private func save() {
-    guard let weightKg else { return }
+    guard allWithinLimits, let weightKg else { return }
     let input = AddMeasurementInput(
       date: .today, weightKg: weightKg, bodyFatPercent: bodyFatPercent, waistCm: waistCm,
       chestCm: chestCm, armCm: armCm, thighCm: thighCm)
@@ -245,15 +258,38 @@ struct OptionalField: View {
   let range: ClosedRange<Double>
   @Binding var value: Double?
 
+  private var outOfRange: Bool { value.map { !range.contains($0) } ?? false }
+
   var body: some View {
-    HStack {
-      Text(label)
-      Spacer()
-      TextField("", value: $value, format: .number.precision(.fractionLength(0...2)))
-        .submitLabel(.done)
-        .decimalInput().multilineTextAlignment(.trailing)
-        .accessibilityLabel(label)
-      Text(unit).font(.caption).foregroundStyle(Color.mutedInk)
+    VStack(alignment: .trailing, spacing: 2) {
+      HStack {
+        Text(label)
+        Spacer()
+        TextField("", value: $value, format: .number.precision(.fractionLength(0...2)))
+          .submitLabel(.done)
+          .decimalInput().multilineTextAlignment(.trailing)
+          .foregroundStyle(outOfRange ? .red : .primary)
+          .accessibilityLabel(label)
+        Text(unit).font(.caption).foregroundStyle(Color.mutedInk)
+      }
+      if outOfRange { RangeHint(range: range, unit: unit) }
     }
+  }
+}
+
+/// A faixa que o servidor aceita, mostrada só quando o valor saiu dela.
+struct RangeHint: View {
+  let range: ClosedRange<Double>
+  let unit: String
+
+  var body: some View {
+    Text("entre \(bound(range.lowerBound)) e \(bound(range.upperBound)) \(unit)")
+      .font(.caption2).foregroundStyle(.red)
+      .frame(maxWidth: .infinity, alignment: .trailing)
+      .accessibilityAddTraits(.updatesFrequently)
+  }
+
+  private func bound(_ value: Double) -> String {
+    value.formatted(.number.precision(.fractionLength(0...1)))
   }
 }

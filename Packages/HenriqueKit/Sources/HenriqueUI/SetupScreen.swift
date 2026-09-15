@@ -152,7 +152,7 @@ struct SetupScreen: View {
           }.padding(18).paperCard()
         }
         Button("adicionar", systemImage: "plus") { picking = true }
-          .buttonStyle(.glass).disabled(exercises.count >= 12)
+          .buttonStyle(.glass).disabled(exercises.count >= Limits.exerciseCount.upperBound)
       }
     case .goal:
       VStack(alignment: .leading, spacing: 18) {
@@ -188,6 +188,20 @@ struct SetupScreen: View {
     store.dashboard?.weekPlan.first { $0.weekdays.contains(weekday) }
   }
 
+  /// O foco digitado, ou os grupos musculares dos exercícios escolhidos. Um
+  /// exercício vindo da wger não está no catálogo, então o grupo sai do próprio
+  /// item. Sem grupo nenhum, vai o nome do treino, porque o servidor pede pelo
+  /// menos dois caracteres.
+  private var resolvedFocus: String {
+    let typed = focus.trimmingCharacters(in: .whitespaces)
+    if !typed.isEmpty { return typed }
+    let groups = exercises.compactMap { exercise in
+      catalogItem(exercise.exerciseId)?.muscleGroup ?? exercise.muscleGroup
+    }
+    let joined = Array(Set(groups)).sorted().joined(separator: ", ")
+    return Limits.workoutFocusLength.contains(joined.count) ? joined : name.trimmingCharacters(in: .whitespaces)
+  }
+
   private func loadWorkout() {
     if let draft = workoutDrafts[weekday] {
       name = draft.name
@@ -211,7 +225,9 @@ struct SetupScreen: View {
     switch step {
     case .welcome: step = .body
     case .body:
-      guard let weight, weight > 0, weight <= 500 else { error = "peso inválido"; return }
+      guard let weight, Limits.bodyWeightKg.contains(weight) else {
+        error = "peso entre \(Int(Limits.bodyWeightKg.lowerBound)) e \(Int(Limits.bodyWeightKg.upperBound)) kg"; return
+      }
       let input = AddMeasurementInput(date: .today, weightKg: weight, bodyFatPercent: fat, waistCm: waist, chestCm: chest, armCm: arm, thighCm: thigh)
       if input != savedBody {
         guard await store.addMeasurement(input) else { error = store.banner; return }
@@ -219,26 +235,31 @@ struct SetupScreen: View {
       }
       step = .workout
     case .workout:
-      guard name.trimmingCharacters(in: .whitespaces).count >= 2, (15...180).contains(minutes) else {
-        error = "nome e 15 a 180 min"; return
+      let trimmedFocus = focus.trimmingCharacters(in: .whitespaces)
+      guard Limits.workoutNameLength.contains(name.trimmingCharacters(in: .whitespaces).count),
+        trimmedFocus.isEmpty || Limits.workoutFocusLength.contains(trimmedFocus.count),
+        Limits.estimatedMinutes.contains(minutes) else {
+        error = "nome de 2 a 80 letras, foco até 140 e 15 a 180 min"; return
       }
       step = .exercises
     case .exercises:
-      guard !exercises.isEmpty, exercises.allSatisfy({ $0.repsMin <= $0.repsMax && $0.startingWeightKg >= 0 }) else {
+      guard Limits.exerciseCount.contains(exercises.count),
+        exercises.allSatisfy({ $0.repsMin <= $0.repsMax && $0.startingWeightKg >= 0 }) else {
         error = "confira os exercícios"; return
       }
-      let groups = exercises.compactMap { exercise in store.dashboard?.exerciseCatalog.first { $0.id == exercise.exerciseId }?.muscleGroup }
       let planned = plannedWorkout
       let input = SaveWorkoutInput(date: store.selectedDate, workoutTemplateId: planned?.id,
         weekdays: planned?.weekdays ?? [weekday], name: name,
-        focus: focus.isEmpty ? Array(Set(groups)).sorted().joined(separator: ", ") : focus, estimatedMinutes: minutes, exercises: exercises)
+        focus: resolvedFocus, estimatedMinutes: minutes, exercises: exercises)
       if input != savedWorkout {
         guard await store.saveWorkout(input) else { error = store.banner; return }
         savedWorkout = input
       }
       step = .goal
     case .goal:
-      guard let target, target > 0, !goalExercise.isEmpty else { error = "meta inválida"; return }
+      guard let target, Limits.strengthTarget.contains(target), !goalExercise.isEmpty else {
+        error = "meta entre \(Int(Limits.strengthTarget.lowerBound)) e \(Int(Limits.strengthTarget.upperBound)) kg"; return
+      }
       let input = SetStrengthGoalInput(date: store.selectedDate, exerciseId: goalExercise, targetValue: target)
       if input != savedGoal {
         guard await store.setStrengthGoal(input) else { error = store.banner; return }

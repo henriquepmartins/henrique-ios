@@ -1,7 +1,10 @@
+import HenriqueCore
 import SwiftUI
 
 struct WeightStepper: View {
   @Binding var weightKg: Double
+  var range: ClosedRange<Double> = Limits.setWeightKg
+
   var body: some View {
     HStack(spacing: 8) {
       Text("carga").font(.body)
@@ -16,10 +19,14 @@ struct WeightStepper: View {
         .frame(minWidth: 64)
         .accessibilityLabel("Carga em kg")
       Text("kg").font(.callout).foregroundStyle(Color.mutedInk)
-      Stepper("Ajustar carga", value: $weightKg, in: 0...1_000, step: 2.5)
+      Stepper("Ajustar carga", value: $weightKg, in: range, step: 2.5)
         .labelsHidden()
         .accessibilityLabel("Ajustar carga em kg")
     }
     .frame(minHeight: 48)
+    .onChange(of: weightKg) { _, new in
+      let clamped = new.isFinite ? new.clamped(to: range) : range.lowerBound
+      if clamped != new { weightKg = clamped }
+    }
   }
 }
