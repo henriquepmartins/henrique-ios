@@ -120,3 +120,45 @@ extension View {
     #endif
   }
 }
+
+#if os(iOS)
+import UIKit
+#endif
+
+extension View {
+  func keyboardDone() -> some View {
+    modifier(KeyboardDone())
+  }
+}
+
+private struct KeyboardDone: ViewModifier {
+  func body(content: Content) -> some View {
+    #if os(iOS)
+    content
+      .toolbar {
+        ToolbarItemGroup(placement: .keyboard) {
+          Spacer()
+          KeyboardDoneButton()
+        }
+      }
+      .onSubmit { dismissKeyboard() }
+    #else
+    content
+    #endif
+  }
+}
+
+struct KeyboardDoneButton: View {
+  var body: some View {
+    Button("concluído", action: dismissKeyboard)
+      .accessibilityIdentifier("keyboard.done")
+  }
+}
+
+@MainActor
+func dismissKeyboard() {
+  #if os(iOS)
+  UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+    to: nil, from: nil, for: nil)
+  #endif
+}

@@ -197,6 +197,7 @@ struct MeasurementEditor: View {
       Form {
         Section("peso") {
           TextField("kg", value: $weightKg, format: .number.precision(.fractionLength(0...2)))
+            .submitLabel(.done)
             .decimalInput()
         }
         Section {
@@ -208,6 +209,7 @@ struct MeasurementEditor: View {
         }
       }
       .interactiveDismissDisabled(isSaving)
+      .keyboardDone()
       .navigationTitle("nova medida")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
@@ -248,6 +250,7 @@ struct OptionalField: View {
       Text(label)
       Spacer()
       TextField("", value: $value, format: .number.precision(.fractionLength(0...2)))
+        .submitLabel(.done)
         .decimalInput().multilineTextAlignment(.trailing)
         .accessibilityLabel(label)
       Text(unit).font(.caption).foregroundStyle(Color.mutedInk)

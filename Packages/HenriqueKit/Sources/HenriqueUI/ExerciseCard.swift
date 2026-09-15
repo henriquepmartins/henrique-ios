@@ -5,6 +5,8 @@ struct ExerciseCard: View {
   @Environment(AcademiaStore.self) private var store
   @Environment(\.accent) private var accent
   let exercise: DashboardExercise
+  let date: CalendarDate
+  let templateId: String
   let isOpen: Bool
   let onToggle: () -> Void
 
@@ -40,13 +42,13 @@ struct ExerciseCard: View {
           if !exercise.sets.prep.isEmpty {
             group("aquecimento", color: .mutedInk)
             ForEach(exercise.sets.prep) { set in
-              TrainingSetRow(exercise: exercise, kind: .prep, index: set.index,
+              TrainingSetRow(key: SetKey(date: date, templateId: templateId, exerciseId: exercise.id, kind: .prep, index: set.index),
                 weight: set.weightKg, repetitions: set.reps, done: set.isDone, failure: false)
             }
           }
           group(exercise.prescription.workToFailure ? "valendo · falha" : "valendo", color: accent.base)
           ForEach(exercise.sets.work) { set in
-            TrainingSetRow(exercise: exercise, kind: .work, index: set.index,
+            TrainingSetRow(key: SetKey(date: date, templateId: templateId, exerciseId: exercise.id, kind: .work, index: set.index),
               weight: set.weightKg, repetitions: set.reps, done: set.isDone, failure: set.toFailure)
           }
           if let previous {
@@ -64,7 +66,7 @@ struct ExerciseCard: View {
   private var prescription: String {
     let p = exercise.prescription
     let reps = p.workToFailure ? "falha" : "\(p.repsMin)-\(p.repsMax)"
-    return "\(p.workSets) × \(reps) · \(weightLabel(exercise.previous?.weightKg ?? p.startingWeightKg))"
+    return "\(p.workSets) × \(reps) · \(weightLabel(p.startingWeightKg))"
   }
   private var previous: String? {
     guard let previous = exercise.previous else { return nil }
@@ -84,16 +86,25 @@ struct TrainingSetRow: View {
   @Environment(\.accent) private var accent
   @State private var weightDraft: Double?
   @State private var repsDraft: Int?
-  let exercise: DashboardExercise
-  let kind: SetKey.Kind
-  let index: Int
+  @FocusState private var focused: Field?
+  @State private var submitted: SetDraft?
+  @State private var tapCount = 0
+  private enum Field: Hashable { case weight, reps }
+  let key: SetKey
+  private var kind: SetKey.Kind { key.kind }
+  private var index: Int { key.index }
   let weight: Double
   let repetitions: Int
   let done: Bool
   let failure: Bool
 
-  private var key: SetKey { .init(exerciseId: exercise.id, kind: kind, index: index) }
-  private var saving: Bool { store.inFlight.contains(key) }
+  private var fieldID: String { "set.\(key.exerciseId).\(kind == .prep ? "prep" : "work").\(index)" }
+  private var currentDone: Bool {
+    guard store.dashboard?.date == key.date, store.dashboard?.workout?.id == key.templateId,
+      let current = store.dashboard?.workout?.exercises.first(where: { $0.id == key.exerciseId }) else { return done }
+    return kind == .prep ? current.sets.prep.first(where: { $0.index == index })?.isDone ?? done
+      : current.sets.work.first(where: { $0.index == index })?.isDone ?? done
+  }
 
   var body: some View {
     HStack(spacing: 8) {
@@ -103,6 +114,9 @@ struct TrainingSetRow: View {
           #if os(iOS)
           .keyboardType(.decimalPad)
           #endif
+          .focused($focused, equals: .weight)
+          .submitLabel(.done)
+          .accessibilityIdentifier(fieldID + ".weight")
           .accessibilityLabel("Peso da série \(index)")
         Text("kg").font(.caption2).foregroundStyle(Color.mutedInk)
       }.padding(8).background(.white, in: .rect(cornerRadius: 10))
@@ -111,28 +125,58 @@ struct TrainingSetRow: View {
           #if os(iOS)
           .keyboardType(.numberPad)
           #endif
+          .focused($focused, equals: .reps)
+          .submitLabel(.done)
+          .accessibilityIdentifier(fieldID + ".reps")
           .accessibilityLabel("Repetições da série \(index)")
         if failure { Text("falha").font(.system(size: 9)).foregroundStyle(accent.base) }
       }.padding(8).background(.white, in: .rect(cornerRadius: 10))
       Button {
-        Task {
-          await store.record(exercise: exercise, kind: kind, index: index,
-            weightKg: weightDraft ?? weight, reps: repsDraft ?? repetitions,
-            completed: !done, toFailure: failure)
-        }
+        commit(completed: !currentDone)
+        focused = nil
+        tapCount += 1
       } label: {
         Image(systemName: "checkmark").font(.body.weight(.semibold))
           .frame(width: 44, height: 44)
           .foregroundStyle(done ? accent.deep : Color.mutedInk.opacity(0.5))
           .background(done ? accent.acid : .white, in: .rect(cornerRadius: 12))
-      }.buttonStyle(.plain).disabled(saving || (weightDraft ?? -1) < 0 || (repsDraft ?? 0) < 1)
+      }.buttonStyle(SetCompletionStyle()).disabled((weightDraft ?? -1) < 0 || (repsDraft ?? 0) < 1)
+        .accessibilityIdentifier(fieldID + ".completion")
+        .animation(.easeOut(duration: 0.18), value: done)
         .accessibilityLabel(done ? "Desmarcar série \(index)" : "Concluir série \(index)")
-        .sensoryFeedback(.success, trigger: done)
+        .sensoryFeedback(.impact(weight: .light), trigger: tapCount)
     }
     .font(.subheadline).monospacedDigit().multilineTextAlignment(.center)
     .padding(6).background(kind == .prep ? Color.surfaceMuted : accent.pale.opacity(0.5), in: .rect(cornerRadius: 16))
-    .onChange(of: weight, initial: true) { weightDraft = weight }
-    .onChange(of: repetitions, initial: true) { repsDraft = repetitions }
+    .onChange(of: weight, initial: true) { if focused == nil { weightDraft = weight } }
+    .onChange(of: repetitions, initial: true) { if focused == nil { repsDraft = repetitions } }
+    .onChange(of: focused) { old, new in
+      if old != nil { commit(completed: currentDone) }
+      if new == nil { submitted = nil }
+    }
+    .onSubmit { commit(completed: currentDone); focused = nil }
+  }
+
+  private func commit(completed: Bool) {
+    let draft = SetDraft(weightKg: weightDraft ?? weight, reps: repsDraft ?? repetitions,
+      completed: completed, toFailure: failure)
+    guard draft != submitted, draft.weightKg.isFinite, draft.weightKg >= 0, draft.reps > 0 else { return }
+    let current = SetDraft(weightKg: weight, reps: repetitions, completed: currentDone, toFailure: failure)
+    guard draft != current else { return }
+    submitted = draft
+    store.record(key: key,
+      weightKg: draft.weightKg, reps: draft.reps, completed: completed, toFailure: failure)
+  }
+}
+
+private struct SetCompletionStyle: ButtonStyle {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
+      .opacity(configuration.isPressed ? 0.8 : 1)
+      .animation(configuration.isPressed ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
   }
 }
 

@@ -2,20 +2,29 @@ import Foundation
 import HenriqueCore
 import Observation
 
-/// Identifica uma série dentro do treino do dia. Serve para saber quais linhas
-/// estão esperando o servidor sem travar a tela inteira.
 public struct SetKey: Hashable, Sendable {
   public enum Kind: Hashable, Sendable { case prep, work }
 
+  public let date: CalendarDate
+  public let templateId: String
   public let exerciseId: String
   public let kind: Kind
   public let index: Int
 
-  public init(exerciseId: String, kind: Kind, index: Int) {
+  public init(date: CalendarDate, templateId: String, exerciseId: String, kind: Kind, index: Int) {
+    self.date = date
+    self.templateId = templateId
     self.exerciseId = exerciseId
     self.kind = kind
     self.index = index
   }
+}
+
+struct SetDraft: Equatable, Sendable {
+  let weightKg: Double
+  let reps: Int
+  let completed: Bool
+  let toFailure: Bool
 }
 
 @MainActor
@@ -29,8 +38,49 @@ public final class AcademiaStore {
   }
 
   public private(set) var phase: Phase = .idle
-  public private(set) var dashboard: Dashboard?
-  public private(set) var inFlight: Set<SetKey> = []
+  private var acceptedDashboard: Dashboard?
+  private struct PendingSet {
+    let key: SetKey
+    let draft: SetDraft
+    let revision: Int
+  }
+  private var pendingSets: [SetKey: PendingSet] = [:]
+  @ObservationIgnored private var mutationTail: Task<Bool, Never>?
+  @ObservationIgnored private var revision = 0
+
+  public var dashboard: Dashboard? {
+    guard var value = acceptedDashboard else { return nil }
+    for pending in pendingSets.values.sorted(by: { $0.revision < $1.revision }) {
+      let key = pending.key
+      let draft = pending.draft
+      if key.kind == .work,
+        let plan = value.weekPlan.firstIndex(where: { $0.id == key.templateId }),
+        let exercise = value.weekPlan[plan].exercises.firstIndex(where: { $0.exerciseId == key.exerciseId }) {
+        value.weekPlan[plan].exercises[exercise].startingWeightKg = draft.weightKg
+      }
+      guard value.date == key.date, value.workout?.id == key.templateId,
+        var workout = value.workout,
+        let exercise = workout.exercises.firstIndex(where: { $0.id == key.exerciseId }) else { continue }
+      if key.kind == .prep,
+        let row = workout.exercises[exercise].sets.prep.firstIndex(where: { $0.index == key.index }) {
+        workout.exercises[exercise].sets.prep[row].weightKg = draft.weightKg
+        workout.exercises[exercise].sets.prep[row].reps = draft.reps
+        workout.exercises[exercise].sets.prep[row].completedAt = draft.completed ? .now : nil
+      } else if key.kind == .work,
+        let row = workout.exercises[exercise].sets.work.firstIndex(where: { $0.index == key.index }) {
+        workout.exercises[exercise].prescription.startingWeightKg = draft.weightKg
+        workout.exercises[exercise].sets.work[row].weightKg = draft.weightKg
+        workout.exercises[exercise].sets.work[row].reps = draft.reps
+        workout.exercises[exercise].sets.work[row].toFailure = draft.toFailure
+        workout.exercises[exercise].sets.work[row].completedAt = draft.completed ? .now : nil
+      }
+      workout.completedWorkSetCount = workout.exercises.reduce(0) { $0 + $1.sets.completedWorkCount }
+      workout.completionPercent = workout.workSetCount == 0 ? 0
+        : Int((Double(workout.completedWorkSetCount) / Double(workout.workSetCount) * 100).rounded())
+      value.workout = workout
+    }
+    return value
+  }
   private var deletingWorkoutIds: Set<String> = []
   public private(set) var isSignedIn: Bool = false
   public var selectedDate: CalendarDate = .today
@@ -109,7 +159,10 @@ public final class AcademiaStore {
     sessionID = UUID()
     invalidateDays()
     isSignedIn = false
-    dashboard = nil
+    acceptedDashboard = nil
+    pendingSets.removeAll()
+    mutationTail?.cancel()
+    mutationTail = nil
     banner = nil
     phase = .idle
     await client.signOut()
@@ -124,7 +177,7 @@ public final class AcademiaStore {
     selectedDate = date
     banner = nil
     if let cached = dayCache[date], Date().timeIntervalSince(cached.storedAt) < 30 {
-      dashboard = cached.dashboard
+      acceptedDashboard = cached.dashboard
       phase = .ready
     }
     await fetchDay(date)
@@ -135,12 +188,14 @@ public final class AcademiaStore {
     let requestID = readID
     if dashboard == nil { phase = .loading }
     let task = Task { [weak self, client] in
+      _ = await self?.mutationTail?.value
+      guard !Task.isCancelled else { return }
       do {
         let received = try await client.dashboard(on: date)
         guard let self, self.readID == requestID, self.selectedDate == date,
           received.date == date, !Task.isCancelled else { return }
         self.remember(received)
-        self.dashboard = received
+        self.acceptedDashboard = received
         self.phase = .ready
         self.banner = nil
       } catch {
@@ -154,25 +209,23 @@ public final class AcademiaStore {
     if readID == requestID { readTask = nil }
   }
 
-  /// Grava a série e recebe o painel inteiro de volta. O servidor é quem decide
-  /// o estado final, então a tela não tenta adivinhar antes da resposta.
+  @discardableResult
   public func record(
-    exercise: DashboardExercise, kind: SetKey.Kind, index: Int, weightKg: Double, reps: Int,
+    key: SetKey, weightKg: Double, reps: Int,
     completed: Bool, toFailure: Bool
-  ) async {
-    guard dashboard?.date == selectedDate, let templateId = dashboard?.workout?.id else { return }
-    let key = SetKey(exerciseId: exercise.id, kind: kind, index: index)
-    guard !inFlight.contains(key) else { return }
-
+  ) -> Task<Bool, Never>? {
+    guard key.date == selectedDate, dashboard?.date == key.date, dashboard?.workout?.id == key.templateId,
+      weightKg.isFinite, weightKg >= 0, reps > 0 else { return nil }
+    let draft = SetDraft(weightKg: weightKg, reps: reps, completed: completed, toFailure: toFailure)
+    if pendingSets[key]?.draft == draft { return mutationTail }
+    revision += 1
+    let pending = PendingSet(key: key, draft: draft, revision: revision)
+    pendingSets[key] = pending
     let fields = RecordSetInput.Fields(
-      date: selectedDate, workoutTemplateId: templateId, exerciseId: exercise.id, setIndex: index,
+      date: key.date, workoutTemplateId: key.templateId, exerciseId: key.exerciseId, setIndex: key.index,
       weightKg: weightKg, reps: reps, completed: completed)
-    let input: RecordSetInput =
-      kind == .prep ? .prep(fields) : .work(fields, toFailure: toFailure)
-
-    inFlight.insert(key)
-    defer { inFlight.remove(key) }
-    await apply { try await self.client.recordSet(input) }
+    let input: RecordSetInput = key.kind == .prep ? .prep(fields) : .work(fields, toFailure: toFailure)
+    return enqueue(pending: pending) { try await self.client.recordSet(input) }
   }
 
   @discardableResult
@@ -222,27 +275,44 @@ public final class AcademiaStore {
     }
   }
 
-  /// Toda chamada devolve o painel inteiro, então o tratamento de erro e a
-  /// troca de estado ficam num lugar só.
   @discardableResult
-  private func apply(_ work: @Sendable () async throws -> Dashboard) async -> Bool {
+  private func apply(_ work: @escaping @Sendable () async throws -> Dashboard) async -> Bool {
+    await enqueue(work).value
+  }
+
+  private func enqueue(
+    pending: PendingSet? = nil, _ work: @escaping @Sendable () async throws -> Dashboard
+  ) -> Task<Bool, Never> {
     invalidateDays()
     let mutationSession = sessionID
-    do {
-      let received = try await work()
-      guard sessionID == mutationSession else { return false }
-      invalidateDays()
-      guard received.date == selectedDate else { return true }
-      dashboard = received
-      phase = .ready
-      banner = nil
-      return true
-    } catch {
-      guard sessionID == mutationSession else { return false }
-      invalidateDays()
-      if !(error is CancellationError) { handle(error) }
+    let previous = mutationTail
+    let task = Task { @MainActor in
+      _ = await previous?.value
+      guard sessionID == mutationSession, !Task.isCancelled else { return false }
+      defer {
+        if let pending, pendingSets[pending.key]?.revision == pending.revision {
+          pendingSets.removeValue(forKey: pending.key)
+        }
+      }
+      do {
+        let received = try await work()
+        guard sessionID == mutationSession, !Task.isCancelled else { return false }
+        dayCache.removeAll()
+        remember(received)
+        if received.date == selectedDate {
+          acceptedDashboard = received
+          phase = .ready
+        }
+        return true
+      } catch {
+        guard sessionID == mutationSession, !Task.isCancelled else { return false }
+        dayCache.removeAll()
+        if !(error is CancellationError) { handle(error) }
+        return false
+      }
     }
-    return false
+    mutationTail = task
+    return task
   }
 
   private func handle(_ error: any Error) {
@@ -251,7 +321,10 @@ public final class AcademiaStore {
       sessionID = UUID()
       invalidateDays()
       isSignedIn = false
-      dashboard = nil
+      acceptedDashboard = nil
+      pendingSets.removeAll()
+      mutationTail?.cancel()
+      mutationTail = nil
       phase = .idle
       banner = "sessão expirou"
     case let error as APIError:

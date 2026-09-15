@@ -146,6 +146,7 @@ public struct NotebookPageScreen: View {
       VStack(alignment: .leading, spacing: 8) {
         if page != nil {
           TextField("título", text: Binding(get: { title }, set: { touch($0) }))
+            .submitLabel(.done)
             .font(.system(size: titleSize, weight: .bold))
             .tracking(-titleSize * 0.035)
             .textFieldStyle(.plain)

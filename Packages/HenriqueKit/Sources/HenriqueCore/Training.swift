@@ -158,7 +158,7 @@ public struct PlanExercise: Codable, Hashable, Sendable, Identifiable {
 
 public struct WeekPlanItem: Codable, Hashable, Sendable, Identifiable {
   public var id: String
-  /// Em ordem crescente e nunca vazio. Treino sem dia não entra no plano.
+  /// Vazio quando o treino ainda não tem dia.
   public var weekdays: [Int]
   public var name: String
   public var focus: String
@@ -168,21 +168,19 @@ public struct WeekPlanItem: Codable, Hashable, Sendable, Identifiable {
 
   /// O dia desse treino mais perto de `today`, andando para a frente. Hoje
   /// conta como distância zero, então quem treina hoje fica em hoje.
-  public func nextWeekday(from today: Int) -> Int {
-    weekdays.min { ($0 - today + 7) % 7 < ($1 - today + 7) % 7 } ?? today
+  public func nextWeekday(from today: Int) -> Int? {
+    weekdays.min { ($0 - today + 7) % 7 < ($1 - today + 7) % 7 }
   }
 }
 
 extension WeekPlanItem {
-  /// Lista vazia é recusada aqui, na entrada, para a tela poder ler `weekdays[0]`
-  /// sem guarda. Fica na extensão para o init memberwise continuar existindo.
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     id = try container.decode(String.self, forKey: .id)
     weekdays = try container.decode([Int].self, forKey: .weekdays)
-    guard !weekdays.isEmpty else {
+    guard weekdays.allSatisfy({ (0...6).contains($0) }) else {
       throw DecodingError.dataCorruptedError(
-        forKey: .weekdays, in: container, debugDescription: "treino sem nenhum dia")
+        forKey: .weekdays, in: container, debugDescription: "dia da semana inválido")
     }
     name = try container.decode(String.self, forKey: .name)
     focus = try container.decode(String.self, forKey: .focus)
@@ -196,14 +194,13 @@ extension WeekPlanItem {
 public struct WeekdayHandoff: Hashable, Sendable {
   public var workoutName: String
   public var weekdays: [Int]
-  /// Perdeu todos os dias, então sai do plano. As sessões e séries continuam no
-  /// banco.
-  public var leavesPlan: Bool
+  /// Perdeu todos os dias e continua no plano sem dia.
+  public var becomesUnscheduled: Bool
 
-  public init(workoutName: String, weekdays: [Int], leavesPlan: Bool) {
+  public init(workoutName: String, weekdays: [Int], becomesUnscheduled: Bool) {
     self.workoutName = workoutName
     self.weekdays = weekdays
-    self.leavesPlan = leavesPlan
+    self.becomesUnscheduled = becomesUnscheduled
   }
 }
 
@@ -233,7 +230,7 @@ public struct WeekdayOwners: Sendable {
       } else {
         let handoff = WeekdayHandoff(
           workoutName: owner.name, weekdays: [day],
-          leavesPlan: Set(owner.weekdays).isSubset(of: selection))
+          becomesUnscheduled: Set(owner.weekdays).isSubset(of: selection))
         handoffs.append((owner.id, handoff))
       }
     }

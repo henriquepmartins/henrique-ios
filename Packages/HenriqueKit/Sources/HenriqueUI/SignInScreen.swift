@@ -35,15 +35,15 @@ struct SignInScreen: View {
                 #endif
                 .autocorrectionDisabled()
                 .focused($focus, equals: .username)
-                .submitLabel(.next)
-                .onSubmit { focus = .password }
+                .submitLabel(.done)
+                .onSubmit { focus = nil }
             }
             GlassField(placeholder: "senha") {
               SecureField("senha", text: $password)
                 .textContentType(.password)
                 .focused($focus, equals: .password)
-                .submitLabel(.go)
-                .onSubmit { submit() }
+                .submitLabel(.done)
+                .onSubmit { focus = nil }
             }
           }
         }
@@ -68,6 +68,7 @@ struct SignInScreen: View {
       .padding(.horizontal, 28)
       .frame(maxWidth: 420)
     }
+    .keyboardDone()
 
   }
 

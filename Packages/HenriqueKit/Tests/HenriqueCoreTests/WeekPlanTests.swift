@@ -21,6 +21,18 @@ struct WeekPlanTests {
     #expect(Self.item("Superiores", [1, 4]).nextWeekday(from: today) == expected)
   }
 
+  @Test("treino sem dia continua no plano e não tem próximo dia")
+  func unscheduledWorkout() throws {
+    let item = try ContractTests.planItem(
+      """
+      {"id": "tpl-1", "weekdays": [], "name": "Superiores", "focus": "peito",
+       "exerciseCount": 0, "exercises": [], "estimatedMinutes": 55}
+      """)
+    #expect(item.weekdays.isEmpty)
+    #expect(item.nextWeekday(from: 2) == nil)
+    #expect(WeekdayOwners(plan: [item], excluding: nil).handoffs(to: [1, 2]).isEmpty)
+  }
+
   @Test("sábado dá a volta para o domingo do mesmo treino")
   func nextWeekdayWrapsAroundTheWeek() {
     #expect(Self.item("Pernas", [0, 3]).nextWeekday(from: 6) == 0)
@@ -32,8 +44,8 @@ struct WeekPlanTests {
     let owners = WeekdayOwners(plan: plan, excluding: nil)
     #expect(
       owners.handoffs(to: [2, 4, 6]) == [
-        WeekdayHandoff(workoutName: "Pernas", weekdays: [2], leavesPlan: true),
-        WeekdayHandoff(workoutName: "Superiores", weekdays: [4], leavesPlan: false),
+        WeekdayHandoff(workoutName: "Pernas", weekdays: [2], becomesUnscheduled: true),
+        WeekdayHandoff(workoutName: "Superiores", weekdays: [4], becomesUnscheduled: false),
       ])
   }
 
@@ -45,7 +57,7 @@ struct WeekPlanTests {
     #expect(owners[2]?.id == "Pernas")
     #expect(
       owners.handoffs(to: [1, 2, 4]) == [
-        WeekdayHandoff(workoutName: "Pernas", weekdays: [2], leavesPlan: true)
+        WeekdayHandoff(workoutName: "Pernas", weekdays: [2], becomesUnscheduled: true)
       ])
   }
 }

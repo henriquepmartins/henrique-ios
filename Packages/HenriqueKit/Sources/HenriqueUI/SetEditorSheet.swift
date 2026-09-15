@@ -7,6 +7,7 @@ struct WeightStepper: View {
       Text("carga").font(.body)
       Spacer(minLength: 8)
       TextField("0", value: $weightKg, format: .number.precision(.fractionLength(0...2)))
+        .submitLabel(.done)
         #if os(iOS)
         .keyboardType(.decimalPad)
         #endif

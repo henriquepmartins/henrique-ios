@@ -169,12 +169,12 @@ struct ContractTests {
     #expect(item.weekdays == [1, 4])
   }
 
-  @Test("treino com a lista de dias vazia é recusado")
-  func planItemRejectsEmptyWeekdays() {
+  @Test("dias fora da semana são recusados", arguments: [-1, 7])
+  func planItemRejectsInvalidWeekdays(day: Int) {
     #expect(throws: DecodingError.self) {
       try Self.planItem(
         """
-        {"id": "tpl-1", "weekdays": [], "name": "Superiores", "focus": "peito",
+        {"id": "tpl-1", "weekdays": [\(day)], "name": "Superiores", "focus": "peito",
          "exerciseCount": 0, "exercises": [], "estimatedMinutes": 55}
         """)
     }

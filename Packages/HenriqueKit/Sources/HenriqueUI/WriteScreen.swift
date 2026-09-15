@@ -390,6 +390,7 @@ private struct WriteKeybar: ViewModifier {
             .accessibilityLabel(action.label)
           }
           Spacer()
+          KeyboardDoneButton()
         }
       }
     #else

@@ -11,7 +11,7 @@ struct WeekScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
-        Button("novo treino", systemImage: "plus") { editor = .new(weekdays: newWorkoutWeekdays) }
+        Button("novo treino", systemImage: "plus") { editor = .new(weekdays: []) }
           .buttonStyle(.glassProminent)
           .controlSize(.large)
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
@@ -21,7 +21,7 @@ struct WeekScreen: View {
               item: item,
               onEdit: { editor = .existing(item) },
               onDelete: { store.deleteWorkout(workoutTemplateId: item.id) },
-              onStart: { onStart(item.nextWeekday(from: store.selectedDate.weekday())) })
+              onStart: { if let day = item.nextWeekday(from: store.selectedDate.weekday()) { onStart(day) } })
               .staggeredEntrance(index: index, isReady: true)
           }
         }
@@ -39,13 +39,7 @@ struct WeekScreen: View {
     }
   }
 
-  /// O treino novo já nasce no dia aberto na tela, a não ser que esse dia seja
-  /// de outro treino. Aí começa sem dia, para não tirar nada de ninguém sem o
-  /// toque de quem monta.
-  private var newWorkoutWeekdays: Set<Int> {
-    let today = store.selectedDate.weekday()
-    return WeekdayOwners(plan: store.weekPlan, excluding: nil)[today] == nil ? [today] : []
-  }
+
 }
 
 private enum PlanEditorDestination: Identifiable {
@@ -82,7 +76,7 @@ private struct WorkoutTile: View {
 
   /// A cor vem do dia e não da posição na grade. Pela posição, apagar um card
   /// repintava todos os que vinham depois.
-  private var tone: WorkoutTone { .at(item.weekdays[0]) }
+  private var tone: WorkoutTone { .at(item.weekdays.first ?? 0) }
   private var nameFont: Font { .system(.headline, weight: .semibold) }
   /// O recuo do bloco colorido. Os três pontos leem o mesmo valor para cair na
   /// linha do nome.
@@ -92,9 +86,9 @@ private struct WorkoutTile: View {
   private let menuTapPad: CGFloat = 10
 
   var body: some View {
-    Button(action: onStart) { face }
+    Button(action: item.weekdays.isEmpty ? onEdit : onStart) { face }
       .buttonStyle(StudyPressStyle())
-      .accessibilityLabel("iniciar \(item.name), \(spokenWeekdays(item.weekdays))")
+      .accessibilityLabel(item.weekdays.isEmpty ? "editar \(item.name), sem dia" : "iniciar \(item.name), \(spokenWeekdays(item.weekdays))")
       // Menu dentro do label de um Button nunca chega a receber o dedo. Por isso
       // ele vem numa camada por cima, com área de toque só nos três pontos.
       .overlay(alignment: .bottomTrailing) { menuLayer }
@@ -116,7 +110,7 @@ private struct WorkoutTile: View {
   }
 
   private var footer: some View {
-    Image(systemName: "play.fill")
+    Label(item.weekdays.isEmpty ? "sem dia" : "", systemImage: item.weekdays.isEmpty ? "pencil" : "play.fill")
       .font(.system(size: 11, weight: .semibold))
       .foregroundStyle(Color.mutedInk)
       .padding(.vertical, 11)
@@ -236,8 +230,7 @@ struct WorkoutEditor: View {
   }
 
   private var canSave: Bool {
-    !weekdays.isEmpty
-      && name.trimmingCharacters(in: .whitespaces).count >= 2
+    name.trimmingCharacters(in: .whitespaces).count >= 2
       && focus.trimmingCharacters(in: .whitespaces).count >= 2
       && !exercises.isEmpty && exercises.count <= 12 && (15...180).contains(estimatedMinutes)
       && exercises.allSatisfy { $0.repsMin <= $0.repsMax && $0.startingWeightKg >= 0 }
@@ -262,8 +255,11 @@ struct WorkoutEditor: View {
 
         Section {
           TextField("nome", text: $name)
+            .submitLabel(.done)
           TextField("foco", text: $focus)
+            .submitLabel(.done)
           TextField("minutos", value: $estimatedMinutes, format: .number)
+            .submitLabel(.done)
             .decimalInput()
         }
 
@@ -336,6 +332,7 @@ struct WorkoutEditor: View {
       .transaction { transaction in
         if reduceMotion { transaction.disablesAnimations = true }
       }
+      .keyboardDone()
       .navigationTitle(name.isEmpty ? "novo treino" : name)
       .toolbarTitleDisplayMode(.inline)
       .interactiveDismissDisabled(isSaving)
@@ -430,8 +427,8 @@ private struct WorkoutDaysSection: View {
   private static func note(_ handoff: WeekdayHandoff) -> String {
     let days = spokenWeekdays(handoff.weekdays)
     let verb = handoff.weekdays.count == 1 ? "sai" : "saem"
-    guard handoff.leavesPlan else { return "\(days) \(verb) de \(handoff.workoutName)" }
-    return "\(handoff.workoutName) sai do plano"
+    guard handoff.becomesUnscheduled else { return "\(days) \(verb) de \(handoff.workoutName)" }
+    return "\(handoff.workoutName) continua sem dia"
   }
 }
 
@@ -698,8 +695,11 @@ struct ExercisePicker: View {
                   .foregroundStyle(Color.mutedInk)
                   .padding(.leading, 2)
                 TextField("buscar", text: $search)
+                  .submitLabel(.done)
                   .focused($searchFocused)
+                  #if os(iOS)
                   .textInputAutocapitalization(.never)
+                  #endif
                   .autocorrectionDisabled()
                   .accessibilityLabel("Buscar exercício")
                 if !search.isEmpty {
@@ -733,6 +733,7 @@ struct ExercisePicker: View {
         }
       }
       .background(Color.canvas)
+      .keyboardDone()
       .navigationTitle("exercícios")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {

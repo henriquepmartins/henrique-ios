@@ -36,7 +36,7 @@ public struct TodayScreen: View {
             }
             .animation(.easeOut(duration: 0.16), value: store.dashboard?.date == store.selectedDate)
           }
-          if let workout = store.dashboard?.workout {
+          if let data = store.dashboard, let workout = data.workout {
             VStack(spacing: 14) {
               HStack {
                 Text("exercícios").font(.title2.weight(.medium)).tracking(-0.8)
@@ -55,14 +55,14 @@ public struct TodayScreen: View {
                 Button("editar plano", systemImage: "square.and.pencil", action: onPlan)
               }.font(.caption).buttonStyle(.glass).labelStyle(.iconOnly)
               ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { index, exercise in
-                ExerciseCard(exercise: exercise, isOpen: openIds.contains(exercise.id)) {
+                ExerciseCard(exercise: exercise, date: data.date, templateId: workout.id, isOpen: openIds.contains(exercise.id)) {
                   withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 1)) {
                     if !openIds.insert(exercise.id).inserted { openIds.remove(exercise.id) }
                   }
                 }
                 .staggeredEntrance(index: index, isReady: true)
               }
-            }.id("exercises").disabled(store.dashboard?.date != store.selectedDate)
+            }.id(store.dashboard?.date).disabled(store.dashboard?.date != store.selectedDate)
           } else if store.dashboard != nil {
             VStack(alignment: .leading, spacing: 14) {
               Image(systemName: "dumbbell").font(.title2)

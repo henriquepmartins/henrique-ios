@@ -168,6 +168,7 @@ public struct FocusSessionScreen: View {
       }
       .scrollDismissesKeyboard(.interactively)
     }
+    .keyboardDone()
     .background(Color.studyBlack.ignoresSafeArea())
     .foregroundStyle(Color.studyCream)
     .tint(Color.studyCream)

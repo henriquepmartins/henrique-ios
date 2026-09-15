@@ -76,6 +76,7 @@ struct SetupScreen: View {
         }.padding(24).disabled(saving)
       }
       .background(Color.canvas.ignoresSafeArea())
+      .keyboardDone()
       .navigationTitle("h&")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
@@ -127,10 +128,13 @@ struct SetupScreen: View {
           loadWorkout()
         }
         TextField("nome", text: $name).textFieldStyle(.roundedBorder)
+          .submitLabel(.done)
         TextField("foco", text: $focus).textFieldStyle(.roundedBorder)
+          .submitLabel(.done)
         HStack {
           Text("minutos")
           TextField("55", value: $minutes, format: .number).decimalInput().multilineTextAlignment(.trailing)
+            .submitLabel(.done)
         }
       }.padding(20).paperCard()
     case .exercises:
@@ -171,6 +175,7 @@ struct SetupScreen: View {
       Text(title).font(.caption).foregroundStyle(Color.mutedInk)
       HStack {
         TextField("", value: value, format: .number.precision(.fractionLength(0...2)))
+          .submitLabel(.done)
           .decimalInput().accessibilityLabel(title)
         Text(unit).foregroundStyle(Color.mutedInk)
       }
