@@ -132,5 +132,7 @@ gh release create "$TAG" "$IPA" --repo "$REPO" --verify-tag \
   --title "h&nrique $MARKETING ($BUILD)" --notes "$NOTES"
 git push origin main
 
+"$ROOT/scripts/push-to-iphone.sh" || warn 'não consegui instalar o build no iPhone. Se o agente do launchd estiver instalado, ele tenta de novo em até 15 minutos.'
+
 printf '\nBuild %s publicado.\nFonte do AltStore %s\nRelease https://github.com/%s/releases/tag/%s\n' \
   "$BUILD" "$SOURCE_URL" "$REPO" "$TAG"

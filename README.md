@@ -26,6 +26,42 @@ mesmos dados nos dois lugares.
 O endereço da API vem de `HENRIQUE_API_BASE_URL` nas configurações de build:
 `http://localhost:3000` no Debug e o domínio de produção no Release.
 
+## Instalar pelo Wi-Fi sem tocar no iPhone
+
+O Mac instala sozinho o último build publicado sempre que encontra o iPhone na
+mesma rede Wi-Fi. Também reinstala quando faltam menos de 72 horas para vencer a
+assinatura de 7 dias da conta gratuita. Assim ninguém precisa abrir nada no
+iPhone.
+
+Antes, uma única vez:
+
+1. Entre com a conta da Apple no Xcode, em Settings > Accounts.
+2. Conecte o iPhone ao Mac por cabo, confie no computador e ative o Modo de
+   Desenvolvedor em Ajustes > Privacidade e Segurança.
+3. Deixe o Mac e o iPhone na mesma rede Wi-Fi.
+
+O UDID do iPhone e o time da conta ficam no topo de `scripts/push-to-iphone.sh`.
+Para ligar o agente do launchd, que roda o script a cada 15 minutos e quando o
+Mac inicia a sessão:
+
+```sh
+./scripts/install-autopush.sh              # instala ou recarrega
+./scripts/install-autopush.sh --uninstall  # remove
+./scripts/push-to-iphone.sh                # uma rodada na mão
+./scripts/push-to-iphone.sh --force        # reinstala mesmo se estiver em dia
+```
+
+O log fica em `~/Library/Logs/henrique-autopush.log`. O script compila a partir
+da tag `build-N`, nunca da cópia de trabalho, e guarda o build assinado em
+`~/Library/Caches/henrique-ios/`. O `release.sh` chama o script no fim, então um
+build novo chega ao iPhone logo depois de publicado.
+
+O iPhone some da rede quando fica bloqueado por um tempo. Nessa hora o script só
+registra que não o encontrou e tenta de novo na rodada seguinte. Desbloqueie o
+iPhone de vez em quando perto do Mac, antes que a assinatura vença.
+
+O AltStore, descrito abaixo, continua como plano B.
+
 ## Instalar o app nativo com AltStore
 
 O iPhone precisa de iOS 26 ou superior. O AltStore Classic usa a conta gratuita
