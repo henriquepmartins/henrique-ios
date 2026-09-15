@@ -23,12 +23,13 @@ enum EditorStep: Int, CaseIterable, Hashable {
   func isSatisfied(by draft: WorkoutDraft) -> Bool {
     switch self {
     case .identidade:
-      draft.trimmedName.count >= 2 && draft.trimmedFocus.count >= 2
-        && (15...180).contains(draft.estimatedMinutes)
+      Limits.workoutNameLength.contains(draft.trimmedName.count)
+        && Limits.workoutFocusLength.contains(draft.trimmedFocus.count)
+        && Limits.estimatedMinutes.contains(draft.estimatedMinutes)
     case .cor, .dias:
       true
     case .exercicios:
-      !draft.exercises.isEmpty && draft.exercises.count <= 12
+      Limits.exerciseCount.contains(draft.exercises.count)
         && draft.exercises.allSatisfy { $0.repsMin <= $0.repsMax && $0.startingWeightKg >= 0 }
     }
   }
@@ -319,7 +320,7 @@ private struct ExercisesStep: View {
         Button("adicionar", systemImage: "plus") {
           isPickingExercise = true
         }
-        .disabled(exercises.count >= 12)
+        .disabled(exercises.count >= Limits.exerciseCount.upperBound)
       } header: {
         #if os(iOS)
         if !exercises.isEmpty || isOrganizing {

@@ -91,26 +91,24 @@ private struct WorkoutTile: View {
     .accessibilityLabel(item.weekdays.isEmpty ? "editar \(item.name), sem dia" : "iniciar \(item.name), \(spokenWeekdays(item.weekdays))")
     // Menu dentro do label de um Button nunca chega a receber o dedo. Por isso
     // ele vem numa camada por cima, com área de toque só no disco dos três pontos.
-    .overlay(alignment: .bottomTrailing) { menuLayer }
+    .overlay(alignment: .topTrailing) { menuLayer }
   }
 
   private var menuLayer: some View {
-    VStack(alignment: .trailing, spacing: 0) {
-      Menu {
-        Button("editar", systemImage: "pencil", action: onEdit)
-        Button("apagar", systemImage: "trash", role: .destructive) { confirmDelete = true }
-      } label: {
-        Color.clear
-          .frame(width: 44, height: 44)
-          .contentShape(.rect)
-      }
-      .accessibilityLabel("editar \(item.name)")
-      // Preso nos três pontos, o diálogo aponta para o card que vai sumir. Preso
-      // na tela, ele abria no topo, longe do toque.
-      .deleteWorkoutConfirmation(isPresented: $confirmDelete, name: item.name, onDelete: onDelete)
-      .padding([.bottom, .trailing], WorkoutFolderCard.menuCenterInset - 22)
-      WorkoutFolderCard.Footer(hasDays: !item.weekdays.isEmpty).hidden()
+    Menu {
+      Button("editar", systemImage: "pencil", action: onEdit)
+      Button("apagar", systemImage: "trash", role: .destructive) { confirmDelete = true }
+    } label: {
+      Color.clear
+        .frame(width: 44, height: 44)
+        .contentShape(.rect)
     }
+    .accessibilityLabel("editar \(item.name)")
+    // Preso nos três pontos, o diálogo aponta para o card que vai sumir. Preso
+    // na tela, ele abria no topo, longe do toque.
+    .deleteWorkoutConfirmation(isPresented: $confirmDelete, name: item.name, onDelete: onDelete)
+    .padding(.trailing, WorkoutFolderCard.menuCenterInset - 22)
+    .padding(.top, WorkoutFolderCard.blockTop + WorkoutFolderCard.menuCenterInset - 22)
   }
 }
 
@@ -126,23 +124,29 @@ struct WorkoutFolderCard: View {
   /// leem o mesmo valor para cair na linha do nome.
   static let blockPad: CGFloat = 12
   static let menuDisc: CGFloat = 34
-  /// Distância do centro do disco até a borda direita e a de baixo do bloco.
+  /// Distância do centro do disco até a borda direita e a de cima do bloco.
   /// A camada do menu na grade se alinha por aqui.
   static var menuCenterInset: CGFloat { blockPad + menuDisc / 2 }
+  /// O quanto o bloco desce por causa das folhas atrás dele.
+  static let blockTop: CGFloat = 13
 
   var body: some View {
-    VStack(spacing: 0) {
-      ZStack(alignment: .top) {
-        Sheet(tone: tone, inset: 24, opacity: 0.3, lined: false)
-        Sheet(tone: tone, inset: 12, opacity: 0.52, lined: true).padding(.top, 6)
-        block.padding(.top, 13)
+    ZStack(alignment: .top) {
+      Sheet(tone: tone, inset: 24, opacity: 0.3, lined: false)
+      Sheet(tone: tone, inset: 12, opacity: 0.52, lined: true).padding(.top, 6)
+      // Bloco e rodapé são um cartão só: mesmo canto, mesma sombra.
+      VStack(spacing: 0) {
+        block
+        Footer(hasDays: hasDays)
       }
-      // Sem achatar antes, a sombra é aplicada em cada vinco e cai sobre o
-      // bloco como uma faixa escura.
-      .compositingGroup()
-      .shadow(color: Color.ink.opacity(0.12), radius: 12, y: 6)
-      Footer(hasDays: hasDays)
+      .background(.white)
+      .clipShape(.rect(cornerRadius: 18))
+      .padding(.top, 13)
     }
+    // Sem achatar antes, a sombra é aplicada em cada vinco e cai sobre o
+    // bloco como uma faixa escura.
+    .compositingGroup()
+    .shadow(color: Color.ink.opacity(0.12), radius: 12, y: 6)
   }
 
   private var block: some View {
@@ -152,7 +156,7 @@ struct WorkoutFolderCard: View {
       .foregroundStyle(tone.ink)
       .lineLimit(2)
       .padding(.trailing, Self.menuDisc + 4)
-      .frame(maxWidth: .infinity, minHeight: 88, alignment: .bottomLeading)
+      .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
       .padding(Self.blockPad)
       .background {
         ZStack {
@@ -161,7 +165,7 @@ struct WorkoutFolderCard: View {
           WorkoutWave().stroke(.white.opacity(0.45), lineWidth: 1.5)
         }
       }
-      .overlay(alignment: .bottomTrailing) {
+      .overlay(alignment: .topTrailing) {
         Circle()
           .fill(.white.opacity(0.35))
           .frame(width: Self.menuDisc, height: Self.menuDisc)
@@ -174,7 +178,6 @@ struct WorkoutFolderCard: View {
           .padding(Self.blockPad)
           .accessibilityHidden(true)
       }
-      .clipShape(.rect(cornerRadius: 18))
   }
 
   struct Footer: View {
@@ -198,7 +201,7 @@ struct WorkoutFolderCard: View {
     var body: some View {
       RoundedRectangle(cornerRadius: 8)
         .fill(tone.top.opacity(opacity))
-        .frame(height: 26)
+        .frame(height: WorkoutFolderCard.blockTop * 2)
         .overlay(alignment: .topLeading) {
           if lined {
             GeometryReader { proxy in
@@ -286,13 +289,13 @@ struct PlanExerciseRow: View {
       .padding(.top, isOrganizing ? 0 : 6)
       if !isOrganizing {
         Divider()
-        ExerciseStepperRow(label: "aquecimento", value: $exercise.prepSets, range: 0...6)
+        ExerciseStepperRow(label: "aquecimento", value: $exercise.prepSets, range: Limits.prepSets)
         Divider()
-        ExerciseStepperRow(label: "valendo", value: $exercise.workSets, range: 1...10)
+        ExerciseStepperRow(label: "valendo", value: $exercise.workSets, range: Limits.workSets)
         Divider()
-        ExerciseStepperRow(label: "reps mín.", value: $exercise.repsMin, range: 1...50)
+        ExerciseStepperRow(label: "reps mín.", value: $exercise.repsMin, range: Limits.planReps)
         Divider()
-        ExerciseStepperRow(label: "reps máx.", value: $exercise.repsMax, range: 1...50)
+        ExerciseStepperRow(label: "reps máx.", value: $exercise.repsMax, range: Limits.planReps)
         Divider()
         WeightStepper(weightKg: $exercise.startingWeightKg)
         Divider()
