@@ -74,72 +74,21 @@ private struct WorkoutTile: View {
   let onStart: () -> Void
   @State private var confirmDelete = false
 
-  /// A cor vem do dia e não da posição na grade. Pela posição, apagar um card
-  /// repintava todos os que vinham depois.
-  private var tone: WorkoutTone { .at(item.weekdays.first ?? 0) }
-  private var nameFont: Font { .system(.headline, weight: .semibold) }
-  /// O recuo do bloco colorido. Os três pontos leem o mesmo valor para cair na
-  /// linha do nome.
-  private let blockPad: CGFloat = 12
-  /// A folga que leva a área de toque dos três pontos aos 44 pontos. Sai de
-  /// novo do recuo de baixo, senão o glifo desce e desalinha do nome.
-  private let menuTapPad: CGFloat = 10
+  /// Sem cor escolhida, a cor vem do dia e não da posição na grade. Pela
+  /// posição, apagar um card repintava todos os que vinham depois.
+  private var tone: WorkoutTone {
+    item.color.flatMap(WorkoutTone.from(hex:)) ?? .at(item.weekdays.first ?? 0)
+  }
 
   var body: some View {
-    Button(action: item.weekdays.isEmpty ? onEdit : onStart) { face }
-      .buttonStyle(StudyPressStyle())
-      .accessibilityLabel(item.weekdays.isEmpty ? "editar \(item.name), sem dia" : "iniciar \(item.name), \(spokenWeekdays(item.weekdays))")
-      // Menu dentro do label de um Button nunca chega a receber o dedo. Por isso
-      // ele vem numa camada por cima, com área de toque só nos três pontos.
-      .overlay(alignment: .bottomTrailing) { menuLayer }
-  }
-
-  private var face: some View {
-    VStack(spacing: 0) {
-      ZStack(alignment: .top) {
-        sheet(inset: 24, opacity: 0.3)
-        sheet(inset: 12, opacity: 0.52).padding(.top, 6)
-        block.padding(.top, 13)
-      }
-      // Sem achatar antes, a sombra é aplicada em cada vinco e cai sobre o
-      // bloco como uma faixa escura.
-      .compositingGroup()
-      .shadow(color: Color.ink.opacity(0.12), radius: 12, y: 6)
-      footer
+    Button(action: item.weekdays.isEmpty ? onEdit : onStart) {
+      WorkoutFolderCard(name: item.name, tone: tone, hasDays: !item.weekdays.isEmpty)
     }
-  }
-
-  private var footer: some View {
-    Label(item.weekdays.isEmpty ? "sem dia" : "", systemImage: item.weekdays.isEmpty ? "pencil" : "play.fill")
-      .font(.system(size: 11, weight: .semibold))
-      .foregroundStyle(Color.mutedInk)
-      .padding(.vertical, 11)
-  }
-
-  private func sheet(inset: CGFloat, opacity: Double) -> some View {
-    RoundedRectangle(cornerRadius: 8)
-      .fill(tone.top.opacity(opacity))
-      .frame(height: 26)
-      .padding(.horizontal, inset)
-  }
-
-  private var block: some View {
-    Text(item.name)
-      .font(nameFont)
-      .tracking(-0.3)
-      .foregroundStyle(tone.ink)
-      .lineLimit(2)
-      .padding(.trailing, 30)
-      .frame(maxWidth: .infinity, minHeight: 88, alignment: .bottomLeading)
-      .padding(blockPad)
-      .background {
-        ZStack {
-          LinearGradient(colors: [tone.top, tone.bottom], startPoint: .top, endPoint: .bottom)
-          WorkoutWave(closed: true).fill(.white.opacity(0.12))
-          WorkoutWave().stroke(.white.opacity(0.45), lineWidth: 1.5)
-        }
-      }
-      .clipShape(.rect(cornerRadius: 18))
+    .buttonStyle(StudyPressStyle())
+    .accessibilityLabel(item.weekdays.isEmpty ? "editar \(item.name), sem dia" : "iniciar \(item.name), \(spokenWeekdays(item.weekdays))")
+    // Menu dentro do label de um Button nunca chega a receber o dedo. Por isso
+    // ele vem numa camada por cima, com área de toque só no disco dos três pontos.
+    .overlay(alignment: .bottomTrailing) { menuLayer }
   }
 
   private var menuLayer: some View {
@@ -148,29 +97,120 @@ private struct WorkoutTile: View {
         Button("editar", systemImage: "pencil", action: onEdit)
         Button("apagar", systemImage: "trash", role: .destructive) { confirmDelete = true }
       } label: {
-        // O espaço invisível no corpo do nome dá a altura da linha, então os
-        // três pontos caem no meio dela em qualquer tamanho de texto.
-        Text(verbatim: " ")
-          .font(nameFont)
-          .hidden()
-          .frame(width: 44)
-          .overlay {
-            Image(systemName: "ellipsis")
-              .font(.system(.body, weight: .semibold))
-              .rotationEffect(.degrees(90))
-              .foregroundStyle(tone.ink)
-          }
-          .padding(.vertical, menuTapPad)
+        Color.clear
+          .frame(width: 44, height: 44)
           .contentShape(.rect)
       }
       .accessibilityLabel("editar \(item.name)")
       // Preso nos três pontos, o diálogo aponta para o card que vai sumir. Preso
       // na tela, ele abria no topo, longe do toque.
       .deleteWorkoutConfirmation(isPresented: $confirmDelete, name: item.name, onDelete: onDelete)
-      .padding(.bottom, blockPad - menuTapPad)
-      footer.hidden()
+      .padding([.bottom, .trailing], WorkoutFolderCard.menuCenterInset - 22)
+      WorkoutFolderCard.Footer(hasDays: !item.weekdays.isEmpty).hidden()
     }
-    .padding(.trailing, 2)
+  }
+}
+
+/// A pasta de treino: duas folhas atrás, o bloco colorido com o nome e a onda,
+/// e o rodapé. A grade e o topo do editor desenham a mesma view; a largura vem
+/// de fora.
+struct WorkoutFolderCard: View {
+  let name: String
+  let tone: WorkoutTone
+  let hasDays: Bool
+
+  /// O recuo do bloco colorido. O disco dos três pontos e os traços das folhas
+  /// leem o mesmo valor para cair na linha do nome.
+  static let blockPad: CGFloat = 12
+  static let menuDisc: CGFloat = 34
+  /// Distância do centro do disco até a borda direita e a de baixo do bloco.
+  /// A camada do menu na grade se alinha por aqui.
+  static var menuCenterInset: CGFloat { blockPad + menuDisc / 2 }
+
+  var body: some View {
+    VStack(spacing: 0) {
+      ZStack(alignment: .top) {
+        Sheet(tone: tone, inset: 24, opacity: 0.3, lined: false)
+        Sheet(tone: tone, inset: 12, opacity: 0.52, lined: true).padding(.top, 6)
+        block.padding(.top, 13)
+      }
+      // Sem achatar antes, a sombra é aplicada em cada vinco e cai sobre o
+      // bloco como uma faixa escura.
+      .compositingGroup()
+      .shadow(color: Color.ink.opacity(0.12), radius: 12, y: 6)
+      Footer(hasDays: hasDays)
+    }
+  }
+
+  private var block: some View {
+    Text(name)
+      .font(.system(.headline, weight: .semibold))
+      .tracking(-0.3)
+      .foregroundStyle(tone.ink)
+      .lineLimit(2)
+      .padding(.trailing, Self.menuDisc + 4)
+      .frame(maxWidth: .infinity, minHeight: 88, alignment: .bottomLeading)
+      .padding(Self.blockPad)
+      .background {
+        ZStack {
+          LinearGradient(colors: [tone.top, tone.bottom], startPoint: .top, endPoint: .bottom)
+          WorkoutWave(closed: true).fill(.white.opacity(0.12))
+          WorkoutWave().stroke(.white.opacity(0.45), lineWidth: 1.5)
+        }
+      }
+      .overlay(alignment: .bottomTrailing) {
+        Circle()
+          .fill(.white.opacity(0.35))
+          .frame(width: Self.menuDisc, height: Self.menuDisc)
+          .overlay {
+            Image(systemName: "ellipsis")
+              .font(.system(.body, weight: .semibold))
+              .rotationEffect(.degrees(90))
+              .foregroundStyle(tone.ink)
+          }
+          .padding(Self.blockPad)
+          .accessibilityHidden(true)
+      }
+      .clipShape(.rect(cornerRadius: 18))
+  }
+
+  struct Footer: View {
+    let hasDays: Bool
+
+    var body: some View {
+      Label(hasDays ? "começar" : "sem dia", systemImage: hasDays ? "play.fill" : "pencil")
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(Color.mutedInk)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 11)
+    }
+  }
+
+  private struct Sheet: View {
+    let tone: WorkoutTone
+    let inset: CGFloat
+    let opacity: Double
+    let lined: Bool
+
+    var body: some View {
+      RoundedRectangle(cornerRadius: 8)
+        .fill(tone.top.opacity(opacity))
+        .frame(height: 26)
+        .overlay(alignment: .topLeading) {
+          if lined {
+            GeometryReader { proxy in
+              VStack(alignment: .leading, spacing: 1) {
+                Capsule().frame(width: proxy.size.width * 0.55, height: 2)
+                Capsule().frame(width: proxy.size.width * 0.35, height: 2)
+              }
+              .foregroundStyle(tone.ink.opacity(0.18))
+              .padding(.leading, WorkoutFolderCard.blockPad)
+              .padding(.top, 1)
+            }
+          }
+        }
+        .padding(.horizontal, inset)
+    }
   }
 }
 
