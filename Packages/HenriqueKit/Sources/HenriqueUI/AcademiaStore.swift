@@ -92,6 +92,8 @@ public final class AcademiaStore {
     let storedAt: Date
   }
   @ObservationIgnored private var dayCache: [CalendarDate: CachedDay] = [:]
+  public private(set) var attendance: [CalendarDate: AttendanceDay] = [:]
+  @ObservationIgnored private var attendanceRanges: [ClosedRange<CalendarDate>] = []
   @ObservationIgnored private var readTask: Task<Void, Never>?
   @ObservationIgnored private var readID = UUID()
   @ObservationIgnored private var sessionID = UUID()
@@ -160,6 +162,8 @@ public final class AcademiaStore {
     invalidateDays()
     isSignedIn = false
     acceptedDashboard = nil
+    attendance.removeAll()
+    attendanceRanges.removeAll()
     pendingSets.removeAll()
     mutationTail?.cancel()
     mutationTail = nil
@@ -207,6 +211,23 @@ public final class AcademiaStore {
     readTask = task
     await task.value
     if readID == requestID { readTask = nil }
+  }
+
+  /// Frequência não é dado crítico: falhou, o mapa fica como está, sem banner.
+  /// Um intervalo já carregado não volta ao servidor; os dias antigos ficam e
+  /// os novos entram por cima.
+  public func loadAttendance(from: CalendarDate, to: CalendarDate) async {
+    #if DEBUG
+      if isCaptureShell { return }
+    #endif
+    guard from <= to, isSignedIn else { return }
+    let range = from...to
+    if attendanceRanges.contains(where: { $0.lowerBound <= from && to <= $0.upperBound }) { return }
+    let session = sessionID
+    guard let days = try? await client.attendance(.init(from: from, to: to)),
+      session == sessionID else { return }
+    for day in days { attendance[day.date] = day }
+    attendanceRanges.append(range)
   }
 
   @discardableResult
@@ -298,6 +319,9 @@ public final class AcademiaStore {
         let received = try await work()
         guard sessionID == mutationSession, !Task.isCancelled else { return false }
         dayCache.removeAll()
+        // a série gravada muda a frequência; o mapa fica na tela e o próximo
+        // mês visitado busca de novo.
+        attendanceRanges.removeAll()
         remember(received)
         if received.date == selectedDate {
           acceptedDashboard = received
@@ -322,6 +346,8 @@ public final class AcademiaStore {
       invalidateDays()
       isSignedIn = false
       acceptedDashboard = nil
+      attendance.removeAll()
+      attendanceRanges.removeAll()
       pendingSets.removeAll()
       mutationTail?.cancel()
       mutationTail = nil
