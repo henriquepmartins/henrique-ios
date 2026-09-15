@@ -207,6 +207,10 @@ private struct WorkoutWave: Shape {
 struct WorkoutEditor: View {
   @Environment(AcademiaStore.self) private var store
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  #if os(iOS)
+  @State private var editMode: EditMode = .inactive
+  #endif
   @State private var name: String
   @State private var focus: String
   @State private var estimatedMinutes: Int
@@ -241,6 +245,18 @@ struct WorkoutEditor: View {
       && exercises.allSatisfy { $0.repsMin <= $0.repsMax && $0.startingWeightKg >= 0 }
   }
 
+  private var isOrganizing: Bool {
+    #if os(iOS)
+    editMode.isEditing
+    #else
+    false
+    #endif
+  }
+
+  private var editAnimation: Animation? {
+    reduceMotion ? nil : .spring(duration: 0.25, bounce: 0)
+  }
+
   var body: some View {
     NavigationStack {
       Form {
@@ -254,24 +270,67 @@ struct WorkoutEditor: View {
         }
 
         Section {
+          if exercises.isEmpty {
+            Text("Adicione um exercício para montar o treino.")
+              .foregroundStyle(Color.mutedInk)
+          }
           ForEach($exercises) { $exercise in
-            let info = exerciseInfo[exercise.exerciseId]
+            let exerciseId = exercise.exerciseId
+            let info = exerciseInfo[exerciseId]
             PlanExerciseRow(
               exercise: $exercise, name: info?.name ?? exercise.exerciseId,
               subtitle: info.map { "\($0.muscleGroup.lowercased()) · \($0.equipment.lowercased())" },
-              imageUrl: info?.imageUrl)
+              imageUrl: info?.imageUrl, isOrganizing: isOrganizing,
+              onRemove: {
+                withAnimation(editAnimation) {
+                  exercises.removeAll { $0.exerciseId == exerciseId }
+                }
+              })
+              .deleteDisabled(isSaving)
+              .moveDisabled(isSaving)
           }
-          .onDelete { exercises.remove(atOffsets: $0) }
-          .onMove { exercises.move(fromOffsets: $0, toOffset: $1) }
+          .onDelete { offsets in
+            withAnimation(editAnimation) { exercises.remove(atOffsets: offsets) }
+          }
+          .onMove { offsets, destination in
+            withAnimation(editAnimation) {
+              exercises.move(fromOffsets: offsets, toOffset: destination)
+            }
+          }
 
           Button("Adicionar exercício", systemImage: "plus") {
             isPickingExercise = true
           }
           .disabled(exercises.count >= 12)
         } header: {
-          Text("Exercícios")
+          HStack {
+            Text("Exercícios")
+            Spacer()
+            #if os(iOS)
+            if !exercises.isEmpty || isOrganizing {
+              Button(isOrganizing ? "Concluir" : "Organizar") {
+                withAnimation(editAnimation) {
+                  editMode = isOrganizing ? .inactive : .active
+                }
+              }
+              .font(.subheadline.weight(.semibold))
+              .textCase(nil)
+              .frame(minHeight: 44)
+              .buttonStyle(.borderless)
+              .accessibilityHint(isOrganizing
+                ? "Voltar aos ajustes dos exercícios"
+                : "Mostrar alças para arrastar os exercícios")
+            }
+            #endif
+          }
         } footer: {
-          Text("Arraste para trocar a ordem. Deslize para remover.")
+          #if os(iOS)
+          Text(isOrganizing
+            ? "Arraste pelas alças à direita para trocar a ordem. Toque em Concluir para ajustar as séries. As alterações só entram ao salvar."
+            : "Use a lixeira para remover um exercício ou Organizar para trocar a ordem. As alterações só entram ao salvar.")
+          #else
+          Text("Use a lixeira para remover um exercício. As alterações só entram ao salvar.")
+          #endif
         }
 
         if workoutId != nil {
@@ -284,15 +343,19 @@ struct WorkoutEditor: View {
           }
         }
       }
+      .disabled(isSaving)
+      #if os(iOS)
+      .environment(\.editMode, $editMode)
+      #endif
+      .transaction { transaction in
+        if reduceMotion { transaction.disablesAnimations = true }
+      }
       .navigationTitle(name.isEmpty ? "Treino" : name)
       .toolbarTitleDisplayMode(.inline)
       .interactiveDismissDisabled(isSaving)
       .toolbar {
-        #if os(iOS)
-        ToolbarItem(placement: .automatic) { EditButton() }
-        #endif
         ToolbarItem(placement: .cancellationAction) {
-          Button("Cancelar") { dismiss() }
+          Button("Cancelar") { dismiss() }.disabled(isSaving)
         }
         ToolbarItem(placement: .confirmationAction) {
           Button(isSaving ? "Salvando" : "Salvar") { save() }.disabled(!canSave || isSaving)
@@ -438,12 +501,19 @@ struct PlanExerciseRow: View {
   let name: String
   let subtitle: String?
   let imageUrl: String?
+  let isOrganizing: Bool
+  let onRemove: (() -> Void)?
 
-  init(exercise: Binding<PlanExercise>, name: String, subtitle: String? = nil, imageUrl: String? = nil) {
+  init(
+    exercise: Binding<PlanExercise>, name: String, subtitle: String? = nil,
+    imageUrl: String? = nil, isOrganizing: Bool = false, onRemove: (() -> Void)? = nil
+  ) {
     _exercise = exercise
     self.name = name
     self.subtitle = subtitle
     self.imageUrl = imageUrl
+    self.isOrganizing = isOrganizing
+    self.onRemove = onRemove
   }
 
   var body: some View {
@@ -452,27 +522,42 @@ struct PlanExerciseRow: View {
         ExerciseThumb(imageUrl: imageUrl, size: 48)
         VStack(alignment: .leading, spacing: 3) {
           Text(name.lowercased()).font(.headline.weight(.semibold))
-          if let subtitle {
+          if isOrganizing {
+            Text("\(exercise.workSets) séries · \(exercise.repsMin) a \(exercise.repsMax) reps")
+              .font(.caption).foregroundStyle(Color.mutedInk).monospacedDigit()
+          } else if let subtitle {
             Text(subtitle).font(.caption).foregroundStyle(Color.mutedInk)
           }
         }
+        Spacer(minLength: 0)
+        if !isOrganizing, let onRemove {
+          Button(role: .destructive, action: onRemove) {
+            Image(systemName: "trash")
+              .frame(width: 44, height: 44)
+              .contentShape(.rect)
+          }
+          .buttonStyle(.borderless)
+          .accessibilityLabel("Remover \(name) do treino")
+        }
       }
-      .padding(.top, 6)
-      Divider()
-      ExerciseStepperRow(
-        label: "séries de aquecimento", value: $exercise.prepSets, range: 0...6)
-      Divider()
-      ExerciseStepperRow(label: "séries de trabalho", value: $exercise.workSets, range: 1...10)
-      Divider()
-      ExerciseStepperRow(label: "reps mínimas", value: $exercise.repsMin, range: 1...50)
-      Divider()
-      ExerciseStepperRow(label: "reps máximas", value: $exercise.repsMax, range: 1...50)
-      Divider()
-      WeightStepper(weightKg: $exercise.startingWeightKg)
-      Divider()
-      Toggle("até a falha", isOn: $exercise.workToFailure)
-        .font(.body)
-        .frame(minHeight: 48)
+      .padding(.top, isOrganizing ? 0 : 6)
+      if !isOrganizing {
+        Divider()
+        ExerciseStepperRow(
+          label: "séries de aquecimento", value: $exercise.prepSets, range: 0...6)
+        Divider()
+        ExerciseStepperRow(label: "séries de trabalho", value: $exercise.workSets, range: 1...10)
+        Divider()
+        ExerciseStepperRow(label: "reps mínimas", value: $exercise.repsMin, range: 1...50)
+        Divider()
+        ExerciseStepperRow(label: "reps máximas", value: $exercise.repsMax, range: 1...50)
+        Divider()
+        WeightStepper(weightKg: $exercise.startingWeightKg)
+        Divider()
+        Toggle("até a falha", isOn: $exercise.workToFailure)
+          .font(.body)
+          .frame(minHeight: 48)
+      }
     }
     .padding(.vertical, 10)
   }
