@@ -101,7 +101,9 @@ struct StreakScreen: View {
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
-          Button("fechar") { dismiss() }
+          Button("fechar", systemImage: "xmark") { dismiss() }
+            .labelStyle(.iconOnly)
+            .accessibilityLabel("fechar")
         }
       }
     }
