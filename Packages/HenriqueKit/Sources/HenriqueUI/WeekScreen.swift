@@ -325,6 +325,7 @@ struct WorkoutEditor: View {
           }
         }
       }
+      .keyboardDone()
       .disabled(isSaving)
       #if os(iOS)
       .environment(\.editMode, $editMode)
@@ -332,7 +333,6 @@ struct WorkoutEditor: View {
       .transaction { transaction in
         if reduceMotion { transaction.disablesAnimations = true }
       }
-      .keyboardDone()
       .navigationTitle(name.isEmpty ? "novo treino" : name)
       .toolbarTitleDisplayMode(.inline)
       .interactiveDismissDisabled(isSaving)
@@ -733,7 +733,6 @@ struct ExercisePicker: View {
         }
       }
       .background(Color.canvas)
-      .keyboardDone()
       .navigationTitle("exercícios")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
@@ -741,6 +740,7 @@ struct ExercisePicker: View {
           Button("fechar") { dismiss() }
         }
       }
+      .keyboardDone()
       .onAppear { searchFocused = true }
       .onChange(of: search) { scheduleRemote() }
       .onChange(of: muscle) { scheduleRemote() }

@@ -17,7 +17,7 @@ final class FluxoDrive: XCTestCase {
 
   func launch(aba: String = "treino") {
     app.terminate()
-    app.launchArguments = ["--aba", aba]
+    app.launchArguments = ["--app", "academia", "--aba", aba]
     app.launch()
     let user = app.textFields["usuário"]
     if user.waitForExistence(timeout: 4) {
@@ -73,6 +73,103 @@ final class FluxoDrive: XCTestCase {
   }
 
   func counterValue() -> String { app.buttons["sequência"].value as? String ?? "" }
+
+  func replaceText(_ field: XCUIElement, with text: String) {
+    field.doubleTap()
+    field.typeText(text)
+  }
+
+  func dismissKeyboard() {
+    let done = app.buttons["keyboard.done"]
+    let localizedDone = app.buttons["concluído"]
+    XCTAssert(done.waitForExistence(timeout: 2) || localizedDone.waitForExistence(timeout: 2), "teclado tem botão nativo para concluir")
+    (done.exists ? done : localizedDone).tap()
+    XCTAssert(app.keyboards.firstMatch.waitForNonExistence(timeout: 3), "concluir fecha o teclado")
+  }
+
+  func testZCargaETeclado() {
+    launch()
+    ensureWorkoutToday()
+    let weight = app.textFields["set.supino-inclinado.work.1.weight"]
+    XCTAssert(weight.waitForExistence(timeout: 5), "carga da série valendo está disponível")
+    let completion = app.buttons["set.supino-inclinado.work.1.completion"]
+    let previousLabel = completion.label
+    replaceText(weight, with: "37,5")
+    shot("10-teclado-carga")
+    dismissKeyboard()
+    XCTAssertEqual(completion.label, previousLabel, "editar carga preserva conclusão da série")
+
+    app.tabBars.buttons["plano"].tap()
+    app.buttons["editar Superiores"].tap()
+    app.buttons["editar"].tap()
+    let planWeight = app.textFields["Carga em kg"].firstMatch
+    XCTAssert(planWeight.waitForExistence(timeout: 5), "editor mostra carga do plano")
+    let updated = NSPredicate(format: "value == %@", "37,5")
+    expectation(for: updated, evaluatedWith: planWeight)
+    waitForExpectations(timeout: 10)
+    shot("11-carga-no-plano")
+    app.buttons["cancelar"].tap()
+
+    launch()
+    XCTAssert(weight.waitForExistence(timeout: 10), "série reaparece depois de abrir o app")
+    XCTAssertEqual(weight.value as? String, "37,5", "carga persiste depois de reabrir")
+    XCTAssertEqual(completion.label, previousLabel, "conclusão também persiste")
+    completion.tap()
+    XCTAssertNotEqual(completion.label, previousLabel, "check responde ao toque")
+    shot("12-check")
+  }
+
+  func testZTreinoSemDia() {
+    launch(aba: "semana")
+    app.tabBars.buttons["plano"].tap()
+    app.buttons["novo treino"].tap()
+    let name = app.textFields["nome"]
+    XCTAssert(name.waitForExistence(timeout: 5), "editor de treino abriu")
+    name.tap()
+    name.typeText("Treino futuro de teste")
+    let focus = app.textFields["foco"]
+    focus.tap()
+    focus.typeText("Adaptação")
+    app.buttons["adicionar"].tap()
+    let search = app.textFields["Buscar exercício"]
+    XCTAssert(search.waitForExistence(timeout: 5), "busca de exercícios abriu")
+    search.tap()
+    search.typeText("Supino inclinado")
+    app.buttons.matching(NSPredicate(format: "label BEGINSWITH[c] 'supino inclinado'")).firstMatch.tap()
+    let save = app.buttons["salvar"]
+    XCTAssert(save.waitForExistence(timeout: 5) && save.isEnabled, "treino sem dia pode ser salvo")
+    shot("13-treino-sem-dia-editor")
+    save.tap()
+    XCTAssert(app.navigationBars["Treino futuro de teste"].waitForNonExistence(timeout: 10), "treino sem dia foi salvo")
+    shot("14-treino-sem-dia-plano")
+
+    launch(aba: "semana")
+    app.tabBars.buttons["plano"].tap()
+    let tile = app.buttons["editar Treino futuro de teste, sem dia"]
+    XCTAssert(tile.waitForExistence(timeout: 10), "treino sem dia continua no plano após reabrir")
+    tile.tap()
+    XCTAssert(app.navigationBars["Treino futuro de teste"].waitForExistence(timeout: 5), "toque no treino sem dia abre edição")
+    app.buttons["sábado"].tap()
+    app.buttons["salvar"].tap()
+    XCTAssert(app.navigationBars["Treino futuro de teste"].waitForNonExistence(timeout: 10), "treino futuro recebeu um dia")
+    XCTAssert(app.buttons["iniciar Treino futuro de teste, sábado"].waitForExistence(timeout: 5), "treino agendado pode ser iniciado")
+    shot("15-treino-agendado")
+  }
+
+  func testZZTecladoEmEstudos() {
+    launch()
+    app.terminate()
+    app.launchArguments = ["--app", "estudos", "--aba", "sessao"]
+    app.launch()
+    let note = app.textViews.firstMatch
+    XCTAssert(note.waitForExistence(timeout: 10), "anotação da sessão abriu")
+    if !note.isHittable { app.swipeUp() }
+    note.tap()
+    note.typeText("Primeira linha\nSegunda linha")
+    XCTAssert((note.value as? String ?? "").contains("\n"), "retorno mantém quebra de linha no editor")
+    shot("16-teclado-estudos")
+    dismissKeyboard()
+  }
 
   func testFluxo() {
     launch()
@@ -131,4 +228,3 @@ final class FluxoDrive: XCTestCase {
     shot("07-estudos")
   }
 }
-

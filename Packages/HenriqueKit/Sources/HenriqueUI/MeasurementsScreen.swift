@@ -209,7 +209,6 @@ struct MeasurementEditor: View {
         }
       }
       .interactiveDismissDisabled(isSaving)
-      .keyboardDone()
       .navigationTitle("nova medida")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
@@ -220,6 +219,7 @@ struct MeasurementEditor: View {
           Button("salvar") { save() }.disabled(isSaving || weightKg == nil || (weightKg ?? 0) <= 0)
         }
       }
+      .keyboardDone()
     }
   }
 

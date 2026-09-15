@@ -76,12 +76,12 @@ struct SetupScreen: View {
         }.padding(24).disabled(saving)
       }
       .background(Color.canvas.ignoresSafeArea())
-      .keyboardDone()
       .navigationTitle("h&")
       .toolbarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) { Button("fechar") { dismiss() }.disabled(saving) }
       }
+      .keyboardDone()
       .interactiveDismissDisabled(saving)
       .sheet(isPresented: $picking) {
         ExercisePicker(catalog: store.dashboard?.exerciseCatalog ?? [], chosen: Set(exercises.map(\.exerciseId))) { item in

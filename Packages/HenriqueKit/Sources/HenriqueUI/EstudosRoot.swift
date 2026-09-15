@@ -81,7 +81,6 @@ struct EstudosTabs: View {
   private func shell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
     NavigationStack {
       content()
-        .keyboardDone()
         .scrollEdgeEffectStyle(.soft, for: .top)
         .background(Color.studyPaper.ignoresSafeArea())
         .navigationTitle("")
@@ -106,6 +105,7 @@ struct EstudosTabs: View {
             .accessibilityLabel("sua conta")
           }
         }
+        .keyboardDone()
     }
   }
 }

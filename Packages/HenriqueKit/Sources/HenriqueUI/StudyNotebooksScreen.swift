@@ -191,6 +191,7 @@ public struct NotebookPageScreen: View {
           .disabled(page == nil)
       }
     }
+    .keyboardDone()
     .confirmationDialog(
       "apagar página?", isPresented: $confirmingDelete, titleVisibility: .visible
     ) {
