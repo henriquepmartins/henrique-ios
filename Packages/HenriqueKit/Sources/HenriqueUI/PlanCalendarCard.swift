@@ -123,7 +123,12 @@ private struct DayCell: View {
   private var workout: WeekPlanItem? {
     switch cell.mark {
     case .none: nil
-    case .done(let ids): ids.first.flatMap { workoutsById[$0] }
+    case .done(let ids):
+      // Id desconhecido (treino apagado) ou feito sem treino conhecido: o
+      // palpite é o treino que o plano pede nesse weekday, para o feito sair
+      // na cor sólida do folder em vez de cinza.
+      ids.first.flatMap { workoutsById[$0] }
+        ?? workoutsById.values.first { $0.weekdays.contains(cell.slot.weekday()) }
     case .planned(let id), .missed(let id): workoutsById[id]
     }
   }

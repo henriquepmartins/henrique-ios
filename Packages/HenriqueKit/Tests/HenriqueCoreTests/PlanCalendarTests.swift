@@ -52,10 +52,19 @@ struct PlanCalendarTests {
     #expect(mark(grid, "2026-09-08") == .done(["peito", "perna"]))
   }
 
-  @Test("dia com séries e sem ids vira feito sem treino conhecido")
+  @Test("dia com séries e sem ids, sem treino no dia, vira feito sem treino conhecido")
   func doneWithoutIds() {
+    // 8 de setembro é terça, sem treino no plano.
     let grid = calendar(attendance: [day("2026-09-08", sets: 5)])
     #expect(mark(grid, "2026-09-08") == .done([]))
+  }
+
+  @Test("dia com séries e sem ids usa o treino que o plano pede no weekday")
+  func doneWithoutIdsFallsBackToWeekday() {
+    // 7 de setembro é segunda (perna), 9 é quarta (peito).
+    let grid = calendar(attendance: [day("2026-09-07", sets: 5), day("2026-09-09", sets: 5)])
+    #expect(mark(grid, "2026-09-07") == .done(["perna"]))
+    #expect(mark(grid, "2026-09-09") == .done(["peito"]))
   }
 
   @Test("dia futuro com weekday no plano vira planejado")

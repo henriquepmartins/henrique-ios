@@ -47,7 +47,16 @@ public struct PlanCalendar: Hashable, Sendable {
 
     func mark(for date: CalendarDate) -> Mark {
       if let ids = attendance[date]?.workoutTemplateIds, !ids.isEmpty { return .done(ids) }
-      if attendance[date]?.workSets ?? 0 > 0 { return .done([]) }
+      if attendance[date]?.workSets ?? 0 > 0 {
+        // Servidor velho não manda os ids. O palpite é o treino que o plano
+        // pede nesse weekday, para o feito sair na cor sólida do folder em
+        // vez de cinza. Sem treino no dia, segue sem treino conhecido.
+        let weekday = date.weekday(in: calendar)
+        if let item = weekPlan.first(where: { $0.weekdays.contains(weekday) }) {
+          return .done([item.id])
+        }
+        return .done([])
+      }
       let weekday = date.weekday(in: calendar)
       guard let item = weekPlan.first(where: { $0.weekdays.contains(weekday) }) else { return .none }
       if date >= today { return .planned(item.id) }
