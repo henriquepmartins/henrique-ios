@@ -17,6 +17,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "11",
+          "date": "2026-09-16T09:31:51-03:00",
+          "localizedDescription": "• Troca de app sem a barra piscando\n• Fluxo que dirige a troca de app na casca",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-11/Henrique.ipa",
+          "size": 3558360,
+          "sha256": "40d39bded30d9615e859539529c6af9c4439fb3be1837b4e561a58bc62fbceff",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "10",
           "date": "2026-09-16T09:13:46-03:00",
           "localizedDescription": "• Treino colapsado, troca com bounce e arranque com snapshot",
