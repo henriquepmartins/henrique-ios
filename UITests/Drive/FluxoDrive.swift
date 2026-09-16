@@ -223,6 +223,20 @@ final class FluxoDrive: XCTestCase {
     shot("pasta-ativa")
   }
 
+  func testCalendarioDoPlano() {
+    launch(aba: "semana")
+    let feito = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS ', feito'"))
+    XCTAssert(feito.firstMatch.waitForExistence(timeout: 8), "calendário pintou algum dia treinado")
+    let mes = Date().formatted(.dateTime.locale(Locale(identifier: "pt_BR")).month(.wide).year())
+    XCTAssert(app.staticTexts[mes].exists, "cabeçalho mostra \(mes)")
+    shot("30-calendario-mes")
+    app.buttons["Mês anterior"].tap()
+    let anterior = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
+      .formatted(.dateTime.locale(Locale(identifier: "pt_BR")).month(.wide).year())
+    XCTAssert(app.staticTexts[anterior].waitForExistence(timeout: 3), "chevron levou a \(anterior)")
+    shot("31-calendario-mes-anterior")
+  }
+
   func testPastaDeTreino() {
     launch(aba: "semana")
     let menu = app.buttons["editar Superiores"]
