@@ -12,6 +12,11 @@ struct WeekScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
+        PlanCalendarCard(
+          attendance: store.attendance,
+          weekPlan: store.weekPlan,
+          load: { from, to in await store.loadAttendance(from: from, to: to) })
+          .staggeredEntrance(index: 0, isReady: true)
         Button("novo treino", systemImage: "plus") {
           editorStep = .identidade
           editor = .new(weekdays: [])
