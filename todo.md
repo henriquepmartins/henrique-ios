@@ -116,3 +116,79 @@ Baseline scripts/verify-ui.sh passou. O teste novo testZTreinoSemDia falhou no a
 Backend integrado localmente em 039d1c3. Testes reportados e revisados: 33 domínio, 19 API, 26 web; build passou. Script packages/api/scripts/verify-workout-flows.ts passou contra PostgreSQL isolado, inclusive rollback e concorrência. Revisão independente sem defeito material. O push para main passou, mas a Vercel bloqueou os deployments com TEAM_ACCESS_REQUIRED. Backend com weekdays vazio requer app atualizado; instalar o iOS antes de disponibilizar treinos sem dia em produção.
 
 Verificação final. `testZCargaETeclado`, `testZTreinoSemDia` e `testZZTecladoEmEstudos` passaram no iPhone 17 Simulator. `scripts/test.sh` passou com 74 testes em 9 suites. As capturas estão em `output/verify/20260915-194307`, `output/verify/20260915-194134` e `output/verify/20260915-194600`.
+
+# Folders com cor, tela de hoje e correções
+
+- [x] 1. `how` over the affected subsystem.
+  - Aba "hoje" é `OverviewScreen` em `RootView.swift`; aba "treino" é `TodayScreen` com o `DayStrip`; aba "plano" é `WeekScreen`, onde ficam os folders (`WorkoutTile`) e o `WorkoutEditor`. O erro "input validation failed" é a mensagem crua do servidor caindo em `AcademiaStore.handle`.
+  - Treino sem dia já existe no app (`weekdays` vazio) e no servidor (039d1c3). Falta confirmar que o deploy em produção tem esse commit.
+- [ ] 2. `architect` for parallel design exploration.
+  - architect skipped: a referência visual fixa o layout da tela de criar treino e a forma do dado é uma coluna `color` mais uma rota de frequência por intervalo. Sem fork real de desenho.
+- [x] 3. Write the throughput checkpoint as four todo items.
+  - Blocking first steps. Contrato do servidor (`color` no `workout_template`, rota de frequência) e as mudanças de Core no iOS antes de qualquer tela.
+  - Independent workstreams. Repo web e repo iOS são disjuntos. Dentro do iOS, heatmap e folders só ficam disjuntos depois do commit de Core.
+  - Shared mutable state. `Training.swift`, `Inputs.swift`, `APIClient.swift` e `AcademiaStore.swift` são escritos por um dono só, na fase 1. Depois cada worker tem seu worktree e seus arquivos de tela.
+  - Smallest safe decomposition. Três donos: servidor, Core+polish do iOS, e depois dois de tela em paralelo.
+- [ ] 4. Delegate code-writing to a subagent.
+- [ ] 5. Verify on the matching surface.
+- [ ] 6. Rebase into small, ordered commits; stack follow-ups.
+- [ ] 7. If the design is contested, `interrogate` before shipping.
+- [ ] 8. Run Opening a PR.
+  - skip: o fluxo do projeto é commitar em main e publicar pelo release.sh.
+
+## Contrato
+
+- `workout_template.color text` nullable, formato `#RRGGBB`. Nulo cai na cor pelo dia da semana, então treino antigo não muda de aparência.
+- `weekPlan[].color: string | null` na saída do dashboard.
+- `saveWorkoutInputSchema.color` opcional e nulo permitido, validado por regex.
+- Rota nova `POST /api/v1/training/attendance`, entrada `{ from, to }` em iso date, saída `{ days: [{ date, workSets, completed }] }`. Intervalo máximo de 400 dias.
+
+## Decisões
+
+- A cor mora no servidor, escolha do usuário, para a web ver a mesma coisa e sobreviver a reinstalar o app.
+- A tela de criar e editar treino segue a referência: preview vivo do folder no topo, um passo por vez embaixo, seta preta voltando o passo. O seletor de cor é um desses passos, alcançado pelos três pontos e "editar".
+- A tela "hoje" ganha um mapa de frequência estilo GitHub, com troca entre mês e ano.
+
+## Achado sobre produção (2026-09-15 20:15)
+
+`hnrq.vercel.app` aponta para `henrique-life-76gubon8q`, um deploy de ~14h. O commit
+039d1c3, que aceita treino sem dia, é de 18:20 e nunca subiu: o deploy das 19:08 ficou
+UNKNOWN. Então treino sem dia funciona no app e no banco local, mas não em produção.
+O deploy final tem que levar 039d1c3 junto com a cor e a rota de frequência, pela rota
+do `git archive` (deploy direto da CLI fica BLOCKED por acesso ao time).
+
+## Diagnóstico do "input validation failed"
+
+A frase é do oRPC, devolvida em 400 quando o zod recusa o corpo. Junto vem
+`data.issues`, dizendo qual campo caiu, e `APIClient.swift:261` joga fora essa
+parte antes de virar banner. Por isso o erro nunca diz nada.
+
+As oito divergências são a mesma falha repetida: as faixas do zod estão escritas
+de novo em cada tela, sempre mais frouxas que o servidor.
+
+Causa provável:
+1. `measurement/add` — `OptionalField` recebe um `range` em `MeasurementsScreen.swift:245` e nunca usa. Braço com 8 cm passa no app e volta recusado.
+2. `plan/save-workout` — no onboarding, exercício da wger não está no catálogo, `groups` fica vazio e `focus` vira string vazia. O servidor pede 2 caracteres.
+3. `workout/record-set` — `reps` sem teto no campo e nas guardas. O servidor limita em 100. É o campo mais tocado do app.
+4. `workout/record-set` — `weightKg` sem teto. O servidor limita em 1000.
+
+Risco latente: peso corporal abaixo de 20 kg, meta de força abaixo de 1,
+`startingWeightKg` acima de 1000, e id de matéria fora do regex de slug.
+
+Conserto: uma tabela de limites em `HenriqueCore`, lida pelas telas e aplicada na
+borda pelos tipos de entrada. Mais `APIClient` lendo `data.issues` e nomeando o
+campo, para o próximo erro se explicar sozinho.
+
+## Verificação (2026-09-15 21:55)
+
+- `scripts/test.sh ios "iPhone 17"`: 92 testes em 11 suítes, passou.
+- `scripts/verify-ui.sh` contra o servidor de teste na 3001: 4 testes, passou.
+  Capturas em `output/verify/20260915-214614`.
+- `ONLY=testZHojeEMapa`: mapa do mês, mapa do ano e bolinha do dia atual, em
+  `output/verify/20260915-215357`.
+- Servidor em produção: migração 0010 aplicada, deploy `henrique-life-1ofjpd2ry`
+  com o alias `hnrq.vercel.app`, main do repo web em `32e1e19` no GitHub.
+
+O driver de UI precisou aprender a andar pelos passos do editor. `salvar` virou
+`concluir`, `cancelar` virou a seta de fechar, e a barra de navegação sumiu, então
+a presença do editor passa a ser detectada pelo botão `concluir`.
