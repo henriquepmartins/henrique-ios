@@ -1,5 +1,9 @@
 import XCTest
 
+/// Quantos passos o editor de treino tem. O driver não importa o pacote, então
+/// o número vive aqui e só muda quando `EditorStep` muda.
+let EditorStepCount = 4
+
 final class FluxoDrive: XCTestCase {
   let app = XCUIApplication(bundleIdentifier: "app.henrique.academia")
   let env = ProcessInfo.processInfo.environment
@@ -62,14 +66,26 @@ final class FluxoDrive: XCTestCase {
     let editar = app.buttons["editar"]
     XCTAssert(editar.waitForExistence(timeout: 3), "menu do treino abriu")
     editar.tap()
-    XCTAssert(app.navigationBars["Superiores"].waitForExistence(timeout: 3), "editor de Superiores abriu")
+    XCTAssert(app.staticTexts["nome e foco"].waitForExistence(timeout: 3), "editor de Superiores abriu")
+    goToStep("dias")
     let day = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", today)).firstMatch
     XCTAssert(day.waitForExistence(timeout: 3), "dia \(today) visível no editor")
     day.tap()
-    app.buttons["salvar"].tap()
-    XCTAssert(app.navigationBars["Superiores"].waitForNonExistence(timeout: 10), "editor fechou depois de salvar")
+    app.buttons["concluir"].tap()
+    XCTAssert(app.buttons["concluir"].waitForNonExistence(timeout: 10), "editor fechou depois de salvar")
     app.tabBars.buttons["treino"].tap()
     XCTAssert(app.buttons["Concluir série 1"].firstMatch.waitForExistence(timeout: 10), "treino de hoje apareceu com séries")
+  }
+
+  /// O editor mostra um passo por vez. Toca em "avançar" até o título ser o
+  /// pedido, e falha em vez de rodar para sempre se o passo não chegar.
+  func goToStep(_ title: String) {
+    for _ in 0..<EditorStepCount where !app.staticTexts[title].exists {
+      let next = app.buttons["avançar"]
+      guard next.exists, next.isEnabled else { break }
+      next.tap()
+    }
+    XCTAssert(app.staticTexts[title].waitForExistence(timeout: 3), "editor chegou no passo \(title)")
   }
 
   func counterValue() -> String { app.buttons["sequência"].value as? String ?? "" }
@@ -102,13 +118,14 @@ final class FluxoDrive: XCTestCase {
     app.tabBars.buttons["plano"].tap()
     app.buttons["editar Superiores"].tap()
     app.buttons["editar"].tap()
+    goToStep("exercícios")
     let planWeight = app.textFields["Carga em kg"].firstMatch
     XCTAssert(planWeight.waitForExistence(timeout: 5), "editor mostra carga do plano")
     let updated = NSPredicate(format: "value == %@", "37,5")
     expectation(for: updated, evaluatedWith: planWeight)
     waitForExpectations(timeout: 10)
     shot("11-carga-no-plano")
-    app.buttons["cancelar"].tap()
+    app.buttons["fechar"].tap()
 
     launch()
     XCTAssert(weight.waitForExistence(timeout: 10), "série reaparece depois de abrir o app")
@@ -130,17 +147,21 @@ final class FluxoDrive: XCTestCase {
     let focus = app.textFields["foco"]
     focus.tap()
     focus.typeText("Adaptação")
+    dismissKeyboard()
+    goToStep("escolha a cor")
+    shot("13a-cor-do-treino-novo")
+    goToStep("exercícios")
     app.buttons["adicionar"].tap()
     let search = app.textFields["Buscar exercício"]
     XCTAssert(search.waitForExistence(timeout: 5), "busca de exercícios abriu")
     search.tap()
     search.typeText("Supino inclinado")
     app.buttons.matching(NSPredicate(format: "label BEGINSWITH[c] 'supino inclinado'")).firstMatch.tap()
-    let save = app.buttons["salvar"]
+    let save = app.buttons["concluir"]
     XCTAssert(save.waitForExistence(timeout: 5) && save.isEnabled, "treino sem dia pode ser salvo")
     shot("13-treino-sem-dia-editor")
     save.tap()
-    XCTAssert(app.navigationBars["Treino futuro de teste"].waitForNonExistence(timeout: 10), "treino sem dia foi salvo")
+    XCTAssert(app.buttons["concluir"].waitForNonExistence(timeout: 10), "treino sem dia foi salvo")
     shot("14-treino-sem-dia-plano")
 
     launch(aba: "semana")
@@ -148,10 +169,11 @@ final class FluxoDrive: XCTestCase {
     let tile = app.buttons["editar Treino futuro de teste, sem dia"]
     XCTAssert(tile.waitForExistence(timeout: 10), "treino sem dia continua no plano após reabrir")
     tile.tap()
-    XCTAssert(app.navigationBars["Treino futuro de teste"].waitForExistence(timeout: 5), "toque no treino sem dia abre edição")
+    XCTAssert(app.staticTexts["nome e foco"].waitForExistence(timeout: 5), "toque no treino sem dia abre edição")
+    goToStep("dias")
     app.buttons["sábado"].tap()
-    app.buttons["salvar"].tap()
-    XCTAssert(app.navigationBars["Treino futuro de teste"].waitForNonExistence(timeout: 10), "treino futuro recebeu um dia")
+    app.buttons["concluir"].tap()
+    XCTAssert(app.buttons["concluir"].waitForNonExistence(timeout: 10), "treino futuro recebeu um dia")
     XCTAssert(app.buttons["iniciar Treino futuro de teste, sábado"].waitForExistence(timeout: 5), "treino agendado pode ser iniciado")
     shot("15-treino-agendado")
   }
@@ -169,6 +191,24 @@ final class FluxoDrive: XCTestCase {
     XCTAssert((note.value as? String ?? "").contains("\n"), "retorno mantém quebra de linha no editor")
     shot("16-teclado-estudos")
     dismissKeyboard()
+  }
+
+  /// O mapa de frequência na aba "hoje" e a bolinha do dia atual na fita da
+  /// aba "treino", que são as duas coisas que nenhum outro teste passa perto.
+  func testZHojeEMapa() {
+    launch()
+    ensureWorkoutToday()
+    app.tabBars.buttons["hoje"].tap()
+    let mes = app.buttons["mês"]
+    XCTAssert(mes.waitForExistence(timeout: 10), "mapa de frequência apareceu")
+    shot("20-hoje-mes")
+    app.buttons["ano"].tap()
+    XCTAssert(app.buttons["ano"].waitForExistence(timeout: 3), "mapa trocou para o ano")
+    shot("21-hoje-ano")
+    mes.tap()
+    app.tabBars.buttons["treino"].tap()
+    XCTAssert(app.buttons["Voltar uma semana"].waitForExistence(timeout: 10), "fita do calendário apareceu")
+    shot("22-calendario-bolinha")
   }
 
   func testFluxo() {

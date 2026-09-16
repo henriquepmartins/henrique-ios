@@ -6,12 +6,16 @@ struct WeekScreen: View {
   @Environment(\.dynamicTypeSize) private var textSize
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var editor: PlanEditorDestination?
+  @State private var editorStep: EditorStep = .identidade
   var onStart: (Int) -> Void = { _ in }
 
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
-        Button("novo treino", systemImage: "plus") { editor = .new(weekdays: []) }
+        Button("novo treino", systemImage: "plus") {
+          editorStep = .identidade
+          editor = .new(weekdays: [])
+        }
           .buttonStyle(.glassProminent)
           .controlSize(.large)
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
@@ -19,7 +23,10 @@ struct WeekScreen: View {
           ForEach(Array(store.weekPlan.enumerated()), id: \.element.id) { index, item in
             WorkoutTile(
               item: item,
-              onEdit: { editor = .existing(item) },
+              onEdit: { step in
+                editorStep = step
+                editor = .existing(item)
+              },
               onDelete: { store.deleteWorkout(workoutTemplateId: item.id) },
               onStart: { if let day = item.nextWeekday(from: store.selectedDate.weekday()) { onStart(day) } })
               .staggeredEntrance(index: index, isReady: true)
@@ -36,7 +43,8 @@ struct WeekScreen: View {
       WorkoutEditor(
         item: destination.item, weekdays: destination.weekdays,
         tone: destination.item?.tone ?? .unused(among: store.weekPlan.map(\.tone.hex)),
-        catalog: store.dashboard?.exerciseCatalog ?? [])
+        catalog: store.dashboard?.exerciseCatalog ?? [],
+        startingAt: editorStep)
     }
   }
 
@@ -78,13 +86,13 @@ extension WeekPlanItem {
 
 private struct WorkoutTile: View {
   let item: WeekPlanItem
-  let onEdit: () -> Void
+  let onEdit: (EditorStep) -> Void
   let onDelete: () -> Void
   let onStart: () -> Void
   @State private var confirmDelete = false
 
   var body: some View {
-    Button(action: item.weekdays.isEmpty ? onEdit : onStart) {
+    Button(action: item.weekdays.isEmpty ? { onEdit(.identidade) } : onStart) {
       WorkoutFolderCard(name: item.name, tone: item.tone, hasDays: !item.weekdays.isEmpty)
     }
     .buttonStyle(StudyPressStyle())
@@ -96,7 +104,8 @@ private struct WorkoutTile: View {
 
   private var menuLayer: some View {
     Menu {
-      Button("editar", systemImage: "pencil", action: onEdit)
+      Button("editar", systemImage: "pencil") { onEdit(.identidade) }
+      Button("cor", systemImage: "paintpalette") { onEdit(.cor) }
       Button("apagar", systemImage: "trash", role: .destructive) { confirmDelete = true }
     } label: {
       Color.clear

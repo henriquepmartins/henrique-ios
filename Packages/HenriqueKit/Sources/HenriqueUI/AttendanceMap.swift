@@ -108,12 +108,13 @@ private struct MonthGrid: View {
   @Environment(\.locale) private var locale
   let grid: AttendanceGrid
 
-  /// As iniciais repetem letra em pt-BR ("S" de segunda e de sábado), então a
-  /// identidade é o número do dia, não o texto.
+  /// A inicial sozinha não distingue segunda, sexta e sábado em português, e as
+  /// colunas do mês têm largura para as três letras. A identidade continua sendo
+  /// o número do dia, porque o texto ainda pode repetir em outro idioma.
   private var weekdayInitials: [(weekday: Int, initial: String)] {
     var calendar = Calendar.autoupdatingCurrent
     calendar.locale = locale
-    let symbols = calendar.veryShortStandaloneWeekdaySymbols
+    let symbols = calendar.shortStandaloneWeekdaySymbols
     let first = calendar.firstWeekday - 1
     return (0..<7).map { weekday in ((first + weekday) % 7, symbols[(first + weekday) % 7]) }
   }
@@ -122,7 +123,9 @@ private struct MonthGrid: View {
     VStack(spacing: 4) {
       HStack(spacing: 4) {
         ForEach(weekdayInitials, id: \.weekday) { _, initial in
-          Text(initial).font(.caption2).foregroundStyle(Color.mutedInk).frame(maxWidth: .infinity)
+          Text(initial).font(.caption2).foregroundStyle(Color.mutedInk)
+            .textCase(.lowercase).lineLimit(1).minimumScaleFactor(0.7)
+            .frame(maxWidth: .infinity)
         }
       }
       .accessibilityHidden(true)
@@ -149,7 +152,11 @@ private struct YearGrid: View {
       HStack(alignment: .top, spacing: 3) {
         ForEach(Array(grid.weeks.enumerated()), id: \.element.id) { index, week in
           VStack(spacing: 3) {
-            Text(monthInitial(for: week)).font(.caption2).foregroundStyle(Color.mutedInk)
+            // O rótulo transborda a coluna de propósito: o mês tem quatro
+            // semanas de largura e a inicial sozinha confunde janeiro, junho e
+            // julho. `fixedSize` impede a abreviação de virar reticências.
+            Text(monthName(for: week)).font(.caption2).foregroundStyle(Color.mutedInk)
+              .textCase(.lowercase).fixedSize()
               .frame(width: side, height: 14, alignment: .leading).accessibilityHidden(true)
             ForEach(week.cells) { cell in
               DaySquare(cell: cell, radius: 3).frame(width: side, height: side)
@@ -163,9 +170,9 @@ private struct YearGrid: View {
     .defaultScrollAnchor(.trailing)
   }
 
-  private func monthInitial(for week: AttendanceGrid.Week) -> String {
+  private func monthName(for week: AttendanceGrid.Week) -> String {
     guard let first = week.cells.first(where: { $0.date?.day == 1 })?.date else { return "" }
-    return first.date().formatted(Date.FormatStyle(locale: locale).month(.narrow))
+    return first.date().formatted(Date.FormatStyle(locale: locale).month(.abbreviated))
   }
 }
 
