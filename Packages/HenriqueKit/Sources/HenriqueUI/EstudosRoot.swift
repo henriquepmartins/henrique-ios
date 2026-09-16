@@ -19,19 +19,17 @@ struct EstudosTabs: View {
   @Environment(AcademiaStore.self) private var academia
   @Binding var tab: EstudosTab
   @Binding var accent: Accent
-  let onSwitchApp: @MainActor (AppSection) -> Void
   @State private var showingSession: Bool
   @State private var showingWrite: Bool
-  @State private var showingApps = false
+  @Binding var showingApps: Bool
 
   init(
-    tab: Binding<EstudosTab>, accent: Binding<Accent>,
-    onSwitchApp: @escaping @MainActor (AppSection) -> Void, openSession: Bool = false,
-    openWrite: Bool = false
+    tab: Binding<EstudosTab>, accent: Binding<Accent>, showingApps: Binding<Bool>,
+    openSession: Bool = false, openWrite: Bool = false
   ) {
     _tab = tab
     _accent = accent
-    self.onSwitchApp = onSwitchApp
+    _showingApps = showingApps
     showingSession = openSession
     showingWrite = openWrite
   }
@@ -64,7 +62,6 @@ struct EstudosTabs: View {
         Color.clear
       }
     }
-    .appSwitcher(current: .estudos, isPresented: $showingApps, onSelect: onSwitchApp)
     .onAppear { if tab == .apps { tab = .hoje; showingApps = true } }
     #if os(iOS)
       .fullScreenCover(isPresented: $showingSession) {

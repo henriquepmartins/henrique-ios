@@ -40,6 +40,7 @@ public struct RootView: View {
   @State private var tab: AcademiaTab
   @State private var estudosTab: EstudosTab
   @State private var appliedInitialSection = false
+  @State private var showingApps = false
   private let store: AcademiaStore
   private let estudos: EstudosStore
   private let initialSection: AppSection?
@@ -60,13 +61,6 @@ public struct RootView: View {
     estudosTab = initialEstudosTab
   }
 
-  /// O app que entra cresce um fio, o que sai encolhe o mesmo fio. Com movimento
-  /// reduzido fica só a opacidade. A troca usa o mesmo snappy com bounce do
-  /// resto do app, no padrão do iOS.
-  private var appSwitch: AnyTransition {
-    reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96))
-  }
-
   public var body: some View {
     Group {
       if !store.sessionChecked {
@@ -78,19 +72,26 @@ public struct RootView: View {
       } else if store.isSignedIn {
         switch section {
         case .academia:
-          AcademiaTabs(accent: $accent, tab: $tab, onSwitchApp: { section = $0 })
-            .transition(appSwitch)
+          AcademiaTabs(accent: $accent, tab: $tab, showingApps: $showingApps)
+            .transition(.opacity)
         case .estudos:
           EstudosTabs(
-            tab: $estudosTab, accent: $accent, onSwitchApp: { section = $0 },
+            tab: $estudosTab, accent: $accent, showingApps: $showingApps,
             openSession: openSession, openWrite: openWrite)
-            .transition(appSwitch)
+            .transition(.opacity)
         }
       } else {
         SignInScreen(phase: store.phase)
       }
     }
-    .animation(reduceMotion ? nil : .snappy(duration: 0.35, extraBounce: 0.15), value: section)
+    // Escalar a tela inteira na troca afastava o vidro das bordas do aparelho e
+    // abria uma fresta branca da janela, com a barra de abas subindo junto. Um
+    // fundo atrás do crossfade fecha o que sobra de branco entre os dois apps.
+    .background((section == .academia ? Color.canvas : Color.studyPaper).ignoresSafeArea())
+    .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: section)
+    // O painel mora aqui, e não dentro de cada app, para a troca não levar embora
+    // a árvore em que ele vive antes de ele tocar a própria saída.
+    .appSwitcher(current: section, isPresented: $showingApps) { section = $0 }
     .environment(store)
     .environment(estudos)
     .environment(\.accent, accent)
@@ -123,11 +124,10 @@ public struct RootView: View {
 struct AcademiaTabs: View {
   @Environment(AcademiaStore.self) private var store
   @State private var showingSetup = false
-  @State private var showingApps = false
   @State private var showingStreak = false
   @Binding var accent: Accent
   @Binding var tab: AcademiaTab
-  let onSwitchApp: @MainActor (AppSection) -> Void
+  @Binding var showingApps: Bool
 
   var body: some View {
     TabView(selection: appSwitcherSelection($tab, isPresented: $showingApps, bubble: .apps)) {
@@ -158,7 +158,6 @@ struct AcademiaTabs: View {
         Color.clear
       }
     }
-    .appSwitcher(current: .academia, isPresented: $showingApps, onSelect: onSwitchApp)
     .sheet(isPresented: $showingSetup) { SetupScreen() }
     .sheet(isPresented: $showingStreak) {
       if let data = store.dashboard {
@@ -231,8 +230,8 @@ var appHubTabRole: TabRole {
 }
 
 extension View {
-  /// O painel de apps que a bolha abre. Mora nos dois apps e veste a pele de
-  /// quem o abriu, então `current` escolhe o estilo e marca o app atual.
+  /// O painel de apps que a bolha abre. Fica na raiz, acima dos dois apps, e
+  /// veste a pele do app atual, então `current` escolhe o estilo e marca a linha.
   func appSwitcher(
     current: AppSection, isPresented: Binding<Bool>,
     onSelect: @escaping @MainActor (AppSection) -> Void
