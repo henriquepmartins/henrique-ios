@@ -17,6 +17,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "9",
+          "date": "2026-09-16T08:44:51-03:00",
+          "localizedDescription": "• Pasta fosca com onda nos treinos mais feitos e em andamento",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-9/Henrique.ipa",
+          "size": 3550461,
+          "sha256": "067b4fcd39f449e04ac59fb5fed9f1cdf6287bc1157fb9a484c89fc93b1a5c64",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "8",
           "date": "2026-09-15T21:56:36-03:00",
           "localizedDescription": "• chore: registra a verificação do mapa, dos folders e dos limites\n• Menu do card abre a cor, e o mapa usa o dia e o mês abreviados\n• Nome no alto do bloco e rodapé dentro do cartão\n• Editor de treino em passos com o card vivo no topo\n• Seletor de cor na própria tela\n• Card de pasta vira WorkoutFolderCard e lê a cor do treino\n• WorkoutColor em HSB e o hex de cada tom da paleta\n• Mapa de frequência na tela de hoje\n• Período e grade de frequência no Core\n• As telas leem as faixas de Limits e avisam antes do servidor\n• O 400 de validação nomeia o campo e o motivo\n• Limits copia as faixas do zod e os inputs cortam no init\n• A bolinha de hoje sai de dentro do círculo da seleção\n• Bolinha embaixo do dia de hoje na fita\n• Fechar da sequência vira ícone xmark\n• AcademiaStore guarda a frequência por intervalo\n• Cor do treino e rota de frequência no Core",
