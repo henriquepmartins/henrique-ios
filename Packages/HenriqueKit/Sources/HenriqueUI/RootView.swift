@@ -61,14 +61,21 @@ public struct RootView: View {
   }
 
   /// O app que entra cresce um fio, o que sai encolhe o mesmo fio. Com movimento
-  /// reduzido fica só a opacidade.
+  /// reduzido fica só a opacidade. A troca usa o mesmo snappy com bounce do
+  /// resto do app, no padrão do iOS.
   private var appSwitch: AnyTransition {
-    reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98))
+    reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96))
   }
 
   public var body: some View {
     Group {
-      if store.isSignedIn {
+      if !store.sessionChecked {
+        ProgressView()
+          .controlSize(.large)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .background(Color.canvas)
+          .transition(.opacity)
+      } else if store.isSignedIn {
         switch section {
         case .academia:
           AcademiaTabs(accent: $accent, tab: $tab, onSwitchApp: { section = $0 })
@@ -83,7 +90,7 @@ public struct RootView: View {
         SignInScreen(phase: store.phase)
       }
     }
-    .animation(.smooth(duration: 0.3), value: section)
+    .animation(reduceMotion ? nil : .snappy(duration: 0.35, extraBounce: 0.15), value: section)
     .environment(store)
     .environment(estudos)
     .environment(\.accent, accent)

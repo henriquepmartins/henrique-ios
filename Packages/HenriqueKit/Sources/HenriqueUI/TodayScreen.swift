@@ -77,8 +77,7 @@ public struct TodayScreen: View {
       .refreshable { await store.load() }
       .overlay { TodayPlaceholder(phase: store.phase, isEmpty: store.dashboard == nil) }
       .onChange(of: store.dashboard?.workout?.id, initial: true) {
-        let exercises = store.dashboard?.workout?.exercises ?? []
-        openIds = Set(exercises.filter { $0.id == exercises.first?.id || $0.sets.completedWorkCount > 0 }.map(\.id))
+        openIds = []
       }
     }
   }
@@ -95,7 +94,7 @@ struct TodayPlaceholder: View {
       if isEmpty {
         switch phase {
         case .loading:
-          ProgressView().controlSize(.large).transition(.opacity)
+          TodaySkeleton().transition(.opacity)
         case .failed(let message):
           ContentUnavailableView(
             "não carregou", systemImage: "wifi.exclamationmark", description: Text(message))
@@ -106,6 +105,23 @@ struct TodayPlaceholder: View {
       }
     }
     .animation(.easeOut(duration: 0.25), value: isEmpty)
+  }
+}
+
+/// Esqueleto da primeira pintura: hero e fileiras no formato do conteúdo. O
+/// spinner era a primeira coisa que o dono via; o esqueleto ocupa o mesmo
+/// espaço do que vai entrar, então a troca é só opacidade.
+struct TodaySkeleton: View {
+  var body: some View {
+    VStack(spacing: 14) {
+      RoundedRectangle(cornerRadius: 32).fill(Color.surfaceMuted).frame(height: 250)
+      ForEach(0..<3) { _ in
+        RoundedRectangle(cornerRadius: 24).fill(Color.surfaceMuted).frame(height: 92)
+      }
+    }
+    .padding(.horizontal, 16).padding(.top, 12)
+    .redacted(reason: .placeholder)
+    .accessibilityHidden(true)
   }
 }
 

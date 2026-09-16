@@ -38,6 +38,9 @@ public final class AcademiaStore {
   }
 
   public private(set) var phase: Phase = .idle
+  /// Falso até a primeira leitura do chaveiro responder. Sem isto, todo arranque
+  /// a frio mostra a entrada por uma fração de segundo mesmo com sessão válida.
+  public private(set) var sessionChecked = false
   private var acceptedDashboard: Dashboard?
   private struct PendingSet {
     let key: SetKey
@@ -114,10 +117,45 @@ public final class AcademiaStore {
     if dayCache.count > 14, let oldest = dayCache.min(by: { $0.value.storedAt < $1.value.storedAt })?.key {
       dayCache.removeValue(forKey: oldest)
     }
+    persist(value)
+  }
+
+  private static var snapshotURL: URL? {
+    FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+      .appending(path: "henrique-dashboard.json")
+  }
+
+  /// Pinta a última tela salva antes da rede responder. Só vale para hoje: dia
+  /// antigo entra apagado e desabilitado, pior que o esqueleto.
+  private func loadSnapshot() {
+    guard let url = Self.snapshotURL,
+      let data = try? Data(contentsOf: url),
+      let saved = try? JSONDecoder.henrique().decode(Dashboard.self, from: data),
+      saved.date == .today
+    else { return }
+    acceptedDashboard = saved
+    phase = .ready
+  }
+
+  private func persist(_ value: Dashboard) {
+    guard let url = Self.snapshotURL,
+      let data = try? JSONEncoder.henrique().encode(value)
+    else { return }
+    Task.detached(priority: .background) {
+      try? data.write(to: url, options: .atomic)
+    }
+  }
+
+  private func clearSnapshot() {
+    guard let url = Self.snapshotURL else { return }
+    Task.detached(priority: .background) {
+      try? FileManager.default.removeItem(at: url)
+    }
   }
 
   public init(client: APIClient) {
     self.client = client
+    loadSnapshot()
   }
 
   #if DEBUG
@@ -128,6 +166,7 @@ public final class AcademiaStore {
     public func openCaptureShell() {
       isCaptureShell = true
       isSignedIn = true
+      sessionChecked = true
       phase = .ready
     }
   #endif
@@ -137,6 +176,7 @@ public final class AcademiaStore {
       if isCaptureShell { return }
     #endif
     isSignedIn = await client.isSignedIn
+    sessionChecked = true
     guard isSignedIn else {
       phase = .idle
       return
@@ -162,6 +202,7 @@ public final class AcademiaStore {
     invalidateDays()
     isSignedIn = false
     acceptedDashboard = nil
+    clearSnapshot()
     attendance.removeAll()
     attendanceRanges.removeAll()
     pendingSets.removeAll()
