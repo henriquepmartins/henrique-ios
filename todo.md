@@ -192,3 +192,31 @@ campo, para o próximo erro se explicar sozinho.
 O driver de UI precisou aprender a andar pelos passos do editor. `salvar` virou
 `concluir`, `cancelar` virou a seta de fechar, e a barra de navegação sumiu, então
 a presença do editor passa a ser detectada pelo botão `concluir`.
+
+# Pasta fosca de treino
+
+- [x] 1. Establish the baseline first, before any migration: a visual regression harness that screenshots the current component across its states, plus the target when matching two implementations. No baseline, no parity claim. A blocking prerequisite, not a follow-up.
+  - Referência original fornecida pelo usuário; captura anterior válida em output/verify/20260915-214614/06-plano.png. As tentativas em output/folder-parity capturaram outra aba e login, por isso não servem de baseline.
+- [x] 2. Anti-shortcut clauses, stated and held: no harness modifications, no baseline tampering, no component restructuring to make a diff pass. If the baseline looks wrong, stop and ask, don't edit it.
+- [x] 3. Migrate one component at a time. Parallelize across worktrees, one owner per component (the **separate-before-serializing-shared-state** principle skill). Shared primitives migrate first as a blocking phase.
+- [ ] 4. Verify each component against its baseline via image diff on the matching surface via the driver skill. A nonzero diff is a fail; investigate the pixel delta. `/loop` per component until the diff is zero.
+  - skip: diferença zero não foi medida. Português, cores por treino e onda condicional são diferenças aprovadas. Conferência visual e testes de interação no simulador, sem afirmar igualdade pixel a pixel.
+- [ ] 5. Run **Opening a PR** per component or per safe batch.
+  - skip: entrega local, sem publicação solicitada.
+
+A referência fornecida e a resposta do usuário confirmam a forma. Nenhum mock novo necessário. Model the Domain mantém a frequência por identidade do treino. Prove It Works exige captura do binário e teste da condição da onda.
+
+Throughput checkpoint. O componente visual tem um dono. Core, testes e frequência no servidor têm outro. Nenhum arquivo compartilhado entre writers. Build depende da propriedade highlightedWorkoutIDs; a geometria pode avançar antes dela.
+
+
+Verificação da pasta. Build iOS passou. O fluxo existente testFluxo passou em 84 s. O novo testPastaDeTreino passou em 30 s, com abertura do menu, editor e início de treino. Capturas normais em output/verify/20260916-082417. A suíte Core passou com 96 testes em 12 suítes, incluindo quatro testes da onda. Backend passou com oito testes em dois arquivos e checagem de tipos/lint.
+
+A onda usa a identidade das sessões concluídas, com todos os empates no maior total positivo da semana. Treino em andamento exige séries valendo registradas e total ainda incompleto. Servidor antigo mantém apenas esse destaque de andamento. Mudanças no repo web permanecem locais, sem deploy.
+
+A verificação no maior tamanho de acessibilidade passou em 34 s após corrigir a combinação de escala da fonte e largura da pasta. Capturas finais em output/verify/20260916-082724. A prévia decorativa do editor mantém tamanho de texto padrão; os campos continuam seguindo o ajuste do sistema. O simulador voltou ao tamanho de texto large. Nenhum commit, deploy ou instalação em iPhone físico foi feito.
+
+## Correção da faixa acima do botão
+
+Fix Root Causes identificou outra borda além do separador já removido. A onda fechada terminava com opacidade 0,12 em y347 da geometria normalizada. O preenchimento agora desaparece gradualmente, mantendo o traço curvo.
+
+Reprodução sem o separador em output/verify/20260916-083332/06-plano.png. Correção em output/verify/20260916-083829/pasta-ativa.png. check-seam.py mediu salto RGB entre linhas de 19,02 antes e 1,49 depois. testPastaAtiva passou em 29,965 s. Build passou. O teste amplo intermediário falhou ao abrir a tela de sequência, antes do componente; a verificação focada chegou à pasta com série marcada e comprovou o resultado. Nenhum deploy.

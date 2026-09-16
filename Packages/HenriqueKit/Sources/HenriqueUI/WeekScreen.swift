@@ -23,6 +23,7 @@ struct WeekScreen: View {
           ForEach(Array(store.weekPlan.enumerated()), id: \.element.id) { index, item in
             WorkoutTile(
               item: item,
+              showsWave: store.dashboard?.highlightedWorkoutIDs.contains(item.id) == true,
               onEdit: { step in
                 editorStep = step
                 editor = .existing(item)
@@ -86,6 +87,7 @@ extension WeekPlanItem {
 
 private struct WorkoutTile: View {
   let item: WeekPlanItem
+  let showsWave: Bool
   let onEdit: (EditorStep) -> Void
   let onDelete: () -> Void
   let onStart: () -> Void
@@ -93,13 +95,18 @@ private struct WorkoutTile: View {
 
   var body: some View {
     Button(action: item.weekdays.isEmpty ? { onEdit(.identidade) } : onStart) {
-      WorkoutFolderCard(name: item.name, tone: item.tone, hasDays: !item.weekdays.isEmpty)
+      WorkoutFolderCard(name: item.name, tone: item.tone, hasDays: !item.weekdays.isEmpty, showsWave: showsWave)
     }
     .buttonStyle(StudyPressStyle())
     .accessibilityLabel(item.weekdays.isEmpty ? "editar \(item.name), sem dia" : "iniciar \(item.name), \(spokenWeekdays(item.weekdays))")
     // Menu dentro do label de um Button nunca chega a receber o dedo. Por isso
     // ele vem numa camada por cima, com área de toque só no disco dos três pontos.
-    .overlay(alignment: .topTrailing) { menuLayer }
+    .overlay {
+      GeometryReader { geometry in
+        menuLayer
+          .position(x: geometry.size.width * 0.854, y: geometry.size.width * 0.394)
+      }
+    }
   }
 
   private var menuLayer: some View {
@@ -116,115 +123,130 @@ private struct WorkoutTile: View {
     // Preso nos três pontos, o diálogo aponta para o card que vai sumir. Preso
     // na tela, ele abria no topo, longe do toque.
     .deleteWorkoutConfirmation(isPresented: $confirmDelete, name: item.name, onDelete: onDelete)
-    .padding(.trailing, WorkoutFolderCard.menuCenterInset - 22)
-    .padding(.top, WorkoutFolderCard.blockTop + WorkoutFolderCard.menuCenterInset - 22)
   }
 }
 
-/// A pasta de treino: duas folhas atrás, o bloco colorido com o nome e a onda,
-/// e o rodapé. A grade e o topo do editor desenham a mesma view; a largura vem
-/// de fora.
 struct WorkoutFolderCard: View {
+  @Environment(\.dynamicTypeSize) private var textSize
+  @ScaledMetric(relativeTo: .headline) private var titleSize = 44.0
+  @ScaledMetric(relativeTo: .subheadline) private var footerSize = 35.0
   let name: String
   let tone: WorkoutTone
   let hasDays: Bool
+  var showsWave = false
 
-  /// O recuo do bloco colorido. O disco dos três pontos e os traços das folhas
-  /// leem o mesmo valor para cair na linha do nome.
-  static let blockPad: CGFloat = 12
-  static let menuDisc: CGFloat = 34
-  /// Distância do centro do disco até a borda direita e a de cima do bloco.
-  /// A camada do menu na grade se alinha por aqui.
-  static var menuCenterInset: CGFloat { blockPad + menuDisc / 2 }
-  /// O quanto o bloco desce por causa das folhas atrás dele.
-  static let blockTop: CGFloat = 13
+  private var extraTitleHeight: CGFloat { textSize.isAccessibilitySize ? 0 : max(0, titleSize - 44) * 2.4 }
+  private var extraFooterHeight: CGFloat { textSize.isAccessibilitySize ? 60 : max(0, footerSize - 35) * 2.6 }
 
   var body: some View {
-    ZStack(alignment: .top) {
-      Sheet(tone: tone, inset: 24, opacity: 0.3, lined: false)
-      Sheet(tone: tone, inset: 12, opacity: 0.52, lined: true).padding(.top, 6)
-      // Bloco e rodapé são um cartão só: mesmo canto, mesma sombra.
-      VStack(spacing: 0) {
-        block
-        Footer(hasDays: hasDays)
-      }
-      .background(.white)
-      .clipShape(.rect(cornerRadius: 18))
-      .padding(.top, 13)
-    }
-    // Sem achatar antes, a sombra é aplicada em cada vinco e cai sobre o
-    // bloco como uma faixa escura.
-    .compositingGroup()
-    .shadow(color: Color.ink.opacity(0.12), radius: 12, y: 6)
-  }
-
-  private var block: some View {
-    Text(name)
-      .font(.system(.headline, weight: .semibold))
-      .tracking(-0.3)
-      .foregroundStyle(tone.ink)
-      .lineLimit(2)
-      .padding(.trailing, Self.menuDisc + 4)
-      .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
-      .padding(Self.blockPad)
-      .background {
-        ZStack {
-          LinearGradient(colors: [tone.top, tone.bottom], startPoint: .top, endPoint: .bottom)
-          WorkoutWave(closed: true).fill(.white.opacity(0.12))
-          WorkoutWave().stroke(.white.opacity(0.45), lineWidth: 1.5)
-        }
-      }
-      .overlay(alignment: .topTrailing) {
-        Circle()
-          .fill(.white.opacity(0.35))
-          .frame(width: Self.menuDisc, height: Self.menuDisc)
+    GeometryReader { geometry in
+      let width = geometry.size.width
+      let scale = width / 508
+      ZStack(alignment: .topLeading) {
+        RoundedRectangle(cornerRadius: 40 * scale)
+          .fill(Color(hex: 0xdedfe2))
+          .frame(width: 225 * scale, height: 180 * scale)
+        RoundedRectangle(cornerRadius: 52 * scale)
+          .fill(Color(hex: 0xf0f1f3))
           .overlay {
-            Image(systemName: "ellipsis")
-              .font(.system(.body, weight: .semibold))
-              .rotationEffect(.degrees(90))
-              .foregroundStyle(tone.ink)
+            RoundedRectangle(cornerRadius: 52 * scale)
+              .strokeBorder(Color.ink.opacity(0.07), lineWidth: scale)
           }
-          .padding(Self.blockPad)
-          .accessibilityHidden(true)
-      }
-  }
-
-  struct Footer: View {
-    let hasDays: Bool
-
-    var body: some View {
-      Label(hasDays ? "começar" : "sem dia", systemImage: hasDays ? "play.fill" : "pencil")
-        .font(.system(size: 11, weight: .semibold))
-        .foregroundStyle(Color.mutedInk)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 11)
-    }
-  }
-
-  private struct Sheet: View {
-    let tone: WorkoutTone
-    let inset: CGFloat
-    let opacity: Double
-    let lined: Bool
-
-    var body: some View {
-      RoundedRectangle(cornerRadius: 8)
-        .fill(tone.top.opacity(opacity))
-        .frame(height: WorkoutFolderCard.blockTop * 2)
-        .overlay(alignment: .topLeading) {
-          if lined {
-            GeometryReader { proxy in
-              VStack(alignment: .leading, spacing: 1) {
-                Capsule().frame(width: proxy.size.width * 0.55, height: 2)
-                Capsule().frame(width: proxy.size.width * 0.35, height: 2)
-              }
-              .foregroundStyle(tone.ink.opacity(0.18))
-              .padding(.leading, WorkoutFolderCard.blockPad)
-              .padding(.top, 1)
+          .padding(.top, 32 * scale)
+        RoundedRectangle(cornerRadius: 25 * scale)
+          .fill(tone.top.mix(with: .ink, by: 0.38))
+          .frame(width: 466 * scale, height: 210 * scale)
+          .rotationEffect(.degrees(-1.5))
+          .offset(x: 24 * scale, y: 37 * scale)
+        RoundedRectangle(cornerRadius: 27 * scale)
+          .fill(tone.top)
+          .frame(width: 475 * scale, height: 220 * scale)
+          .rotationEffect(.degrees(1))
+          .offset(x: 20 * scale, y: 52 * scale)
+        RoundedRectangle(cornerRadius: 27 * scale)
+          .fill(tone.top.mix(with: Color(hex: 0xf3f5f7), by: 0.30))
+          .frame(width: 486 * scale, height: 250 * scale)
+          .overlay(alignment: .topLeading) {
+            VStack(alignment: .leading, spacing: 10 * scale) {
+              Capsule().frame(width: 252 * scale, height: 6 * scale)
+              Capsule().frame(width: 136 * scale, height: 5 * scale)
             }
+            .foregroundStyle(tone.ink.opacity(0.22))
+            .padding(.leading, 35 * scale)
+            .padding(.top, 18 * scale)
           }
+          .offset(x: 11 * scale, y: 67 * scale)
+        front(scale: scale)
+          .frame(width: width, height: (328 + extraTitleHeight + extraFooterHeight) * scale)
+          .offset(y: 127 * scale)
+      }
+      .compositingGroup()
+      .shadow(color: Color.ink.opacity(0.12), radius: 26 * scale, y: 20 * scale)
+    }
+    .aspectRatio(508 / (455 + extraTitleHeight + extraFooterHeight), contentMode: .fit)
+  }
+
+  private func front(scale: CGFloat) -> some View {
+    let shape = RoundedRectangle(cornerRadius: 57 * scale)
+    let textScale = textSize.isAccessibilitySize ? min(scale, 180.0 / 508) : scale
+    return ZStack(alignment: .topLeading) {
+      shape.fill(.ultraThinMaterial)
+      shape.fill(
+        LinearGradient(stops: [
+          .init(color: tone.bottom.opacity(0.78), location: 0),
+          .init(color: tone.bottom.opacity(0.78), location: 0.48),
+          .init(color: Color(hex: 0xf2f3f6).opacity(0.95), location: 0.76),
+          .init(color: Color(hex: 0xf2f3f6), location: 1),
+        ], startPoint: .top, endPoint: .bottom))
+      if showsWave {
+        WorkoutWave(closed: true)
+          .fill(LinearGradient(stops: [
+            .init(color: tone.top.opacity(0.12), location: 0),
+            .init(color: tone.top.opacity(0.12), location: 0.52),
+            .init(color: tone.top.opacity(0), location: 1),
+          ], startPoint: .top, endPoint: .bottom))
+          .overlay { WorkoutWave().stroke(tone.top.opacity(0.3), lineWidth: 1) }
+          .frame(height: 180 * scale)
+          .offset(y: 40 * scale)
+      }
+      Text(name)
+        .font(.system(size: titleSize * textScale, weight: .bold))
+        .tracking(-1 * scale)
+        .foregroundStyle(Color.ink)
+        .lineLimit(2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 43 * scale)
+        .padding(.trailing, 130 * scale)
+        .padding(.top, 46 * scale)
+      Circle()
+        .fill(tone.ink.opacity(0.10))
+        .overlay { Circle().strokeBorder(tone.ink.opacity(0.13), lineWidth: scale) }
+        .overlay {
+          VStack(spacing: 8 * scale) {
+            ForEach(0..<3) { _ in Circle().frame(width: 8 * scale, height: 8 * scale) }
+          }
+          .foregroundStyle(Color.ink)
         }
-        .padding(.horizontal, inset)
+        .frame(width: 87 * scale, height: 87 * scale)
+        .offset(x: 389 * scale, y: 29 * scale)
+        .accessibilityHidden(true)
+      VStack(spacing: 0) {
+        Text(hasDays ? "começar treino" : "sem dia")
+          .font(.system(size: footerSize * textScale, weight: .semibold))
+          .multilineTextAlignment(.center)
+          .lineLimit(2)
+          .padding(.horizontal, 24 * scale)
+          .foregroundStyle(Color.mutedInk)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
+      .frame(height: (97 + extraFooterHeight) * scale)
+      .frame(maxHeight: .infinity, alignment: .bottom)
+    }
+    .clipShape(shape)
+    .overlay {
+      shape.strokeBorder(
+        LinearGradient(colors: [Color(hex: 0xf7fbff).opacity(0.65), Color.ink.opacity(0.06)],
+          startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2 * scale)
     }
   }
 }

@@ -298,6 +298,16 @@ public struct StreakGoal: Codable, Hashable, Sendable {
   }
 }
 
+public struct WeeklyWorkoutSessions: Codable, Hashable, Sendable {
+  public var workoutTemplateId: String
+  public var count: Int
+
+  public init(workoutTemplateId: String, count: Int) {
+    self.workoutTemplateId = workoutTemplateId
+    self.count = count
+  }
+}
+
 public struct Dashboard: Codable, Hashable, Sendable {
   public var date: CalendarDate
   public var workout: WorkoutSummary?
@@ -308,6 +318,7 @@ public struct Dashboard: Codable, Hashable, Sendable {
   /// servidor antigo, e aí a presença cai para `currentStreak`.
   public var attendanceStreak: Int?
   public var streakGoals: [StreakGoal]?
+  public var weeklyWorkoutSessions: [WeeklyWorkoutSessions]? = nil
   public var weeklyCompleted: Int
   public var weeklyPlanned: Int
   public var weekPlan: [WeekPlanItem]
@@ -324,6 +335,18 @@ public struct Dashboard: Codable, Hashable, Sendable {
 }
 
 extension Dashboard {
+  public var highlightedWorkoutIDs: Set<String> {
+    let sessions = weeklyWorkoutSessions ?? []
+    let maximum = sessions.map(\.count).max() ?? 0
+    var highlighted = Set(sessions.filter { maximum > 0 && $0.count == maximum }
+      .map(\.workoutTemplateId))
+    if let workout, workout.completedWorkSetCount > 0,
+      workout.completedWorkSetCount < workout.workSetCount {
+      highlighted.insert(workout.id)
+    }
+    return highlighted
+  }
+
   public func streak(_ kind: StreakKind) -> Int {
     switch kind {
     case .attendance: attendanceStreak ?? currentStreak

@@ -211,6 +211,35 @@ final class FluxoDrive: XCTestCase {
     shot("22-calendario-bolinha")
   }
 
+  func testPastaAtiva() {
+    launch()
+    ensureWorkoutToday()
+    let sets = app.buttons.matching(identifier: "Concluir série 1")
+    XCTAssert(sets.firstMatch.waitForExistence(timeout: 5))
+    sets.allElementsBoundByIndex.last!.tap()
+    XCTAssert(app.buttons["Desmarcar série 1"].firstMatch.waitForExistence(timeout: 5))
+    app.tabBars.buttons["plano"].tap()
+    XCTAssert(app.buttons["editar Superiores"].waitForExistence(timeout: 5))
+    shot("pasta-ativa")
+  }
+
+  func testPastaDeTreino() {
+    launch(aba: "semana")
+    let menu = app.buttons["editar Superiores"]
+    XCTAssert(menu.waitForExistence(timeout: 8))
+    shot("pasta-plano")
+    menu.tap()
+    let edit = app.buttons["editar"]
+    XCTAssert(edit.waitForExistence(timeout: 3))
+    edit.tap()
+    XCTAssert(app.staticTexts["nome e foco"].waitForExistence(timeout: 3))
+    shot("pasta-editor")
+    app.buttons["fechar"].tap()
+    XCTAssert(menu.waitForExistence(timeout: 3))
+    app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'iniciar '")).firstMatch.tap()
+    XCTAssert(app.tabBars.buttons["treino"].isSelected)
+  }
+
   func testFluxo() {
     launch()
     ensureWorkoutToday()

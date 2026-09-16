@@ -123,6 +123,7 @@ struct WorkoutEditor: View {
         name: draft.name.isEmpty ? "novo treino" : draft.name,
         tone: draft.color.tone, hasDays: !draft.weekdays.isEmpty
       )
+      .dynamicTypeSize(.large)
       .containerRelativeFrame(.horizontal) { width, _ in width * 0.62 }
       .padding(.top, 8)
       .accessibilityHidden(true)
