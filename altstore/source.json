@@ -17,6 +17,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "12",
+          "date": "2026-09-16T10:42:02-03:00",
+          "localizedDescription": "• o calendário do plano no driver de UI\n• calendário no topo da tela plano\n• card do calendário do plano\n• calendário do plano resolvido em HenriqueCore\n• campo workoutTemplateIds na frequência",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-12/Henrique.ipa",
+          "size": 3615474,
+          "sha256": "682d7aee60e8d05efea69123d531a96e8a7c839f69b3df64e11855141914a29d",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "11",
           "date": "2026-09-16T09:31:51-03:00",
           "localizedDescription": "• Troca de app sem a barra piscando\n• Fluxo que dirige a troca de app na casca",
