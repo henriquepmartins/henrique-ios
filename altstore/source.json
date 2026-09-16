@@ -17,6 +17,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "10",
+          "date": "2026-09-16T09:13:46-03:00",
+          "localizedDescription": "• Treino colapsado, troca com bounce e arranque com snapshot",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-10/Henrique.ipa",
+          "size": 3560249,
+          "sha256": "29a9f972ca326191163b3a4cc61b421100ab18c7684b4e658e10b49ca053a929",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "9",
           "date": "2026-09-16T08:44:51-03:00",
           "localizedDescription": "• Pasta fosca com onda nos treinos mais feitos e em andamento",
