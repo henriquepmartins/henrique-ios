@@ -199,13 +199,27 @@ public struct AttendanceDay: Codable, Hashable, Sendable, Identifiable {
   public var date: CalendarDate
   public var workSets: Int
   public var completed: Bool
+  /// Os treinos feitos nesse dia, na ordem em que a primeira série de cada um
+  /// saiu. Vazio quando o servidor é velho e não manda o campo.
+  public var workoutTemplateIds: [String]
 
   public var id: CalendarDate { date }
 
-  public init(date: CalendarDate, workSets: Int, completed: Bool) {
+  public init(date: CalendarDate, workSets: Int, completed: Bool, workoutTemplateIds: [String] = []) {
     self.date = date
     self.workSets = workSets
     self.completed = completed
+    self.workoutTemplateIds = workoutTemplateIds
+  }
+}
+
+extension AttendanceDay {
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    date = try container.decode(CalendarDate.self, forKey: .date)
+    workSets = try container.decode(Int.self, forKey: .workSets)
+    completed = try container.decode(Bool.self, forKey: .completed)
+    workoutTemplateIds = try container.decodeIfPresent([String].self, forKey: .workoutTemplateIds) ?? []
   }
 }
 
