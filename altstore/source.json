@@ -22,6 +22,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "20",
+          "date": "2026-09-17T13:55:13-03:00",
+          "localizedDescription": "• Restaura a animação do contador de presença",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-20/Henrique.ipa",
+          "size": 3793727,
+          "sha256": "8f54ece623d62d892cdf279f2dd8c3c60e6bab7833657e917523372adbefc4cf",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "19",
           "date": "2026-09-17T13:30:47-03:00",
           "localizedDescription": "• Uniformiza a entrada dos cartões de home e plano",
