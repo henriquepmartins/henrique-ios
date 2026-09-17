@@ -97,8 +97,7 @@ private struct AttendanceCount: View {
       .font(.title2.weight(.medium)).monospacedDigit().foregroundStyle(Color.ink)
       .contentTransition(.numericText(value: Double(total)))
       .opacity(answered || total > 0 ? 1 : 0)
-      .animation(reduceMotion ? nil : Motion.crossfade, value: total)
-      .animation(reduceMotion ? nil : Motion.crossfade, value: answered)
+      .animation(reduceMotion ? nil : .default, value: total)
   }
 
   private var text: String {
