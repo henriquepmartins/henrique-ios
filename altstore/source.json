@@ -22,6 +22,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "22",
+          "date": "2026-09-17T14:27:08-03:00",
+          "localizedDescription": "• Anima os quadradinhos do calendário do plano",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-22/Henrique.ipa",
+          "size": 3793303,
+          "sha256": "71bd193e8dbca2c1ca0a5a4f33cd7f84f77f9826d3ee2f9a7c9a870d16be53b0",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "21",
           "date": "2026-09-17T14:02:57-03:00",
           "localizedDescription": "• Alinha a entrada da tela de progresso",
