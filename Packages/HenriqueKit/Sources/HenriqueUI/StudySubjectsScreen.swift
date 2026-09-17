@@ -48,7 +48,7 @@ public struct StudySubjectsScreen: View {
             StudySubjectCard(subject: subject)
           }
           .buttonStyle(StudyPressStyle())
-          .staggeredEntrance(index: index, isReady: true)
+          .staggeredEntrance(index: index, columns: 2, isReady: true)
         }
       }
     }

@@ -177,7 +177,7 @@ enum Motion {
   /// Com movimento reduzido só a opacidade muda, e rápido.
   static let plain = Animation.easeOut(duration: 0.15)
   /// O quanto um item sobe ao entrar.
-  static let rise: CGFloat = 10
+  static let rise: CGFloat = 8
 
   /// O passo entre um item e o seguinte. O atraso para de crescer no sétimo
   /// para a última linha de uma lista longa não esperar a lista inteira.
@@ -208,8 +208,12 @@ extension View {
   /// Entrada em cascata da primeira montagem da lista. `isReady` é o momento em
   /// que os dados chegaram; o atraso para no sexto item para a última linha não
   /// esperar.
-  func staggeredEntrance(index: Int, isReady: Bool) -> some View {
-    modifier(StudyStaggeredEntrance(index: index, isReady: isReady))
+  ///
+  /// `columns` é quantas colunas a grade que segura este item tem. A cascata só
+  /// corre na vertical: duas peças lado a lado entram juntas, senão o olho lê
+  /// uma varredura na diagonal em vez de um fade de baixo para cima.
+  func staggeredEntrance(index: Int, columns: Int = 1, isReady: Bool) -> some View {
+    modifier(StudyStaggeredEntrance(index: index / max(columns, 1), isReady: isReady))
   }
 }
 

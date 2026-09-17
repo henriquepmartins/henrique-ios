@@ -35,7 +35,7 @@ struct WeekScreen: View {
               },
               onDelete: { store.deleteWorkout(workoutTemplateId: item.id) },
               onStart: { if let day = item.nextWeekday(from: store.selectedDate.weekday()) { onStart(day) } })
-              .staggeredEntrance(index: index, isReady: true)
+              .staggeredEntrance(index: index, columns: textSize.isAccessibilitySize ? 1 : 2, isReady: true)
           }
         }
         .animation(reduceMotion ? .easeOut(duration: 0.15) : .snappy, value: store.weekPlan.map(\.id))

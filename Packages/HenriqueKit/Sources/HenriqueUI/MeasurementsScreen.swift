@@ -19,13 +19,13 @@ struct MeasurementsScreen: View {
           .buttonStyle(.glassProminent).controlSize(.large)
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: textSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
           MeasurementMetric(title: "peso", value: measurements.first?.weightKg, unit: "kg", symbol: "scalemass")
-            .staggeredEntrance(index: 0, isReady: true)
+            .staggeredEntrance(index: 0, columns: textSize.isAccessibilitySize ? 1 : 2, isReady: true)
           MeasurementMetric(title: "gordura", value: measurements.first?.bodyFatPercent, unit: "%", symbol: "figure")
-            .staggeredEntrance(index: 1, isReady: true)
+            .staggeredEntrance(index: 1, columns: textSize.isAccessibilitySize ? 1 : 2, isReady: true)
           MeasurementMetric(title: "cintura", value: measurements.first?.waistCm, unit: "cm", symbol: "ruler")
-            .staggeredEntrance(index: 2, isReady: true)
+            .staggeredEntrance(index: 2, columns: textSize.isAccessibilitySize ? 1 : 2, isReady: true)
           MeasurementMetric(title: "massa magra", value: leanMass, unit: "kg", symbol: "figure.strengthtraining.traditional")
-            .staggeredEntrance(index: 3, isReady: true)
+            .staggeredEntrance(index: 3, columns: textSize.isAccessibilitySize ? 1 : 2, isReady: true)
         }
         VStack(alignment: .leading, spacing: 16) {
           Text("peso").font(.title2.weight(.medium))
@@ -35,7 +35,7 @@ struct MeasurementsScreen: View {
             WeightChart(measurements: measurements.sorted { $0.date < $1.date }).frame(height: 220)
           }
         }.padding(22).paperCard(radius: 32)
-          .staggeredEntrance(index: 4, isReady: true)
+          .staggeredEntrance(index: 2, isReady: true)
         VStack(alignment: .leading, spacing: 16) {
           Text("histórico").font(.title2.weight(.medium))
           ForEach(measurements) { measurement in
@@ -43,7 +43,7 @@ struct MeasurementsScreen: View {
             Divider()
           }
         }.padding(22).paperCard(radius: 32)
-          .staggeredEntrance(index: 5, isReady: true)
+          .staggeredEntrance(index: 3, isReady: true)
       }.padding(16).padding(.bottom, 32)
     }
     .refreshable { await store.load() }
