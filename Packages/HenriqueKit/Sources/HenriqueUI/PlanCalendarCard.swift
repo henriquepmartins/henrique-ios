@@ -41,11 +41,6 @@ struct PlanCalendarCard: View {
         // tempo, com os números de dois meses sobrepostos. `blurReplace` é a
         // troca que o sistema usa para conteúdo que muda no lugar.
         PlanMonthGrid(grid: calendarGrid, workoutsById: workoutsById)
-          // A frequência chega depois da rede, e sem isto as casas saltavam do
-          // cinza para a cor do treino no quadro em que a resposta volta. Fica
-          // dentro do `id` de propósito: mês novo é view nova, não tem cor
-          // velha para atravessar.
-          .animation(reduceMotion ? nil : Motion.crossfade, value: calendarGrid)
           .id(period)
           .transition(.blurReplace)
       }
@@ -116,6 +111,7 @@ private struct PlanMonthGrid: View {
 
 private struct DayCell: View {
   @Environment(\.locale) private var locale
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let cell: PlanCalendar.Cell
   let workoutsById: [String: WeekPlanItem]
   private let radius: CGFloat = 8
@@ -136,6 +132,10 @@ private struct DayCell: View {
   var body: some View {
     if let date = cell.date {
       background
+        // A frequência chega depois da rede, e sem isto a casa saltava do cinza
+        // para a cor do treino no quadro em que a resposta volta. Só a cor
+        // atravessa, para a grade não mudar de forma no meio da entrada.
+        .animation(reduceMotion ? nil : Motion.crossfade, value: cell.mark)
         .overlay { content }
         .overlay {
           if cell.isToday {

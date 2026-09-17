@@ -17,16 +17,13 @@ struct AttendanceMap: View {
     VStack(alignment: .leading, spacing: 16) {
       AttendanceHeader(period: $period, title: period.title(locale: locale))
       AttendanceCount(total: grid.total, name: period.name(locale: locale), answered: answered)
-      // A grade é uma peça só. Cada casa só muda de cor quando a frequência
-      // chega da rede ou quando o período troca, então o que anima é a cor no
-      // lugar, não a casa entrando.
-      Group {
-        switch period {
-        case .month: MonthGrid(grid: grid)
-        case .year: YearGrid(grid: grid)
-        }
+      // A grade é uma peça só. O que anima é a cor da casa, dentro do
+      // `DaySquare`. Uma animação aqui em cima pegaria o layout junto e fazia a
+      // fita do ano deslizar de lado até a borda direita ao entrar.
+      switch period {
+      case .month: MonthGrid(grid: grid)
+      case .year: YearGrid(grid: grid)
       }
-      .animation(reduceMotion ? nil : Motion.crossfade, value: grid)
       if grid.total > 0 {
         AttendanceLegend()
       }
@@ -186,6 +183,7 @@ private struct YearGrid: View {
 private struct DaySquare: View {
   @Environment(\.accent) private var accent
   @Environment(\.locale) private var locale
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let cell: AttendanceGrid.Cell
   let radius: CGFloat
 
@@ -194,6 +192,9 @@ private struct DaySquare: View {
       if let date = cell.date {
         RoundedRectangle(cornerRadius: radius)
           .fill(AttendanceFill.color(level: cell.level, accent: accent))
+          // A frequência chega depois da rede. Só a cor atravessa; o quadrado
+          // não muda de tamanho nem de lugar.
+          .animation(reduceMotion ? nil : Motion.crossfade, value: cell.level)
           .overlay {
             if date == .today {
               RoundedRectangle(cornerRadius: radius + 1.5)

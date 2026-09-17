@@ -11,6 +11,18 @@ struct DayStrip: View {
   let selected: CalendarDate
   @Binding var notch: CGFloat
 
+  /// A fita nasce montada e já centrada no dia escolhido. Enquanto os dias e a
+  /// posição vinham do `onAppear`, o primeiro quadro tinha a fita vazia e o
+  /// seguinte tinha 181 dias com o scroll voando até o meio, então quem abria o
+  /// app via a linha se construir de lado antes de parar.
+  init(selected: CalendarDate, notch: Binding<CGFloat>) {
+    self.selected = selected
+    _notch = notch
+    _anchor = State(initialValue: selected)
+    _days = State(initialValue: (-90...90).map { selected.adding(days: $0) })
+    _visible = State(initialValue: selected)
+  }
+
   private var selectionAnimation: Animation {
     .interpolatingSpring(mass: 1, stiffness: 900, damping: 48)
   }
@@ -56,10 +68,6 @@ struct DayStrip: View {
       .scrollPosition(id: $visible, anchor: .center)
       .scrollTargetBehavior(.viewAligned)
       .frame(height: 76)
-      .onAppear {
-        if days.isEmpty { resetWindow(around: selected) }
-        visible = selected
-      }
       .onChange(of: selected) {
         if !days.contains(selected) { resetWindow(around: selected) }
         withAnimation(reduceMotion ? nil : selectionAnimation) {

@@ -43,7 +43,6 @@ struct StudyAssignmentsCalendarCard: View {
         // A mesma troca do calendário do plano: um mês tem a forma do
         // seguinte, então o que muda é o conteúdo no lugar, não uma grade
         // passando por cima da outra.
-        .animation(reduceMotion ? nil : Motion.crossfade, value: grid)
         .id(month)
         .transition(.blurReplace)
       }
