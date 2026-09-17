@@ -146,6 +146,7 @@ private struct DayCell: View {
         }
         .accessibilityElement()
         .accessibilityLabel(label(for: date))
+        .subtleEntrance()
     } else {
       Color.clear.accessibilityHidden(true)
     }
