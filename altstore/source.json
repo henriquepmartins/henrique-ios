@@ -22,6 +22,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "15",
+          "date": "2026-09-17T11:18:50-03:00",
+          "localizedDescription": "• calendários entram como uma peça só",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-15/Henrique.ipa",
+          "size": 3790100,
+          "sha256": "412e3349e3ce38158337d1ffa1055eba46dbec6b63268325124ea916fce4c47d",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "14",
           "date": "2026-09-17T11:05:06-03:00",
           "localizedDescription": "• abertura do app com as curvas do sistema",
