@@ -12,9 +12,24 @@
       "category": "utilities",
       "appPermissions": {
         "entitlements": [],
-        "privacy": []
+        "privacy": [
+          {
+            "name": "Calendars",
+            "usageDescription": "Levar os prazos das entregas para o calendário do iPhone."
+          }
+        ]
       },
       "versions": [
+        {
+          "version": "0.1",
+          "buildVersion": "14",
+          "date": "2026-09-17T11:05:06-03:00",
+          "localizedDescription": "• abertura do app com as curvas do sistema",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-14/Henrique.ipa",
+          "size": 3789633,
+          "sha256": "32fb1332dbd684c364cec1043d1a969caa3cb1958a10c858da6f65e37c9242a3",
+          "minOSVersion": "26.0"
+        },
         {
           "version": "0.1",
           "buildVersion": "13",
