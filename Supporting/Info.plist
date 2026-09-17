@@ -4,6 +4,8 @@
 <dict>
 	<key>HenriqueAPIBaseURL</key>
 	<string>$(HENRIQUE_API_BASE_URL)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>O microfone serve para repetir as frases em voz alta. Sem ele, o treino vira só escuta.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Levar os prazos das entregas para o calendário do iPhone.</string>
 	<key>NSAppTransportSecurity</key>

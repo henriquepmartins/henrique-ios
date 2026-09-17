@@ -11,9 +11,11 @@ struct HenriqueApp: App {
       RootView(
         store: stores.academia,
         estudos: stores.estudos,
+        idiomas: stores.idiomas,
         initialSection: AppConfiguration.launch.section,
         initialTab: AppConfiguration.launch.academiaTab,
         initialEstudosTab: AppConfiguration.launch.estudosTab,
+        initialIdiomasTab: AppConfiguration.launch.idiomasTab,
         openSession: AppConfiguration.launch.openSession,
         openWrite: AppConfiguration.launch.openWrite)
     }
@@ -27,6 +29,7 @@ struct LaunchArguments: Sendable {
   var section: AppSection?
   var academiaTab: AcademiaTab = .treino
   var estudosTab: EstudosTab = .hoje
+  var idiomasTab: IdiomasTab = .rotina
   var openSession = false
   var openWrite = false
 }
@@ -35,7 +38,8 @@ extension LaunchArguments {
   /// `--app estudos` abre o outro app. `--aba <nome>` abre direto naquela aba,
   /// lida como aba de estudos quando veio `--app estudos`, onde ela também
   /// aceita `sessao` e `escrever`, que não são abas e sim o bloco de foco e a
-  /// folha de escrever. Os nomes aposentados continuam valendo: `medidas` cai
+  /// folha de escrever. Com `--app idiomas` a aba é `rotina`, `revisar` ou
+  /// `progresso`. Os nomes aposentados continuam valendo: `medidas` cai
   /// em progresso e `cadernos` cai em matérias, que é onde essas telas moram
   /// agora.
   ///
@@ -59,7 +63,10 @@ extension LaunchArguments {
         case "escrever": launch.openWrite = true
         default: launch.estudosTab = tab.flatMap(EstudosTab.init(named:)) ?? .hoje
         }
-      } else if let tab, let academia = AcademiaTab(named: tab) {
+      } else if launch.section == .idiomas {
+        launch.idiomasTab = tab.flatMap(IdiomasTab.init(named:)) ?? .rotina
+      }
+      else if let tab, let academia = AcademiaTab(named: tab) {
         launch.academiaTab = academia
       }
     #endif
@@ -70,15 +77,21 @@ extension LaunchArguments {
 enum AppConfiguration {
   static let launch = LaunchArguments.parse(CommandLine.arguments)
 
-  /// Os dois apps dividem o mesmo `APIClient` para uma sessão só valer para os
-  /// dois e o logout de um derrubar o outro.
-  @MainActor static func makeStores() -> (academia: AcademiaStore, estudos: EstudosStore) {
+  /// Os três apps dividem o mesmo `APIClient` para uma sessão só valer para
+  /// todos e o logout de um derrubar os outros.
+  @MainActor static func makeStores() -> (
+    academia: AcademiaStore, estudos: EstudosStore, idiomas: IdiomasStore
+  ) {
     let client = makeClient()
-    let stores = (academia: AcademiaStore(client: client), estudos: EstudosStore(client: client))
+    let stores = (
+      academia: AcademiaStore(client: client), estudos: EstudosStore(client: client),
+      idiomas: IdiomasStore(client: client)
+    )
     #if DEBUG
       if launch.shell {
         stores.academia.openCaptureShell()
         stores.estudos.openCaptureShell()
+        stores.idiomas.openCaptureShell()
       }
     #endif
     return stores

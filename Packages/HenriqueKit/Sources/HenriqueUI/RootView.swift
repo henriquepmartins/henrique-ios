@@ -16,12 +16,13 @@ public enum AcademiaTab: String, Hashable, Sendable, CaseIterable {
 }
 
 public enum AppSection: String, CaseIterable, Sendable {
-  case academia, estudos
+  case academia, estudos, idiomas
 
   var label: String {
     switch self {
     case .academia: "academia"
     case .estudos: "estudos"
+    case .idiomas: "idiomas"
     }
   }
 
@@ -29,6 +30,7 @@ public enum AppSection: String, CaseIterable, Sendable {
     switch self {
     case .academia: "dumbbell"
     case .estudos: "book"
+    case .idiomas: "globe"
     }
   }
 }
@@ -39,26 +41,32 @@ public struct RootView: View {
   @AppStorage("henrique.app") private var section: AppSection = .academia
   @State private var tab: AcademiaTab
   @State private var estudosTab: EstudosTab
+  @State private var idiomasTab: IdiomasTab
   @State private var appliedInitialSection = false
   @State private var showingApps = false
   private let store: AcademiaStore
   private let estudos: EstudosStore
+  private let idiomas: IdiomasStore
   private let initialSection: AppSection?
   private let openSession: Bool
   private let openWrite: Bool
 
   public init(
-    store: AcademiaStore, estudos: EstudosStore, initialSection: AppSection? = nil,
+    store: AcademiaStore, estudos: EstudosStore, idiomas: IdiomasStore,
+    initialSection: AppSection? = nil,
     initialTab: AcademiaTab = .treino, initialEstudosTab: EstudosTab = .hoje,
+    initialIdiomasTab: IdiomasTab = .rotina,
     openSession: Bool = false, openWrite: Bool = false
   ) {
     self.store = store
     self.estudos = estudos
+    self.idiomas = idiomas
     self.initialSection = initialSection
     self.openSession = openSession
     self.openWrite = openWrite
     tab = initialTab
     estudosTab = initialEstudosTab
+    idiomasTab = initialIdiomasTab
   }
 
   public var body: some View {
@@ -74,6 +82,9 @@ public struct RootView: View {
           EstudosTabs(
             tab: $estudosTab, accent: $accent, showingApps: $showingApps,
             openSession: openSession, openWrite: openWrite)
+            .transition(.opacity)
+        case .idiomas:
+          IdiomasTabs(tab: $idiomasTab, showingApps: $showingApps)
             .transition(.opacity)
         }
       } else {
@@ -95,6 +106,7 @@ public struct RootView: View {
     .appSwitcher(current: section, isPresented: $showingApps) { section = $0 }
     .environment(store)
     .environment(estudos)
+    .environment(idiomas)
     .environment(\.accent, accent)
     .environment(\.locale, Locale(identifier: "pt_BR"))
     .preferredColorScheme(.light)
@@ -108,16 +120,23 @@ public struct RootView: View {
     }
     .task {
       estudos.onUnauthorized = { await store.signOut() }
+      idiomas.onUnauthorized = { await store.signOut() }
       await store.start()
     }
     .onChange(of: store.isSignedIn) {
-      if !store.isSignedIn { estudos.reset() }
+      if !store.isSignedIn {
+        estudos.reset()
+        idiomas.reset()
+      }
     }
     .alert(store.banner ?? "", isPresented: .init(get: { store.banner != nil }, set: { if !$0 { store.banner = nil } })) {
       Button("ok") { store.banner = nil }
     }
     .alert(estudos.banner ?? "", isPresented: .init(get: { estudos.banner != nil }, set: { if !$0 { estudos.banner = nil } })) {
       Button("ok") { estudos.banner = nil }
+    }
+    .alert(idiomas.banner ?? "", isPresented: .init(get: { idiomas.banner != nil }, set: { if !$0 { idiomas.banner = nil } })) {
+      Button("ok") { idiomas.banner = nil }
     }
   }
 }
@@ -313,7 +332,15 @@ private struct AppSwitcherPanel: View {
     .frame(width: 228)
     .glassEffect(in: .rect(cornerRadius: 24))
     .shadow(color: Color.ink.opacity(0.18), radius: 22, y: 10)
-    .tint(current == .estudos ? .studyBlue : nil)
+    .tint(switcherTint(current))
+  }
+}
+
+private func switcherTint(_ current: AppSection) -> Color? {
+  switch current {
+  case .estudos: .studyBlue
+  case .idiomas: .idiomasTeal
+  case .academia: nil
   }
 }
 
@@ -324,7 +351,13 @@ private struct AppSwitcherRow: View {
   let isCurrent: Bool
   let action: @MainActor () -> Void
 
-  private var tint: Color { style == .estudos ? .studyBlue : accent.base }
+  private var tint: Color {
+    switch style {
+    case .estudos: .studyBlue
+    case .idiomas: .idiomasTeal
+    case .academia: accent.base
+    }
+  }
 
   var body: some View {
     Button(action: action) {

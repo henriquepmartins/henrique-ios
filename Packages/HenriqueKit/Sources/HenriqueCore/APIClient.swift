@@ -46,6 +46,10 @@ public enum Route: String, Sendable {
   case studyNotebookGet = "/api/v1/estudos/notebook/get"
   case studyNotebookSave = "/api/v1/estudos/notebook/save"
   case studyNotebookRemove = "/api/v1/estudos/notebook/remove"
+  case idiomasRoutineGet = "/api/v1/idiomas/routine/get"
+  case idiomasDrillComplete = "/api/v1/idiomas/drill/complete"
+  case idiomasCorrectionGrade = "/api/v1/idiomas/correction/grade"
+  case idiomasSessionFinish = "/api/v1/idiomas/session/finish"
 }
 
 public actor APIClient {
@@ -204,6 +208,30 @@ public actor APIClient {
 
   public func removeNotebookPage(id: String) async throws {
     _ = try await send(.studyNotebookRemove, body: IdInput(id: id))
+  }
+
+  // MARK: Idiomas
+
+  public func idiomasRoutine() async throws -> LanguageRoutineBundle {
+    try await call(.idiomasRoutineGet, body: EmptyBody())
+  }
+
+  public func completeLanguageDrill(_ input: LanguageCompleteInput) async throws
+    -> LanguageCompleteResult
+  {
+    try await call(.idiomasDrillComplete, body: input)
+  }
+
+  public func gradeLanguageCorrection(_ input: LanguageCorrectionInput) async throws
+    -> LanguageCorrection
+  {
+    try await call(.idiomasCorrectionGrade, body: input)
+  }
+
+  public func finishLanguageSession(_ input: LanguageFinishInput) async throws
+    -> LanguageProgressPayload
+  {
+    try await call(.idiomasSessionFinish, body: input)
   }
 
   private struct EmptyBody: Encodable {}

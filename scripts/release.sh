@@ -23,7 +23,7 @@ check() { if [[ "$DRY_RUN" == 1 ]]; then warn "$1"; else fail "$1"; fi; }
 cd "$ROOT"
 
 [[ "$(git branch --show-current)" == main ]] || check 'o release sai só da branch main.'
-[[ -z "$(git status --porcelain --untracked-files=no)" ]] || check 'há mudanças não commitadas em arquivos rastreados.'
+[[ -z "$(git status --porcelain)" ]] || check 'há mudanças não commitadas ou arquivos não rastreados. O release precisa levar todo o módulo para o build.'
 git fetch --quiet --tags origin
 git merge-base --is-ancestor origin/main HEAD || fail 'o HEAD está atrás de origin/main ou divergiu. Rode git pull antes.'
 if ! command -v gh >/dev/null; then

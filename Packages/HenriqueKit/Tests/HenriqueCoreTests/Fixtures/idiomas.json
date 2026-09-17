@@ -1,0 +1,76 @@
+{
+  "routine": {
+    "drills": [
+      {
+        "id": "drill-ouvir-1",
+        "kind": "listen",
+        "promptDE": "Guten Morgen, wie geht es dir?",
+        "glossPT": "Bom dia, como vai você?",
+        "expectedDE": null,
+        "dueAt": null
+      },
+      {
+        "id": "drill-sombra-1",
+        "kind": "shadow",
+        "promptDE": "Ich lerne jeden Tag ein bisschen Deutsch.",
+        "glossPT": "Eu aprendo um pouco de alemão todo dia.",
+        "expectedDE": "Ich lerne jeden Tag ein bisschen Deutsch.",
+        "dueAt": null
+      },
+      {
+        "id": "drill-produz-1",
+        "kind": "produce",
+        "promptDE": "Descreva o seu café da manhã.",
+        "glossPT": "Descreva o seu café da manhã em alemão.",
+        "expectedDE": null,
+        "dueAt": null
+      },
+      {
+        "id": "drill-revisa-1",
+        "kind": "review",
+        "promptDE": "Die Wohnung ist groß und hell.",
+        "glossPT": "O apartamento é grande e claro.",
+        "expectedDE": "Die Wohnung ist groß und hell.",
+        "dueAt": "2026-09-16T10:00:00.000Z"
+      }
+    ]
+  },
+  "queue": {
+    "drills": [
+      {
+        "id": "drill-revisa-1",
+        "kind": "review",
+        "promptDE": "Die Wohnung ist groß und hell.",
+        "glossPT": "O apartamento é grande e claro.",
+        "expectedDE": "Die Wohnung ist groß und hell.",
+        "dueAt": "2026-09-16T10:00:00.000Z"
+      },
+      {
+        "id": "drill-revisa-2",
+        "kind": "review",
+        "promptDE": "Ich habe gestern lange gearbeitet.",
+        "glossPT": "Eu trabalhei muito ontem.",
+        "expectedDE": "Ich habe gestern lange gearbeitet.",
+        "dueAt": "2026-09-15T10:00:00.000Z"
+      }
+    ]
+  },
+  "progress": {
+    "doneDates": ["2026-09-14", "2026-09-15"],
+    "streakCount": 2,
+    "target": 7
+  },
+  "correction": {
+    "id": "corr-1",
+    "correctionPT": "Faltou o artigo antes de Wohnung e o verbo no final.",
+    "fixedDE": "Die Wohnung ist groß und hell.",
+    "score": 78,
+    "dueAt": "2026-09-17T10:00:00.000Z",
+    "interval": 1
+  },
+  "complete": {
+    "id": "drill-ouvir-1",
+    "dueAt": "2026-09-17T10:00:00.000Z",
+    "interval": 1
+  }
+}
