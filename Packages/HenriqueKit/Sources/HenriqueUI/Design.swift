@@ -166,6 +166,8 @@ struct PageHeading: View {
 /// que o sistema move em volta dele. Números soltos por tela eram o que fazia
 /// duas telas vizinhas entrarem em ritmos diferentes.
 enum Motion {
+  static let calendarEntrance = Animation.easeOut(duration: 0.3)
+  static let calendarRise: CGFloat = 6
   /// Conteúdo que chega e se acomoda: cascata de lista, cartão que nasce.
   static let entrance = Animation.smooth(duration: 0.4)
   /// A mesma entrada para quem cresce no lugar, com o repique quase no fim.
@@ -205,6 +207,10 @@ struct StudyPressStyle: ButtonStyle {
 }
 
 extension View {
+  func calendarEntrance() -> some View {
+    modifier(CalendarEntrance())
+  }
+
   /// Entrada em cascata da primeira montagem da lista. `isReady` é o momento em
   /// que os dados chegaram; o atraso para no sexto item para a última linha não
   /// esperar.
@@ -214,6 +220,22 @@ extension View {
   /// uma varredura na diagonal em vez de um fade de baixo para cima.
   func staggeredEntrance(index: Int, columns: Int = 1, isReady: Bool) -> some View {
     modifier(StudyStaggeredEntrance(index: index / max(columns, 1), isReady: isReady))
+  }
+}
+
+private struct CalendarEntrance: ViewModifier {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var shown = false
+
+  func body(content: Content) -> some View {
+    content
+      // A curva fica só no fade e no deslocamento, sem animar o layout da grade.
+      .animation(reduceMotion ? Motion.plain : Motion.calendarEntrance) { view in
+        view
+          .opacity(shown ? 1 : 0)
+          .offset(y: shown || reduceMotion ? 0 : Motion.calendarRise)
+      }
+      .onAppear { shown = true }
   }
 }
 

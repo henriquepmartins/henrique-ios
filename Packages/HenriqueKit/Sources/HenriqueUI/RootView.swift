@@ -359,7 +359,6 @@ struct OverviewScreen: View {
         AttendanceMap(attendance: store.attendance) { from, to in
           await store.loadAttendance(from: from, to: to)
         }
-        .staggeredEntrance(index: 0, isReady: true)
         if let data = store.dashboard {
           VStack(alignment: .leading, spacing: 10) {
             Text("\(data.consistencyPercent)%").font(.system(size: 48, weight: .medium)).monospacedDigit()

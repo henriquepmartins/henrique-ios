@@ -24,12 +24,12 @@ struct AttendanceMap: View {
       case .month: MonthGrid(grid: grid)
       case .year: YearGrid(grid: grid)
       }
-      if grid.total > 0 {
-        AttendanceLegend()
-      }
+      AttendanceLegend()
+        .opacity(grid.total > 0 ? 1 : 0)
+        .animation(reduceMotion ? Motion.plain : Motion.crossfade, value: grid.total > 0)
     }
-    .animation(reduceMotion ? nil : Motion.crossfade, value: grid.total > 0)
     .padding(22).paperCard(radius: 32)
+    .calendarEntrance()
     .onChange(of: period) { grid = AttendanceGrid(period: period, attendance: attendance) }
     .onChange(of: attendance, initial: true) { grid = AttendanceGrid(period: period, attendance: attendance) }
     .task(id: period) {
