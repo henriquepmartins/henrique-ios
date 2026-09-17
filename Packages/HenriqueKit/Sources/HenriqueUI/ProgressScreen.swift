@@ -43,20 +43,20 @@ struct ProgressScreen: View {
       VStack(spacing: 20) {
         NavigationLink("detalhes") { MetricDetailScreen(onWorkout: onWorkout) }
           .frame(maxWidth: .infinity, alignment: .trailing).font(.subheadline)
+          .subtleEntrance()
         if let dashboard = store.dashboard {
           let streakGoals = dashboard.streakGoals ?? []
-          let cards = (dashboard.strengthGoal == nil ? 0 : 1) + streakGoals.count
           if let goal = dashboard.strengthGoal {
             GoalCard(
               exerciseName: goal.exerciseName, targetValue: goal.targetValue,
               projection: dashboard.projection)
-              .staggeredEntrance(index: 0, isReady: true)
+              .subtleEntrance()
           }
-          ForEach(Array(streakGoals.enumerated()), id: \.element.kind) { index, goal in
+          ForEach(streakGoals, id: \.kind) { goal in
             StreakGoalCard(
               kind: GoalKind(goal.kind), current: dashboard.streak(goal.kind), target: goal.target
             ) { editing = GoalKind(goal.kind) }
-              .staggeredEntrance(index: cards - streakGoals.count + index, isReady: true)
+              .subtleEntrance()
           }
 
           Button("nova meta") {
@@ -64,20 +64,20 @@ struct ProgressScreen: View {
           }
             .buttonStyle(.glassProminent).controlSize(.large)
             .disabled(dashboard.exerciseCatalog.isEmpty)
-            .staggeredEntrance(index: cards, isReady: true)
+            .subtleEntrance()
           if dashboard.progress.isEmpty {
             ContentUnavailableView("sem histórico", systemImage: "chart.xyaxis.line")
               .padding(.vertical, 40)
-              .staggeredEntrance(index: cards + 1, isReady: true)
+              .subtleEntrance()
           } else {
             OneRepMaxChart(
               points: dashboard.progress, target: dashboard.strengthGoal?.targetValue)
-              .staggeredEntrance(index: cards + 1, isReady: true)
+              .subtleEntrance()
             VolumeChart(points: dashboard.progress)
-              .staggeredEntrance(index: cards + 2, isReady: true)
+              .subtleEntrance()
           }
           MeasurementsLink(latest: latest(in: dashboard))
-            .staggeredEntrance(index: cards + 3, isReady: true)
+            .subtleEntrance()
         }
       }
       .padding(.horizontal, 16)
