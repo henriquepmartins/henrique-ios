@@ -22,6 +22,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "17",
+          "date": "2026-09-17T11:46:02-03:00",
+          "localizedDescription": "• as tabelas param de se montar de lado",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-17/Henrique.ipa",
+          "size": 3791295,
+          "sha256": "d5f638c2a2393788f235112819d2d32801cc034e883087fb1d956df5cf06088a",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "16",
           "date": "2026-09-17T11:28:46-03:00",
           "localizedDescription": "• cascata de entrada só na vertical",
