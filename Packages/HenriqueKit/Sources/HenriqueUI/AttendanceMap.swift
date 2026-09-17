@@ -29,7 +29,7 @@ struct AttendanceMap: View {
         .animation(reduceMotion ? Motion.plain : Motion.crossfade, value: grid.total > 0)
     }
     .padding(22).paperCard(radius: 32)
-    .calendarEntrance()
+    .subtleEntrance()
     .onChange(of: period) { grid = AttendanceGrid(period: period, attendance: attendance) }
     .onChange(of: attendance, initial: true) { grid = AttendanceGrid(period: period, attendance: attendance) }
     .task(id: period) {

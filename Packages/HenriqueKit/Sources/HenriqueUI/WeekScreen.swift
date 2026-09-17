@@ -4,7 +4,6 @@ import SwiftUI
 struct WeekScreen: View {
   @Environment(AcademiaStore.self) private var store
   @Environment(\.dynamicTypeSize) private var textSize
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var editor: PlanEditorDestination?
   @State private var editorStep: EditorStep = .identidade
   var onStart: (Int) -> Void = { _ in }
@@ -16,16 +15,17 @@ struct WeekScreen: View {
           attendance: store.attendance,
           weekPlan: store.weekPlan,
           load: { from, to in await store.loadAttendance(from: from, to: to) })
-          .calendarEntrance()
+          .subtleEntrance()
         Button("novo treino", systemImage: "plus") {
           editorStep = .identidade
           editor = .new(weekdays: [])
         }
           .buttonStyle(.glassProminent)
           .controlSize(.large)
+          .subtleEntrance()
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
                                  count: textSize.isAccessibilitySize ? 1 : 2), spacing: 6) {
-          ForEach(Array(store.weekPlan.enumerated()), id: \.element.id) { index, item in
+          ForEach(store.weekPlan) { item in
             WorkoutTile(
               item: item,
               showsWave: store.dashboard?.highlightedWorkoutIDs.contains(item.id) == true,
@@ -35,10 +35,9 @@ struct WeekScreen: View {
               },
               onDelete: { store.deleteWorkout(workoutTemplateId: item.id) },
               onStart: { if let day = item.nextWeekday(from: store.selectedDate.weekday()) { onStart(day) } })
-              .staggeredEntrance(index: index, columns: textSize.isAccessibilitySize ? 1 : 2, isReady: true)
+              .subtleEntrance()
           }
         }
-        .animation(reduceMotion ? .easeOut(duration: 0.15) : .snappy, value: store.weekPlan.map(\.id))
       }
       .padding(16)
       .padding(.bottom, 32)

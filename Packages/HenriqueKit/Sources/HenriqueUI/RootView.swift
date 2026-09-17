@@ -366,7 +366,7 @@ struct OverviewScreen: View {
           }
           .foregroundStyle(.white).frame(maxWidth: .infinity, alignment: .leading)
           .padding(22).background(accent.deep, in: .rect(cornerRadius: 28))
-          .staggeredEntrance(index: 1, isReady: true)
+          .subtleEntrance()
           HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 10) {
               Text(data.workout?.name.lowercased() ?? "descanso").font(.title2.weight(.medium))
@@ -378,7 +378,7 @@ struct OverviewScreen: View {
             Button("Abrir treino", systemImage: "arrow.right", action: onWorkout)
               .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
           }.padding(22).paperCard(radius: 32)
-            .staggeredEntrance(index: 2, isReady: true)
+            .subtleEntrance()
         }
       }.padding(16).padding(.bottom, 24)
     }
