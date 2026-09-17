@@ -22,6 +22,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "21",
+          "date": "2026-09-17T14:02:57-03:00",
+          "localizedDescription": "• Alinha a entrada da tela de progresso",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-21/Henrique.ipa",
+          "size": 3791924,
+          "sha256": "7c7565c53fc7ee39f094359642f49ae9f3399510fe3a68ae53c137f618cee679",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "20",
           "date": "2026-09-17T13:55:13-03:00",
           "localizedDescription": "• Restaura a animação do contador de presença",
