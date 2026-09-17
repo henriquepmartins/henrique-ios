@@ -69,8 +69,10 @@ struct StreakCounter: View {
 // MARK: - A tela cheia
 
 struct StreakScreen: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dismiss) private var dismiss
   @State private var entered = false
+  @State private var celebrating = false
   let snapshot: StreakSnapshot
 
   private var streak: WorkoutStreak { snapshot.streak }
@@ -79,7 +81,7 @@ struct StreakScreen: View {
     NavigationStack {
       ScrollView {
         VStack(spacing: 28) {
-          StreakRing(streak: streak, entered: entered)
+          StreakRing(streak: streak, entered: entered, celebrating: celebrating)
           if let week = snapshot.week {
             StreakRibbon(days: week, entered: entered)
           }
@@ -108,8 +110,33 @@ struct StreakScreen: View {
       }
     }
     .presentationDragIndicator(.visible)
-    .onAppear { entered = true }
+    .task {
+      try? await Task.sleep(for: .seconds(Entrance.sheet))
+      entered = true
+      guard !reduceMotion else { return }
+      try? await Task.sleep(for: .seconds(Entrance.sparkle))
+      celebrating = true
+    }
   }
+}
+
+// MARK: - A entrada
+
+/// Quando cada peça entra, contado do momento em que a folha pousa.
+///
+/// A espera do começo não é enfeite. Enquanto a folha sobe, o SwiftUI corta
+/// qualquer animação que esteja rodando dentro dela: filmando o simulador a 60
+/// quadros, o anel crescia até 91% e no quadro seguinte estava em 100%, um
+/// salto que se vê. A folha leva 0,47 s para subir e parar, então a entrada
+/// espera meio segundo e só aí começa, com a folha imóvel.
+private enum Entrance {
+  static let sheet = 0.5
+  static let ring = 0.0
+  static let count = 0.08
+  static let badge = 0.16
+  static let ribbon = 0.24
+  static let ribbonStep = 0.035
+  static let sparkle = 0.2
 }
 
 // MARK: - O anel
@@ -118,6 +145,7 @@ private struct StreakRing: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let streak: WorkoutStreak
   let entered: Bool
+  let celebrating: Bool
 
   private let diameter: CGFloat = 216
   private let line: CGFloat = 18
@@ -127,7 +155,7 @@ private struct StreakRing: View {
     ZStack {
       Circle().stroke(streakTone.bottom.opacity(0.32), lineWidth: line)
       Circle()
-        .trim(from: 0, to: shownProgress)
+        .trim(from: 0, to: streak.weekProgress)
         // Degradê reto e não angular: o angular emenda a última cor na primeira
         // bem no ponto onde o traço começa, e a ponta arredondada mostra o corte.
         .stroke(
@@ -137,18 +165,22 @@ private struct StreakRing: View {
           style: StrokeStyle(lineWidth: line, lineCap: .round)
         )
         .rotationEffect(.degrees(-90))
-        .animation(growth, value: entered)
       StreakCount(attendance: streak.attendance, complete: streak.complete, entered: entered)
     }
     .frame(width: diameter, height: diameter)
-    .modifier(AttentionPulse(active: streak.isAtRisk, trigger: entered))
+    // Âncora no centro e só escala: o anel nasce do lugar onde vai ficar, sem
+    // um pixel de deslocamento lateral.
+    .scaleEffect(grown ? 1 : 0.82, anchor: .center)
+    .opacity(grown ? 1 : 0)
+    .animation(growth(duration: 0.55, bounce: 0.16, delay: Entrance.ring), value: entered)
     .overlay {
-      if streak.isTodayDone, !reduceMotion {
-        SparkBurst(trigger: entered, radius: diameter / 2)
-      }
+      if !reduceMotion { StreakSparkle(radius: diameter / 2, trigger: celebrating) }
     }
     .overlay(alignment: .bottom) {
-      FlamePulse(size: badge, isTodayDone: streak.isTodayDone, trigger: entered)
+      FlameBadge(size: badge)
+        .scaleEffect(grown ? 1 : 0.72)
+        .opacity(grown ? 1 : 0)
+        .animation(growth(duration: 0.4, bounce: 0.24, delay: Entrance.badge), value: entered)
         .offset(y: badge / 2)
     }
     .padding(.bottom, badge / 2)
@@ -157,16 +189,15 @@ private struct StreakRing: View {
       "\(streak.attendance.count) treinos, \(streak.complete.count) completos")
   }
 
-  private var shownProgress: Double { entered || reduceMotion ? streak.weekProgress : 0 }
+  private var grown: Bool { entered || reduceMotion }
 
-  private var growth: Animation? {
-    reduceMotion ? nil : .snappy(duration: 0.7, extraBounce: 0.25)
+  private func growth(duration: Double, bounce: Double, delay: Double) -> Animation? {
+    reduceMotion ? nil : .spring(duration: duration, bounce: bounce).delay(delay)
   }
 }
 
-/// O número parte do estado final e a entrada é um desvio que volta para ele.
-/// Escrito assim porque o contrário deixa o número invisível se a animação não
-/// chegar a rodar, e um número que some é pior do que um que não pula.
+/// O número entra um pouco depois do anel para a leitura não competir com o
+/// crescimento. Com `reduceMotion` tudo já nasce no lugar.
 private struct StreakCount: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let attendance: StreakFigure
@@ -174,29 +205,15 @@ private struct StreakCount: View {
   let entered: Bool
 
   var body: some View {
-    if reduceMotion {
-      label
-    } else {
-      KeyframeAnimator(initialValue: CountPose(), trigger: entered) { pose in
-        label.scaleEffect(pose.scale).opacity(pose.opacity)
-      } keyframes: { _ in
-        // O primeiro salto some com o número no mesmo quadro; o resto da espera
-        // é o anel dando a volta sozinho.
-        KeyframeTrack(\.scale) {
-          LinearKeyframe(0.55, duration: 0.001)
-          LinearKeyframe(0.55, duration: 0.3)
-          SpringKeyframe(1.12, duration: 0.24, spring: .snappy)
-          SpringKeyframe(1, duration: 0.22)
-        }
-        KeyframeTrack(\.opacity) {
-          LinearKeyframe(0, duration: 0.001)
-          LinearKeyframe(0, duration: 0.3)
-          LinearKeyframe(1, duration: 0.14)
-          LinearKeyframe(1, duration: 0.32)
-        }
-      }
-    }
+    label
+      .scaleEffect(shown ? 1 : 0.88)
+      .opacity(shown ? 1 : 0)
+      .animation(
+        reduceMotion ? nil : .spring(duration: 0.45, bounce: 0.12).delay(Entrance.count),
+        value: entered)
   }
+
+  private var shown: Bool { entered || reduceMotion }
 
   private var label: some View {
     VStack(spacing: 4) {
@@ -222,39 +239,6 @@ private struct StreakCount: View {
   }
 }
 
-private struct CountPose {
-  var scale: Double = 1
-  var opacity: Double = 1
-}
-
-/// Uma batida curta quando a sequência está por um fio. É aviso, não festa, e
-/// acontece uma vez só.
-private struct AttentionPulse: ViewModifier {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  let active: Bool
-  let trigger: Bool
-
-  func body(content: Content) -> some View {
-    if active, !reduceMotion {
-      PhaseAnimator([0, 1, 2, 3], trigger: trigger) { phase in
-        content.scaleEffect(scale(phase))
-      } animation: { phase in
-        phase == 0 ? nil : .snappy(duration: 0.22, extraBounce: 0.35).delay(phase == 1 ? 0.8 : 0)
-      }
-    } else {
-      content
-    }
-  }
-
-  private func scale(_ phase: Int) -> Double {
-    switch phase {
-    case 1: 1.045
-    case 2: 0.985
-    default: 1
-    }
-  }
-}
-
 // MARK: - A chama
 
 struct FlameBadge: View {
@@ -273,68 +257,30 @@ struct FlameBadge: View {
   }
 }
 
-private struct FlamePulse: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  let size: CGFloat
-  let isTodayDone: Bool
-  let trigger: Bool
+// MARK: - As bolinhas
 
-  var body: some View {
-    if reduceMotion {
-      FlameBadge(size: size)
-    } else {
-      PhaseAnimator(Array(beats.indices), trigger: trigger) { phase in
-        FlameBadge(size: size).scaleEffect(beats[phase])
-      } animation: { phase in
-        phase == 0 ? nil : .snappy(duration: 0.26, extraBounce: 0.4).delay(phase == 1 ? 0.15 : 0)
-      }
-    }
-  }
-
-  /// Treinou hoje, a chama bate mais vezes e para. Pulsar para sempre numa tela
-  /// parada gasta bateria e cansa o olho.
-  private var beats: [Double] {
-    isTodayDone ? [1, 1.2, 1, 1.14, 1, 1.09, 1] : [1, 1.16, 1]
-  }
-}
-
-// MARK: - As faíscas
-
-private struct SparkBurst: View {
-  let trigger: Bool
+/// Bolinhas em volta do anel. Cada uma dá um estalo e some logo depois, fora de
+/// ordem, para virar uma pipoca e não uma varredura. Roda uma vez por abertura
+/// da folha, que é uma tela que se abre de vez em quando, então a festa não
+/// cansa.
+///
+/// Fica montada desde o começo e espera o gatilho. O `KeyframeAnimator` só anda
+/// quando o gatilho muda com ele já na tela; montado junto com o valor novo,
+/// ele fica parado no primeiro quadro para sempre.
+private struct StreakSparkle: View {
   let radius: CGFloat
-
-  private let sparks = 12
+  let trigger: Bool
 
   var body: some View {
     ZStack {
-      ForEach(Array(0..<sparks), id: \.self) { index in
-        let angle = Double(index) / Double(sparks) * 2 * .pi - .pi / 2
-        KeyframeAnimator(initialValue: SparkPose(), trigger: trigger) { pose in
-          Circle()
-            .fill(index.isMultiple(of: 2) ? streakTone.top : streakTone.bottom)
-            .frame(width: 8, height: 8)
-            .scaleEffect(pose.scale)
-            .opacity(pose.opacity)
-            .offset(
-              x: cos(angle) * (radius + pose.distance),
-              y: sin(angle) * (radius + pose.distance))
-        } keyframes: { _ in
-          KeyframeTrack(\.distance) {
-            LinearKeyframe(0, duration: 0.26)
-            SpringKeyframe(46, duration: 0.5, spring: .snappy)
-          }
-          KeyframeTrack(\.scale) {
-            LinearKeyframe(0, duration: 0.26)
-            SpringKeyframe(1.1, duration: 0.18)
-            LinearKeyframe(0.45, duration: 0.32)
-          }
-          KeyframeTrack(\.opacity) {
-            LinearKeyframe(0, duration: 0.26)
-            LinearKeyframe(1, duration: 0.1)
-            LinearKeyframe(0, duration: 0.4)
-          }
-        }
+      ForEach(SparkDot.all) { dot in
+        Circle()
+          .fill(dot.color)
+          .frame(width: dot.size, height: dot.size)
+          .modifier(Pop(delay: dot.delay, trigger: trigger))
+          .offset(
+            x: cos(dot.angle) * (radius + dot.lift),
+            y: sin(dot.angle) * (radius + dot.lift))
       }
     }
     .allowsHitTesting(false)
@@ -342,10 +288,85 @@ private struct SparkBurst: View {
   }
 }
 
-private struct SparkPose {
-  var distance: CGFloat = 0
-  var scale: Double = 0
+/// Nasce pequena, passa do tamanho e recolhe apagando. O estalo é o passo de
+/// mais: sem ele a bolinha só acende, e acender não é comemorar.
+private struct Pop: ViewModifier {
+  let delay: Double
+  let trigger: Bool
+
+  func body(content: Content) -> some View {
+    KeyframeAnimator(initialValue: PopPose(), trigger: trigger) { pose in
+      content.scaleEffect(pose.scale).opacity(pose.opacity)
+    } keyframes: { _ in
+      KeyframeTrack(\.scale) {
+        LinearKeyframe(0.3, duration: delay)
+        SpringKeyframe(1.15, duration: 0.17, spring: .bouncy)
+        SpringKeyframe(0.8, duration: 0.31)
+      }
+      KeyframeTrack(\.opacity) {
+        LinearKeyframe(0, duration: delay)
+        LinearKeyframe(1, duration: 0.09)
+        LinearKeyframe(1, duration: 0.11)
+        LinearKeyframe(0, duration: 0.28)
+      }
+    }
+  }
+}
+
+private struct PopPose {
+  var scale: Double = 0.3
   var opacity: Double = 0
+}
+
+private struct SparkDot: Identifiable {
+  let id: Int
+  let angle: Double
+  let lift: CGFloat
+  let size: CGFloat
+  let delay: Double
+  let color: Color
+
+  /// Sorteadas uma vez, com semente fixa. Sorteadas a cada desenho, a mesma
+  /// bolinha saltaria para outro ponto do anel em cada quadro.
+  static let all: [SparkDot] = {
+    var rng = SeededRandom(seed: 0x5EED_1F0)
+    let count = 16
+    // O vão de baixo é da chama. Bolinha ali sai por trás do disco e some.
+    let gap = 52.0
+    let order = Array(0..<count).shuffled(using: &rng)
+    return (0..<count).map { index in
+      let sweep = 360 - gap
+      let degrees = 90 + gap / 2 + sweep * Double(index) / Double(count - 1)
+      return SparkDot(
+        id: index,
+        angle: (degrees + .random(in: -4...4, using: &rng)) * .pi / 180,
+        lift: .random(in: 7...17, using: &rng),
+        size: .random(in: 5...9, using: &rng),
+        delay: 0.001 + 0.026 * Double(order[index]),
+        color: colors[index % colors.count])
+    }
+  }()
+
+  /// Laranja, amarelo e vermelho, as três cores de uma chama.
+  private static let colors: [Color] = [
+    streakTone.top, Color(hex: 0xfa_cc15), Color(hex: 0xef_4444),
+  ]
+}
+
+/// splitmix64. Precisa ser igual em toda execução, não precisa ser bom em
+/// estatística.
+private struct SeededRandom: RandomNumberGenerator {
+  private var state: UInt64
+
+  init(seed: UInt64) { state = seed }
+
+  mutating func next() -> UInt64 {
+    state &+= 0x9E37_79B9_7F4A_7C15
+    var z = state
+    z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+    z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+    return z ^ (z >> 31)
+  }
 }
 
 // MARK: - A fita dos sete dias
@@ -369,7 +390,7 @@ private struct StreakRibbon: View {
             day: day, isToday: index == days.count - 1, size: 32, accent: accent)
         }
         .frame(maxWidth: .infinity)
-        .scaleEffect(shown ? 1 : 0.35)
+        .scaleEffect(shown ? 1 : 0.7)
         .opacity(shown ? 1 : 0)
         .animation(cascade(index), value: entered)
         .accessibilityElement(children: .ignore)
@@ -384,7 +405,8 @@ private struct StreakRibbon: View {
 
   private func cascade(_ index: Int) -> Animation? {
     guard !reduceMotion else { return nil }
-    return .snappy(duration: 0.42, extraBounce: 0.35).delay(0.45 + 0.04 * Double(index))
+    return .spring(duration: 0.38, bounce: 0.18)
+      .delay(Entrance.ribbon + Entrance.ribbonStep * Double(index))
   }
 }
 

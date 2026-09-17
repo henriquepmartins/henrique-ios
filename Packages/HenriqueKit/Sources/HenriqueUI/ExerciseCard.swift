@@ -81,9 +81,24 @@ struct ExerciseCard: View {
   }
 }
 
+/// O tamanho da linha de série. A tela de hoje lista para conferir, com a mão
+/// livre; a sessão é para marcar com o peso na mão, então lá o número e o alvo
+/// do dedo crescem.
+enum SetRowScale {
+  case list, session
+
+  var check: CGFloat { self == .list ? 44 : 52 }
+  var value: Font { self == .list ? .subheadline : .system(size: 22, weight: .medium) }
+  var padding: CGFloat { self == .list ? 6 : 10 }
+  /// A lista tem uma linha de cabeçalho dizendo qual coluna é qual. A sessão
+  /// mostra um exercício só e não tem cabeçalho, então a unidade vai na linha.
+  var showsUnits: Bool { self == .session }
+}
+
 struct TrainingSetRow: View {
   @Environment(AcademiaStore.self) private var store
   @Environment(\.accent) private var accent
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var weightDraft: Double?
   @State private var repsDraft: Int?
   @FocusState private var focused: Field?
@@ -97,8 +112,10 @@ struct TrainingSetRow: View {
   let repetitions: Int
   let done: Bool
   let failure: Bool
+  var scale: SetRowScale = .list
 
   private var fieldID: String { "set.\(key.exerciseId).\(kind == .prep ? "prep" : "work").\(index)" }
+  private var waiting: Bool { store.isWaiting(key) }
   private var currentDone: Bool {
     guard store.dashboard?.date == key.date, store.dashboard?.workout?.id == key.templateId,
       let current = store.dashboard?.workout?.exercises.first(where: { $0.id == key.exerciseId }) else { return done }
@@ -116,6 +133,7 @@ struct TrainingSetRow: View {
           #endif
           .focused($focused, equals: .weight)
           .submitLabel(.done)
+          .font(scale.value)
           .accessibilityIdentifier(fieldID + ".weight")
           .accessibilityLabel("Peso da série \(index)")
           .onChange(of: weightDraft) { _, new in
@@ -130,12 +148,17 @@ struct TrainingSetRow: View {
           #endif
           .focused($focused, equals: .reps)
           .submitLabel(.done)
+          .font(scale.value)
           .accessibilityIdentifier(fieldID + ".reps")
           .accessibilityLabel("Repetições da série \(index)")
           .onChange(of: repsDraft) { _, new in
             if let new, new > Limits.reps.upperBound { repsDraft = Limits.reps.upperBound }
           }
-        if failure { Text("falha").font(.system(size: 9)).foregroundStyle(accent.base) }
+        if failure {
+          Text("falha").font(.system(size: 9)).foregroundStyle(accent.base)
+        } else if scale.showsUnits {
+          Text("reps").font(.caption2).foregroundStyle(Color.mutedInk)
+        }
       }.padding(8).background(.white, in: .rect(cornerRadius: 10))
       Button {
         commit(completed: !currentDone)
@@ -143,17 +166,30 @@ struct TrainingSetRow: View {
         tapCount += 1
       } label: {
         Image(systemName: "checkmark").font(.body.weight(.semibold))
-          .frame(width: 44, height: 44)
-          .foregroundStyle(done ? accent.deep : Color.mutedInk.opacity(0.5))
-          .background(done ? accent.acid : .white, in: .rect(cornerRadius: 12))
+          .foregroundStyle(done ? accent.deep : Color.mutedInk.opacity(0.35))
+          .scaleEffect(done ? 1 : 0.7)
+          .frame(width: scale.check, height: scale.check)
+          .background(done ? accent.acid : .white, in: .circle)
+          .overlay(Circle().strokeBorder(Color.ink.opacity(done ? 0 : 0.12), lineWidth: 1.5))
+          // Borda tracejada enquanto a marcação não chegou ao servidor. O visto
+          // cheio sozinho prometia coisa que às vezes não tinha acontecido.
+          .overlay {
+            if waiting {
+              Circle().strokeBorder(
+                accent.deep.opacity(0.55),
+                style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+            }
+          }
+          .scaleEffect(done ? 1 : 0.94)
       }.buttonStyle(SetCompletionStyle()).disabled(!Limits.setWeightKg.contains(weightDraft ?? -1) || !Limits.reps.contains(repsDraft ?? 0))
         .accessibilityIdentifier(fieldID + ".completion")
-        .animation(.easeOut(duration: 0.18), value: done)
+        .animation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.74), value: done)
         .accessibilityLabel(done ? "Desmarcar série \(index)" : "Concluir série \(index)")
-        .sensoryFeedback(.impact(weight: .light), trigger: tapCount)
+        .accessibilityValue(waiting ? "esperando enviar" : "")
+        .sensoryFeedback(currentDone ? .success : .impact(weight: .light), trigger: tapCount)
     }
     .font(.subheadline).monospacedDigit().multilineTextAlignment(.center)
-    .padding(6).background(kind == .prep ? Color.surfaceMuted : accent.pale.opacity(0.5), in: .rect(cornerRadius: 16))
+    .padding(scale.padding).background(kind == .prep ? Color.surfaceMuted : accent.pale.opacity(0.5), in: .rect(cornerRadius: 16))
     .onChange(of: weight, initial: true) { if focused == nil { weightDraft = weight } }
     .onChange(of: repetitions, initial: true) { if focused == nil { repsDraft = repetitions } }
     .onChange(of: focused) { old, new in
@@ -181,9 +217,9 @@ private struct SetCompletionStyle: ButtonStyle {
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
+      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.9 : 1)
       .opacity(configuration.isPressed ? 0.8 : 1)
-      .animation(configuration.isPressed ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
+      .animation(configuration.isPressed || reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.74), value: configuration.isPressed)
   }
 }
 

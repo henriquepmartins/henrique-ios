@@ -64,11 +64,7 @@ public struct RootView: View {
   public var body: some View {
     Group {
       if !store.sessionChecked {
-        ProgressView()
-          .controlSize(.large)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-          .background(Color.canvas)
-          .transition(.opacity)
+        LaunchCurtain()
       } else if store.isSignedIn {
         switch section {
         case .academia:
@@ -81,14 +77,19 @@ public struct RootView: View {
             .transition(.opacity)
         }
       } else {
-        SignInScreen(phase: store.phase)
+        SignInScreen(phase: store.phase).transition(.opacity)
       }
     }
     // Escalar a tela inteira na troca afastava o vidro das bordas do aparelho e
     // abria uma fresta branca da janela, com a barra de abas subindo junto. Um
     // fundo atrás do crossfade fecha o que sobra de branco entre os dois apps.
     .background((section == .academia ? Color.canvas : Color.studyPaper).ignoresSafeArea())
-    .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: section)
+    .animation(reduceMotion ? nil : Motion.crossfade, value: section)
+    // As transições acima são ignoradas sem alguém animando o valor que troca a
+    // tela. Sem estas duas linhas a abertura era um corte seco da cortina para
+    // as abas, e o login entrava no app da mesma forma abrupta.
+    .animation(reduceMotion ? nil : Motion.crossfade, value: store.sessionChecked)
+    .animation(reduceMotion ? nil : Motion.crossfade, value: store.isSignedIn)
     // O painel mora aqui, e não dentro de cada app, para a troca não levar embora
     // a árvore em que ele vive antes de ele tocar a própria saída.
     .appSwitcher(current: section, isPresented: $showingApps) { section = $0 }
@@ -118,6 +119,30 @@ public struct RootView: View {
     .alert(estudos.banner ?? "", isPresented: .init(get: { estudos.banner != nil }, set: { if !$0 { estudos.banner = nil } })) {
       Button("ok") { estudos.banner = nil }
     }
+  }
+}
+
+/// O que fica na tela entre a tela de lançamento e a primeira tela do app,
+/// enquanto a sessão é lida do chaveiro. A leitura leva milissegundos, e um
+/// spinner que pisca por dois quadros é pior do que nenhum, então ele só entra
+/// se a espera passar de meio segundo. O fundo é o da raiz, que já veste a cor
+/// do app escolhido, e é o mesmo da tela de lançamento.
+private struct LaunchCurtain: View {
+  @State private var slow = false
+
+  var body: some View {
+    Color.clear
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .overlay {
+        if slow {
+          ProgressView().controlSize(.large).transition(.opacity)
+        }
+      }
+      .animation(Motion.crossfade, value: slow)
+      .task {
+        try? await Task.sleep(for: .milliseconds(500))
+        slow = true
+      }
   }
 }
 

@@ -6,3 +6,5 @@ output/
 xcuserdata/
 .DS_Store
 UITests/*.xcodeproj
+
+.env

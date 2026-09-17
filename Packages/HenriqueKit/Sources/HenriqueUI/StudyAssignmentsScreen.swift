@@ -5,6 +5,7 @@ public struct StudyAssignmentsScreen: View {
   @Environment(EstudosStore.self) private var store
   @State private var filter: AssignmentFilter = .todas
   @State private var switched = false
+  @State private var selectedDay: CalendarDate?
 
   public init() {}
 
@@ -33,7 +34,11 @@ public struct StudyAssignmentsScreen: View {
       async let day: Void = store.loadOverview()
       _ = await (list, day)
     }
-    .refreshable { await store.loadAssignments(force: true) }
+    .refreshable {
+      async let list: Void = store.loadAssignments(force: true)
+      async let day: Void = store.loadOverview(force: true)
+      _ = await (list, day)
+    }
   }
 
   /// O relógio da tela é o meio-dia do dia que o overview trouxe, e não o
@@ -45,8 +50,28 @@ public struct StudyAssignmentsScreen: View {
   @ViewBuilder
   private func content(_ groups: [AssignmentGroup]) -> some View {
     let now = today.date(in: StudyFormat.calendar)
+    let all = groups.flatMap(\.items)
 
     StudyHeading(title: "entregas")
+
+    syncCallout()
+
+    StudyAssignmentsCalendarCard(assignments: all, now: now, selectedDay: $selectedDay)
+
+    AssignmentAppleCalendarCard(assignments: all)
+
+    if let day = selectedDay {
+      HStack(spacing: 8) {
+        StudyPill(
+          tone: .neutral, systemImage: "calendar",
+          text: StudyFormat.dayLabel(day, today: today))
+        Button("limpar") { selectedDay = nil }
+          .font(.footnote.weight(.medium))
+          .foregroundStyle(Color.studyInk60)
+          .buttonStyle(StudyPressStyle())
+        Spacer(minLength: 0)
+      }
+    }
 
     ScrollView(.horizontal) {
       HStack(spacing: 6) {
@@ -86,9 +111,10 @@ public struct StudyAssignmentsScreen: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .id(filter)
+    .id("\(filter.rawValue)-\(selectedDay?.iso ?? "")")
     .transition(.opacity)
     .animation(.easeOut(duration: 0.12), value: filter)
+    .onChange(of: selectedDay) { switched = true }
   }
 
   private func count(of entry: AssignmentFilter, in groups: [AssignmentGroup], now: Date) -> Int {
@@ -97,10 +123,30 @@ public struct StudyAssignmentsScreen: View {
     }
   }
 
+  /// O sync roda no servidor e o app mostra em que pé ele está. Com sync, a
+  /// hora e as novas. Sem sync, o aviso de que o portal chega sozinho.
+  @ViewBuilder
+  private func syncCallout() -> some View {
+    if let sync = store.overview.value?.lastSync {
+      StudyCallout(
+        icon: "arrow.triangle.2.circlepath", tone: .sky,
+        title: "sincronizado \(StudyFormat.relative(sync.completedAt, now: Date()))",
+        detail: sync.createdCount == 1 ? "1 nova" : "\(sync.createdCount) novas")
+    } else {
+      StudyCallout(
+        icon: "arrow.triangle.2.circlepath", tone: .sky,
+        title: "o portal chega sozinho",
+        detail:
+          "a varredura roda de quinze em quinze minutos e só cria o que ainda não existe.")
+    }
+  }
+
   private func visibleGroups(_ groups: [AssignmentGroup], now: Date) -> [VisibleGroup] {
     var visible: [VisibleGroup] = []
     var start = 0
     for group in groups {
+      // Com dia marcado no calendário, a lista mostra só ele.
+      if let day = selectedDay, group.date != day { continue }
       let items = group.items.filter { filter.matches($0, now: now) }
       guard !items.isEmpty else { continue }
       visible.append(

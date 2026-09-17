@@ -30,20 +30,27 @@ public struct StudyTodayScreen: View {
           StudyFailedState(message: message) { Task { await store.loadOverview(force: true) } }
             .transition(.opacity)
         case .ready(let overview):
+          // A tela chegava inteira num quadro só. Numerar os blocos faz a
+          // abertura descer de cima para baixo, na ordem em que o olho lê, e o
+          // índice de cada um é o que os cards de pendência continuam a partir.
           VStack(alignment: .leading, spacing: 20) {
             StudyHeading(
               title: StudyFormat.weekdayLong(overview.date.date(in: StudyFormat.calendar)))
+              .staggeredEntrance(index: 0, isReady: true)
             StudyTodayHero(overview: overview, onSession: onSession)
+              .staggeredEntrance(index: 1, isReady: true)
             StudyTodayMetrics(overview: overview)
-            StudyTodayPending(overview: overview, onAssignments: onAssignments)
+              .staggeredEntrance(index: 2, isReady: true)
+            StudyTodayPending(overview: overview, onAssignments: onAssignments, base: 3)
             if overview.reviewCount > 0 || overview.lastSession != nil {
               StudyTodayContinue(overview: overview, onSession: onSession, onReview: onReview)
+                .staggeredEntrance(index: 5, isReady: true)
             }
           }
           .transition(.opacity)
         }
       }
-      .animation(.easeOut(duration: 0.25), value: store.overview.phase)
+      .animation(Motion.crossfade, value: store.overview.phase)
       .padding(.horizontal, 16)
       .padding(.bottom, 32)
     }
@@ -106,26 +113,32 @@ struct StudyTodayPending: View {
   @Environment(EstudosStore.self) private var store
   let overview: StudyOverview
   let onAssignments: () -> Void
+  /// Onde este bloco entra na cascata da tela. Os cards continuam daqui, então
+  /// eles nunca chegam antes do próprio título.
+  var base = 0
 
   var body: some View {
     let now = overview.date.date(in: StudyFormat.calendar)
     VStack(alignment: .leading, spacing: 0) {
       StudySectionHeading(title: "pendências", action: ("ver todas", onAssignments))
+        .staggeredEntrance(index: base, isReady: true)
       VStack(spacing: 8) {
         if let sync = overview.lastSync {
           StudyCallout(
             icon: "arrow.triangle.2.circlepath", tone: .sky,
             title: "sincronizado \(StudyFormat.relative(sync.completedAt, now: Date()))",
             detail: contagem(sync.createdCount, "nova", "novas"))
+            .staggeredEntrance(index: base + 1, isReady: true)
         }
         if overview.dueSoon.isEmpty {
           StudyEmptyState(icon: "calendar", title: "sem entregas")
+            .staggeredEntrance(index: base + 1, isReady: true)
         } else {
           ForEach(Array(overview.dueSoon.enumerated()), id: \.element.id) { index, item in
             StudyTaskCard(assignment: item, now: now) { next in
               Task { await store.setStatus(of: item, to: next) }
             }
-            .staggeredEntrance(index: index, isReady: true)
+            .staggeredEntrance(index: base + 1 + index, isReady: true)
           }
         }
       }

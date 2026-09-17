@@ -7,6 +7,9 @@ public struct TodayScreen: View {
   @State private var compact = false
   @State private var openIds: Set<String> = []
   @State private var notch: CGFloat = 0.5
+  @State private var enteredDates: Set<String> = []
+  @State private var showingSession = false
+  @Namespace private var sessionSource
   let onPlan: () -> Void
   let onProgress: () -> Void
 
@@ -16,70 +19,100 @@ public struct TodayScreen: View {
   }
 
   public var body: some View {
-    ScrollViewReader { scroll in
-      ScrollView {
-        VStack(spacing: 36) {
-          VStack(spacing: 12) {
-            DayStrip(selected: store.selectedDate, notch: $notch)
-            WorkoutHero(workout: store.dashboard?.workout, notch: notch) {
-              withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) {
-                scroll.scrollTo("exercises", anchor: .top)
-              }
-            }
-            .opacity(store.dashboard?.date == store.selectedDate ? 1 : 0.5)
-            .overlay {
-              if store.dashboard != nil && store.dashboard?.date != store.selectedDate {
-                ProgressView()
-                  .padding(12)
-                  .background(.regularMaterial, in: .capsule)
-              }
-            }
-            .animation(.easeOut(duration: 0.16), value: store.dashboard?.date == store.selectedDate)
+    ScrollView {
+      VStack(spacing: 36) {
+        VStack(spacing: 12) {
+          DayStrip(selected: store.selectedDate, notch: $notch)
+            .staggeredEntrance(index: 0, isReady: hasData)
+          WorkoutHero(workout: store.dashboard?.workout, notch: notch, sessionSource: sessionSource) {
+            showingSession = true
           }
-          if let data = store.dashboard, let workout = data.workout {
-            VStack(spacing: 14) {
-              HStack {
-                Text("exercícios").font(.title2.weight(.medium)).tracking(-0.8)
-                Spacer()
-                Picker("Modo de exibição", selection: $compact) {
-                  Image(systemName: "list.bullet").tag(true).accessibilityLabel("lista")
-                  Image(systemName: "rectangle.grid.1x2").tag(false).accessibilityLabel("cartões")
-                }.pickerStyle(.segmented).frame(width: 96)
-                .onChange(of: compact) {
-                  openIds = compact ? [] : Set(workout.exercises.map(\.id))
+          .opacity(fresh ? 1 : 0.5)
+          // Enquanto o painel é de outro dia, abrir a sessão daria um treino
+          // que o store recusa gravar, porque `record` compara com a data
+          // escolhida. O hero já aparece apagado, então também não responde.
+          .disabled(!fresh)
+          .overlay {
+            if store.dashboard != nil && !fresh {
+              ProgressView()
+                .padding(12)
+                .background(.regularMaterial, in: .capsule)
+            }
+          }
+          .animation(Motion.tap, value: fresh)
+          // O hero fica montado desde o primeiro quadro, com "descanso" no
+          // lugar do nome do treino, então sem isto ele apareceria pronto por
+          // baixo do esqueleto e só o resto da tela entraria. Ele é a primeira
+          // coisa que o dono olha, então é ele que abre a cascata.
+          .staggeredEntrance(index: 1, isReady: hasData)
+        }
+        if let data = store.dashboard, let workout = data.workout {
+          VStack(spacing: 14) {
+            HStack {
+              Text("exercícios").font(.title2.weight(.medium)).tracking(-0.8)
+              Spacer()
+              Picker("Modo de exibição", selection: $compact) {
+                Image(systemName: "list.bullet").tag(true).accessibilityLabel("lista")
+                Image(systemName: "rectangle.grid.1x2").tag(false).accessibilityLabel("cartões")
+              }.pickerStyle(.segmented).frame(width: 96)
+              .onChange(of: compact) { openIds = defaultOpenIds() }
+            }
+            HStack {
+              Button("progresso", systemImage: "chart.xyaxis.line", action: onProgress)
+              Spacer()
+              Button("editar plano", systemImage: "square.and.pencil", action: onPlan)
+            }.font(.caption).buttonStyle(.glass).labelStyle(.iconOnly)
+            .firstEntrance(index: 2, settled: enteredDates.contains(data.date.iso))
+            ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { index, exercise in
+              ExerciseCard(exercise: exercise, date: data.date, templateId: workout.id, isOpen: openIds.contains(exercise.id)) {
+                withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 1)) {
+                  if !openIds.insert(exercise.id).inserted { openIds.remove(exercise.id) }
                 }
               }
-              HStack {
-                Button("progresso", systemImage: "chart.xyaxis.line", action: onProgress)
-                Spacer()
-                Button("editar plano", systemImage: "square.and.pencil", action: onPlan)
-              }.font(.caption).buttonStyle(.glass).labelStyle(.iconOnly)
-              ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { index, exercise in
-                ExerciseCard(exercise: exercise, date: data.date, templateId: workout.id, isOpen: openIds.contains(exercise.id)) {
-                  withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 1)) {
-                    if !openIds.insert(exercise.id).inserted { openIds.remove(exercise.id) }
-                  }
-                }
-                .staggeredEntrance(index: index, isReady: true)
-              }
-            }.id(store.dashboard?.date).disabled(store.dashboard?.date != store.selectedDate)
-          } else if store.dashboard != nil {
-            VStack(alignment: .leading, spacing: 14) {
-              Image(systemName: "dumbbell").font(.title2)
-              Text("sem exercícios").font(.title2.weight(.medium))
-              Button("abrir plano", action: onPlan).buttonStyle(.glass)
-            }.frame(maxWidth: .infinity, alignment: .leading).padding(24).paperCard(radius: 32)
-              .id("exercises")
+              .firstEntrance(index: index + 3, settled: enteredDates.contains(data.date.iso))
+            }
+          }.id(store.dashboard?.date).disabled(!fresh)
+          .task(id: data.date.iso) {
+            guard !enteredDates.contains(data.date.iso) else { return }
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            enteredDates.insert(data.date.iso)
           }
-        }.padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 32)
-      }
-      .scrollBounceBehavior(.basedOnSize)
-      .refreshable { await store.load() }
-      .overlay { TodayPlaceholder(phase: store.phase, isEmpty: store.dashboard == nil) }
-      .onChange(of: store.dashboard?.workout?.id, initial: true) {
-        openIds = []
-      }
+        } else if store.dashboard != nil {
+          VStack(alignment: .leading, spacing: 14) {
+            Image(systemName: "dumbbell").font(.title2)
+            Text("sem exercícios").font(.title2.weight(.medium))
+            Button("abrir plano", action: onPlan).buttonStyle(.glass)
+          }.frame(maxWidth: .infinity, alignment: .leading).padding(24).paperCard(radius: 32)
+        }
+      }.padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 32)
     }
+    .scrollBounceBehavior(.basedOnSize)
+    .refreshable { await store.load() }
+    .overlay { TodayPlaceholder(phase: store.phase, isEmpty: store.dashboard == nil) }
+    .onChange(of: store.dashboard?.workout?.id, initial: true) {
+      openIds = defaultOpenIds()
+    }
+    #if os(iOS)
+      .fullScreenCover(isPresented: $showingSession) {
+        WorkoutSessionScreen().navigationTransition(.zoom(sourceID: "sessao", in: sessionSource))
+      }
+    #endif
+  }
+
+  /// O painel na tela é do dia escolhido, e não de um anterior ainda na troca.
+  private var fresh: Bool { store.dashboard?.date == store.selectedDate }
+
+  /// O primeiro painel chegou. É o que solta a cascata de abertura, depois do
+  /// esqueleto sair.
+  private var hasData: Bool { store.dashboard != nil }
+
+  /// Quais cartões nascem abertos. "cartões" é o modo que mostra as séries, e o
+  /// seletor já começa nele, então abrir só depois que o dedo troca o modo faz
+  /// o primeiro desenho contradizer o que o seletor diz.
+  private func defaultOpenIds() -> Set<String> {
+    guard !compact, let exercises = store.dashboard?.workout?.exercises else { return [] }
+    return Set(exercises.map(\.id))
   }
 }
 
@@ -104,7 +137,7 @@ struct TodayPlaceholder: View {
         }
       }
     }
-    .animation(.easeOut(duration: 0.25), value: isEmpty)
+    .animation(Motion.crossfade, value: isEmpty)
   }
 }
 
@@ -130,6 +163,7 @@ struct WorkoutHero: View {
   @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 46.0
   let workout: WorkoutSummary?
   let notch: CGFloat
+  let sessionSource: Namespace.ID
   let onStart: () -> Void
 
   var body: some View {
@@ -153,6 +187,7 @@ struct WorkoutHero: View {
           }
           Button(workout.completionPercent > 0 ? "continuar" : "começar", systemImage: "play.fill", action: onStart)
             .buttonStyle(.glassProminent).tint(accent.deep).foregroundStyle(.white).controlSize(.large)
+            .matchedTransitionSource(id: "sessao", in: sessionSource)
         }.padding(.top, 10)
       }
     }

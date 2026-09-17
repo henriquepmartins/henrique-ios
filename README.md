@@ -84,6 +84,22 @@ depois:
 ./scripts/push-to-iphone.sh --force        # reinstala mesmo em dia
 ```
 
+### iterar no código sem cabo
+
+para subir o working tree em debug, ainda via wi-fi:
+
+```sh
+./scripts/run-iphone.sh
+HENRIQUE_API_BASE_URL=http://192.168.1.10:3000 ./scripts/run-iphone.sh
+```
+
+a diferença é que o `push-to-iphone.sh` instala o último build publicado, da
+tag `build-N`, e o `run-iphone.sh` instala o que está aberto no editor. no
+aparelho físico `localhost` é o próprio iphone, então o padrão já usa o ip do
+mac. suba o servidor ouvindo na rede e desbloqueie o iphone na mesma wi-fi. se
+o túnel cair, confira CONNECT VIA NETWORK na janela Devices and Simulators do
+xcode.
+
 o agente do launchd roda o script a cada 15 minutos e quando a sessão do mac
 começa. o log fica em `~/Library/Logs/henrique-autopush.log`. o script compila a
 partir da tag `build-N`, nunca da cópia de trabalho, e guarda o app assinado em

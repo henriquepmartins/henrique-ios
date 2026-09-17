@@ -632,6 +632,8 @@ struct StudyTaskCard: View {
             .font(.system(size: 12, weight: .bold))
             .foregroundStyle(.white)
             .opacity(done ? 1 : 0)
+            .scaleEffect(done ? 1 : 0.6)
+            .animation(.easeOut(duration: 0.16), value: done)
         )
         .frame(width: 20, height: 20)
         .padding(12)
@@ -641,6 +643,7 @@ struct StudyTaskCard: View {
     .padding(-12)
     .disabled(onToggle == nil)
     .accessibilityLabel(done ? "reabrir entrega" : "concluir entrega")
+    .sensoryFeedback(.selection, trigger: done)
   }
 }
 

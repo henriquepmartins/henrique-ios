@@ -2,8 +2,8 @@ import Foundation
 import HenriqueCore
 import Observation
 
-public struct SetKey: Hashable, Sendable {
-  public enum Kind: Hashable, Sendable { case prep, work }
+public struct SetKey: Hashable, Sendable, Codable {
+  public enum Kind: String, Hashable, Sendable, Codable { case prep, work }
 
   public let date: CalendarDate
   public let templateId: String
@@ -20,7 +20,7 @@ public struct SetKey: Hashable, Sendable {
   }
 }
 
-struct SetDraft: Equatable, Sendable {
+struct SetDraft: Equatable, Sendable, Codable {
   let weightKg: Double
   let reps: Int
   let completed: Bool
@@ -42,14 +42,24 @@ public final class AcademiaStore {
   /// a frio mostra a entrada por uma fração de segundo mesmo com sessão válida.
   public private(set) var sessionChecked = false
   private var acceptedDashboard: Dashboard?
-  private struct PendingSet {
+  /// Uma marcação que ainda não chegou ao servidor. Marcar série é o único
+  /// gesto do app que acontece longe do wi-fi, então ela vive em disco até o
+  /// servidor aceitar. `failed` liga quando já houve uma tentativa perdida, que
+  /// é quando a tela precisa dizer que aquilo ainda está a caminho.
+  private struct PendingSet: Codable {
     let key: SetKey
     let draft: SetDraft
     let revision: Int
+    var failed: Bool
   }
   private var pendingSets: [SetKey: PendingSet] = [:]
   @ObservationIgnored private var mutationTail: Task<Bool, Never>?
+  @ObservationIgnored private var resendTask: Task<Void, Never>?
   @ObservationIgnored private var revision = 0
+
+  /// A série está marcada na tela mas ainda não no servidor. A tela mostra isso
+  /// para o visto não prometer o que não aconteceu.
+  public func isWaiting(_ key: SetKey) -> Bool { pendingSets[key]?.failed == true }
 
   public var dashboard: Dashboard? {
     guard var value = acceptedDashboard else { return nil }
@@ -153,9 +163,56 @@ public final class AcademiaStore {
     }
   }
 
+  /// Fora de `caches`, ao contrário do retrato do painel. O sistema apaga
+  /// `caches` quando o disco aperta, e uma série marcada na academia é a única
+  /// coisa aqui que não dá para buscar de novo no servidor.
+  private static var queueURL: URL? {
+    FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+      .appending(path: "henrique-series-pendentes.json")
+  }
+
+  private func saveQueue() {
+    guard let url = Self.queueURL else { return }
+    let queued = pendingSets.values.sorted { $0.revision < $1.revision }
+    Task.detached(priority: .background) {
+      guard !queued.isEmpty else {
+        try? FileManager.default.removeItem(at: url)
+        return
+      }
+      guard let data = try? JSONEncoder.henrique().encode(queued) else { return }
+      try? FileManager.default.createDirectory(
+        at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+      try? data.write(to: url, options: .atomic)
+    }
+  }
+
+  /// Tudo o que voltou do disco já falhou uma vez, por definição: só chega ali
+  /// o que não foi aceito antes do app fechar.
+  private func loadQueue() {
+    guard let url = Self.queueURL, let data = try? Data(contentsOf: url),
+      let saved = try? JSONDecoder.henrique().decode([PendingSet].self, from: data)
+    else { return }
+    for var pending in saved {
+      pending.failed = true
+      pendingSets[pending.key] = pending
+      revision = max(revision, pending.revision)
+    }
+  }
+
+  private func clearQueue() {
+    pendingSets.removeAll()
+    resendTask?.cancel()
+    resendTask = nil
+    guard let url = Self.queueURL else { return }
+    Task.detached(priority: .background) {
+      try? FileManager.default.removeItem(at: url)
+    }
+  }
+
   public init(client: APIClient) {
     self.client = client
     loadSnapshot()
+    loadQueue()
   }
 
   #if DEBUG
@@ -205,7 +262,7 @@ public final class AcademiaStore {
     clearSnapshot()
     attendance.removeAll()
     attendanceRanges.removeAll()
-    pendingSets.removeAll()
+    clearQueue()
     mutationTail?.cancel()
     mutationTail = nil
     banner = nil
@@ -243,6 +300,9 @@ public final class AcademiaStore {
         self.acceptedDashboard = received
         self.phase = .ready
         self.banner = nil
+        // A leitura que deu certo prova que a rede voltou. É o gatilho mais
+        // barato que existe para esvaziar a fila.
+        self.scheduleResend()
       } catch {
         guard let self, self.readID == requestID, self.selectedDate == date,
           !Task.isCancelled, !(error is CancellationError) else { return }
@@ -281,13 +341,55 @@ public final class AcademiaStore {
     let draft = SetDraft(weightKg: weightKg, reps: reps, completed: completed, toFailure: toFailure)
     if pendingSets[key]?.draft == draft { return mutationTail }
     revision += 1
-    let pending = PendingSet(key: key, draft: draft, revision: revision)
+    let pending = PendingSet(key: key, draft: draft, revision: revision, failed: false)
     pendingSets[key] = pending
+    saveQueue()
+    return send(pending)
+  }
+
+  private func send(_ pending: PendingSet) -> Task<Bool, Never> {
+    let key = pending.key
+    let draft = pending.draft
     let fields = RecordSetInput.Fields(
-      date: key.date, workoutTemplateId: key.templateId, exerciseId: key.exerciseId, setIndex: key.index,
-      weightKg: weightKg, reps: reps, completed: completed)
-    let input: RecordSetInput = key.kind == .prep ? .prep(fields) : .work(fields, toFailure: toFailure)
+      date: key.date, workoutTemplateId: key.templateId, exerciseId: key.exerciseId,
+      setIndex: key.index, weightKg: draft.weightKg, reps: draft.reps, completed: draft.completed)
+    let input: RecordSetInput = key.kind == .prep
+      ? .prep(fields) : .work(fields, toFailure: draft.toFailure)
     return enqueue(pending: pending) { try await self.client.recordSet(input) }
+  }
+
+  /// Gravar série é idempotente no servidor, que casa por sessão, exercício,
+  /// tipo e índice, então reenviar a mesma marcação não duplica nada.
+  private func resend() async -> Bool {
+    for pending in pendingSets.values.sorted(by: { $0.revision < $1.revision }) {
+      guard let current = pendingSets[pending.key], current.revision == pending.revision else {
+        continue
+      }
+      // Uma falha basta para saber que a rede continua fora. Insistir no resto
+      // da fila só gasta bateria e enche a tela de banner.
+      if await send(current).value == false { return false }
+    }
+    return true
+  }
+
+  private func scheduleResend() {
+    guard resendTask == nil, !pendingSets.isEmpty else { return }
+    resendTask = Task { @MainActor [weak self] in
+      await self?.resendLoop()
+      self?.resendTask = nil
+    }
+  }
+
+  /// Dobra a espera até um minuto e fica lá. Sem `NWPathMonitor` de propósito:
+  /// um minuto de atraso no pior caso não muda nada para quem está entre séries,
+  /// e observar a rede seria mais peça para manter.
+  private func resendLoop() async {
+    var wait = 2.0
+    while isSignedIn, !pendingSets.isEmpty, !Task.isCancelled {
+      wait = await resend() ? 2 : min(wait * 2, 60)
+      guard !pendingSets.isEmpty, !Task.isCancelled else { return }
+      try? await Task.sleep(for: .seconds(wait))
+    }
   }
 
   @discardableResult
@@ -351,14 +453,10 @@ public final class AcademiaStore {
     let task = Task { @MainActor in
       _ = await previous?.value
       guard sessionID == mutationSession, !Task.isCancelled else { return false }
-      defer {
-        if let pending, pendingSets[pending.key]?.revision == pending.revision {
-          pendingSets.removeValue(forKey: pending.key)
-        }
-      }
       do {
         let received = try await work()
         guard sessionID == mutationSession, !Task.isCancelled else { return false }
+        forget(pending)
         dayCache.removeAll()
         // a série gravada muda a frequência; o mapa fica na tela e o próximo
         // mês visitado busca de novo.
@@ -372,12 +470,47 @@ public final class AcademiaStore {
       } catch {
         guard sessionID == mutationSession, !Task.isCancelled else { return false }
         dayCache.removeAll()
-        if !(error is CancellationError) { handle(error) }
+        guard !(error is CancellationError) else { return false }
+        var kept = false
+        if let pending {
+          kept = Self.keeps(error)
+          if kept { hold(pending) } else { forget(pending) }
+        }
+        // A sessão caída tira o usuário da conta mesmo com a série guardada, e
+        // o aviso dela vale mais do que a contagem da fila.
+        if !kept || (error as? APIError) == .unauthorized { handle(error) }
         return false
       }
     }
     mutationTail = task
     return task
+  }
+
+  /// Rede fora e servidor doente voltam a ser tentados. Recusa do servidor não:
+  /// o mesmo corpo nunca vai passar, e insistir entope a fila atrás dele.
+  private static func keeps(_ error: any Error) -> Bool {
+    switch error {
+    case APIError.http(let status, _): status >= 500
+    default: true
+    }
+  }
+
+  /// A marcação some da rede, não da tela. O banner conta quantas esperam,
+  /// porque "sem conexão" sozinho parece série perdida, e não é mais.
+  private func hold(_ pending: PendingSet) {
+    guard pendingSets[pending.key]?.revision == pending.revision else { return }
+    pendingSets[pending.key]?.failed = true
+    saveQueue()
+    banner = pendingSets.count == 1
+      ? "1 série guardada, envio quando a rede voltar"
+      : "\(pendingSets.count) séries guardadas, envio quando a rede voltar"
+    scheduleResend()
+  }
+
+  private func forget(_ pending: PendingSet?) {
+    guard let pending, pendingSets[pending.key]?.revision == pending.revision else { return }
+    pendingSets.removeValue(forKey: pending.key)
+    saveQueue()
   }
 
   private func handle(_ error: any Error) {
@@ -389,7 +522,6 @@ public final class AcademiaStore {
       acceptedDashboard = nil
       attendance.removeAll()
       attendanceRanges.removeAll()
-      pendingSets.removeAll()
       mutationTail?.cancel()
       mutationTail = nil
       phase = .idle

@@ -4,12 +4,17 @@
 <dict>
 	<key>HenriqueAPIBaseURL</key>
 	<string>$(HENRIQUE_API_BASE_URL)</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Levar os prazos das entregas para o calendário do iPhone.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 </dict>
 </plist>

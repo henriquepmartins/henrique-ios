@@ -14,5 +14,6 @@ let package = Package(
     .testTarget(
       name: "HenriqueCoreTests", dependencies: ["HenriqueCore"],
       resources: [.copy("Fixtures")]),
+    .testTarget(name: "HenriqueUITests", dependencies: ["HenriqueUI"]),
   ]
 )

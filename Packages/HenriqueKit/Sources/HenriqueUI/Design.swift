@@ -161,6 +161,29 @@ struct PageHeading: View {
 
 // MARK: - Movimento
 
+/// As curvas de todo o app. As molas de `smooth` e `snappy` são o mesmo modelo
+/// que o iOS usa nos próprios controles, então o que o app move acompanha o
+/// que o sistema move em volta dele. Números soltos por tela eram o que fazia
+/// duas telas vizinhas entrarem em ritmos diferentes.
+enum Motion {
+  /// Conteúdo que chega e se acomoda: cascata de lista, cartão que nasce.
+  static let entrance = Animation.smooth(duration: 0.4)
+  /// A mesma entrada para quem cresce no lugar, com o repique quase no fim.
+  static let grow = Animation.spring(duration: 0.45, bounce: 0.18)
+  /// Resposta ao dedo, onde qualquer atraso aparece.
+  static let tap = Animation.snappy(duration: 0.22)
+  /// Troca de uma tela inteira por outra.
+  static let crossfade = Animation.smooth(duration: 0.3)
+  /// Com movimento reduzido só a opacidade muda, e rápido.
+  static let plain = Animation.easeOut(duration: 0.15)
+  /// O quanto um item sobe ao entrar.
+  static let rise: CGFloat = 10
+
+  /// O passo entre um item e o seguinte. O atraso para de crescer no sétimo
+  /// para a última linha de uma lista longa não esperar a lista inteira.
+  static func delay(index: Int) -> Double { 0.05 * Double(min(index, 6)) }
+}
+
 struct StudyPressStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     Press(configuration: configuration)
@@ -176,15 +199,15 @@ struct StudyPressStyle: ButtonStyle {
         .opacity(configuration.isPressed && reduceMotion ? 0.7 : 1)
         // O encolher acontece no mesmo quadro do toque. Só a volta tem curva,
         // senão o botão parece responder atrasado ao dedo.
-        .animation(configuration.isPressed ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
+        .animation(configuration.isPressed ? nil : Motion.tap, value: configuration.isPressed)
     }
   }
 }
 
 extension View {
   /// Entrada em cascata da primeira montagem da lista. `isReady` é o momento em
-  /// que os dados chegaram; o atraso para no oitavo item para a última linha não
-  /// esperar meio segundo.
+  /// que os dados chegaram; o atraso para no sexto item para a última linha não
+  /// esperar.
   func staggeredEntrance(index: Int, isReady: Bool) -> some View {
     modifier(StudyStaggeredEntrance(index: index, isReady: isReady))
   }
@@ -199,17 +222,15 @@ private struct StudyStaggeredEntrance: ViewModifier {
   func body(content: Content) -> some View {
     content
       .opacity(shown ? 1 : 0)
-      .offset(y: shown || reduceMotion ? 0 : 12)
+      .offset(y: shown || reduceMotion ? 0 : Motion.rise)
+      .animation(animation, value: shown)
       .onChange(of: isReady, initial: true) { _, ready in
-        guard ready, !shown else { return }
-        withAnimation(animation) { shown = true }
+        if ready { shown = true }
       }
   }
 
   private var animation: Animation {
-    reduceMotion
-      ? .easeOut(duration: 0.15)
-      : .easeOut(duration: 0.35).delay(0.06 * Double(min(index, 8)))
+    reduceMotion ? Motion.plain : Motion.entrance.delay(Motion.delay(index: index))
   }
 }
 
@@ -264,4 +285,34 @@ func dismissKeyboard() {
   UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
     to: nil, from: nil, for: nil)
   #endif
+}
+
+extension View {
+  /// A entrada das telas que crescem no lugar. `staggeredEntrance` desliza o
+  /// conteúdo para cima, que é o gesto certo numa lista já montada; aqui a tela
+  /// inteira nasce, então cada peça cresce a partir do próprio centro e nada
+  /// anda de lado.
+  func springEntrance(index: Int, shown: Bool) -> some View {
+    modifier(SpringEntrance(index: index, shown: shown))
+  }
+}
+
+private struct SpringEntrance: ViewModifier {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  let index: Int
+  let shown: Bool
+
+  func body(content: Content) -> some View {
+    content
+      // Nada no mundo nasce de tamanho zero. Começar em 0.94 deixa a peça já
+      // com forma antes de assentar, e o olho lê isso como uma coisa só
+      // chegando, não como uma aparição.
+      .scaleEffect(visible ? 1 : 0.94)
+      .opacity(visible ? 1 : 0)
+      .animation(
+        reduceMotion ? nil : Motion.grow.delay(Motion.delay(index: index)),
+        value: shown)
+  }
+
+  private var visible: Bool { shown || reduceMotion }
 }

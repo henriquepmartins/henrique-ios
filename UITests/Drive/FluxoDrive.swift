@@ -91,8 +91,14 @@ final class FluxoDrive: XCTestCase {
   func counterValue() -> String { app.buttons["sequência"].value as? String ?? "" }
 
   func replaceText(_ field: XCUIElement, with text: String) {
+    // O toque duplo sozinho às vezes só põe o cursor, e aí o texto novo entra
+    // na frente do velho. Focar primeiro e só então selecionar a palavra é o
+    // que faz a digitação substituir o que estava lá.
+    field.tap()
+    XCTAssert(app.keyboards.firstMatch.waitForExistence(timeout: 3), "teclado abriu no campo")
     field.doubleTap()
     field.typeText(text)
+    XCTAssertEqual(field.value as? String, text, "o campo ficou com o texto novo")
   }
 
   func dismissKeyboard() {
@@ -237,6 +243,120 @@ final class FluxoDrive: XCTestCase {
     shot("31-calendario-mes-anterior")
   }
 
+  /// O modo treino atrás do botão do hero. Prova as três coisas que a tela de
+  /// hoje não prova: a sessão abre, marcar série ali sobe o contador da sessão,
+  /// e o descanso começa junto.
+  func testSessaoDeTreino() {
+    launch()
+    ensureWorkoutToday()
+    let start = app.buttons.matching(
+      NSPredicate(format: "label IN {'começar', 'continuar'}")).firstMatch
+    XCTAssert(start.waitForExistence(timeout: 8), "hero mostra o botão de começar o treino")
+    start.tap()
+
+    let close = app.buttons["sessao.fechar"]
+    XCTAssert(close.waitForExistence(timeout: 5), "sessão abriu")
+    shot("50-sessao")
+
+    let counter = app.staticTexts.matching(
+      NSPredicate(format: "label BEGINSWITH 'de ' AND label ENDSWITH ' séries'")).firstMatch
+    XCTAssert(counter.waitForExistence(timeout: 3), "sessão mostra o total de séries")
+
+    // Aquecimento e valendo têm o mesmo rótulo, e só a valendo move o contador.
+    // O rótulo tem que ser "Concluir": um teste anterior pode ter deixado a
+    // primeira valendo já marcada, e aí o toque desmarcaria.
+    let check = app.buttons.matching(
+      NSPredicate(format:
+        "identifier CONTAINS '.work.' AND identifier ENDSWITH '.completion'"
+        + " AND label BEGINSWITH 'Concluir'")).firstMatch
+    XCTAssert(check.waitForExistence(timeout: 5), "sessão tem série valendo em aberto")
+    let antes = doneCount()
+    check.tap()
+    XCTAssert(
+      app.staticTexts["descansando"].waitForExistence(timeout: 3),
+      "marcar série valendo começa o descanso")
+    XCTAssertEqual(doneCount(), antes + 1, "o contador da sessão subiu uma série")
+    shot("51-sessao-descanso")
+
+    app.buttons["sessao.proximo"].tap()
+    XCTAssert(
+      app.staticTexts["exercício 2 de \(exerciseCount())"].waitForExistence(timeout: 3),
+      "o botão do rodapé anda para o próximo exercício")
+    shot("52-sessao-proximo")
+
+    close.tap()
+    XCTAssert(close.waitForNonExistence(timeout: 5), "sessão fechou")
+    XCTAssert(
+      app.buttons["Desmarcar série 1"].firstMatch.waitForExistence(timeout: 5)
+        || start.waitForExistence(timeout: 5),
+      "voltou para a tela de hoje com a marca da sessão")
+  }
+
+  /// Continuar tem que reabrir no exercício em aberto, não no começo. Roda por
+  /// último porque termina um exercício inteiro, e os outros testes contam
+  /// treinos e séries do mesmo banco.
+  func testZContinuarTreino() {
+    launch()
+    ensureWorkoutToday()
+
+    let hero = app.buttons.matching(
+      NSPredicate(format: "label IN {'começar', 'continuar'}")).firstMatch
+    XCTAssert(hero.waitForExistence(timeout: 8), "hero tem o botão do treino")
+    hero.tap()
+
+    let close = app.buttons["sessao.fechar"]
+    XCTAssert(close.waitForExistence(timeout: 5), "sessão abriu")
+    // Fecha o primeiro exercício inteiro. A página vizinha do TabView já está
+    // montada, então o filtro também acha botão do exercício 2, fora da tela e
+    // sem resposta ao toque. `isHittable` é o que separa um do outro.
+    let abertas = NSPredicate(format:
+      "identifier CONTAINS '.work.' AND identifier ENDSWITH '.completion'"
+      + " AND label BEGINSWITH 'Concluir'")
+    let valendo = app.buttons.matching(abertas)
+    XCTAssert(valendo.firstMatch.waitForExistence(timeout: 5), "sessão tem série em aberto")
+    for _ in 0..<8 {
+      guard valendo.firstMatch.isHittable else { break }
+      let antes = doneCount()
+      valendo.firstMatch.tap()
+      waitForCount(antes + 1)
+    }
+    XCTAssertFalse(valendo.firstMatch.isHittable, "primeiro exercício terminou")
+    close.tap()
+    XCTAssert(close.waitForNonExistence(timeout: 5), "sessão fechou")
+
+    let continuar = app.buttons["continuar"]
+    XCTAssert(continuar.waitForExistence(timeout: 8), "o hero virou continuar")
+    continuar.tap()
+    XCTAssert(close.waitForExistence(timeout: 5), "sessão reabriu pelo continuar")
+    shot("60-continuar-onde-parou")
+    XCTAssert(
+      app.staticTexts["exercício 2 de \(exerciseCount())"].waitForExistence(timeout: 3),
+      "continuar cai no exercício em aberto")
+  }
+
+  /// Espera o contador da sessão chegar no valor. Ler logo depois do toque pega
+  /// o número antes da transição, e o teste acusa marca perdida que não houve.
+  func waitForCount(_ alvo: Int, timeout: TimeInterval = 4) {
+    let contador = app.staticTexts.matching(
+      NSPredicate(format: "label MATCHES '^[0-9]+$'")).firstMatch
+    expectation(
+      for: NSPredicate(format: "label == %@", String(alvo)), evaluatedWith: contador)
+    waitForExpectations(timeout: timeout)
+  }
+
+  /// As séries já feitas, lidas da legenda "N de M séries" do topo da sessão.
+  func doneCount() -> Int {
+    let label = app.staticTexts.matching(
+      NSPredicate(format: "label MATCHES '^[0-9]+$'")).firstMatch
+    return Int(label.label) ?? -1
+  }
+
+  func exerciseCount() -> Int {
+    let atual = app.staticTexts.matching(
+      NSPredicate(format: "label BEGINSWITH 'exercício '")).firstMatch.label
+    return Int(atual.split(separator: " ").last ?? "0") ?? 0
+  }
+
   func testPastaDeTreino() {
     launch(aba: "semana")
     let menu = app.buttons["editar Superiores"]
@@ -252,6 +372,33 @@ final class FluxoDrive: XCTestCase {
     XCTAssert(menu.waitForExistence(timeout: 3))
     app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'iniciar '")).firstMatch.tap()
     XCTAssert(app.tabBars.buttons["treino"].isSelected)
+  }
+
+  /// A aba de entregas com o calendário do mês, o status do sync e a linha do
+  /// Apple Calendar. Vale com e sem entregas semeadas, porque o calendário,
+  /// o callout e a linha existem nos dois casos.
+  func testZEntregasECalendario() {
+    launch()
+    app.terminate()
+    app.launchArguments = ["--app", "estudos", "--aba", "entregas"]
+    app.launch()
+    XCTAssert(
+      app.staticTexts["entregas"].waitForExistence(timeout: 15), "aba de entregas abriu")
+    XCTAssert(
+      app.buttons["Mês anterior"].waitForExistence(timeout: 8),
+      "calendário de entregas apareceu")
+    let nunca = app.staticTexts["o portal chega sozinho"]
+    let sincronizado = app.staticTexts.matching(
+      NSPredicate(format: "label BEGINSWITH 'sincronizado'")).firstMatch
+    XCTAssert(
+      nunca.waitForExistence(timeout: 3) || sincronizado.waitForExistence(timeout: 3),
+      "status do sync visível")
+    XCTAssert(app.staticTexts["Apple Calendar"].exists, "linha do Apple Calendar visível")
+    shot("40-entregas-calendario")
+    app.buttons["Próximo mês"].tap()
+    shot("41-entregas-mes-seguinte")
+    app.buttons["Mês anterior"].tap()
+    XCTAssert(app.buttons["Mês anterior"].waitForExistence(timeout: 3), "voltou ao mês atual")
   }
 
   func testFluxo() {

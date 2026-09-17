@@ -48,6 +48,7 @@ struct DayStrip: View {
         }
         .scrollTargetLayout()
         .animation(reduceMotion ? .easeOut(duration: 0.16) : selectionAnimation, value: selected)
+        .sensoryFeedback(.selection, trigger: selected)
       }
       .coordinateSpace(.named("days"))
       .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
