@@ -22,6 +22,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "19",
+          "date": "2026-09-17T13:30:47-03:00",
+          "localizedDescription": "• Uniformiza a entrada dos cartões de home e plano",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-19/Henrique.ipa",
+          "size": 3794127,
+          "sha256": "5403d27634f658149c75d4dea0e9a099960cbec98699f181597d73d1798ba2df",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "18",
           "date": "2026-09-17T13:24:52-03:00",
           "localizedDescription": "• Suaviza a entrada do calendário e do mapa de frequência",
