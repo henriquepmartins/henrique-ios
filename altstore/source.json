@@ -16,10 +16,24 @@
           {
             "name": "Calendars",
             "usageDescription": "Levar os prazos das entregas para o calendário do iPhone."
+          },
+          {
+            "name": "Microphone",
+            "usageDescription": "O microfone serve para repetir as frases em voz alta. Sem ele, o treino vira só escuta."
           }
         ]
       },
       "versions": [
+        {
+          "version": "0.1",
+          "buildVersion": "23",
+          "date": "2026-09-17T19:37:11-03:00",
+          "localizedDescription": "• feat: integrar modulo de idiomas",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-23/Henrique.ipa",
+          "size": 4069551,
+          "sha256": "00dd779b09d000502fd91efe6e2e45b80fc201e7c2159823c461317bc24dbc38",
+          "minOSVersion": "26.0"
+        },
         {
           "version": "0.1",
           "buildVersion": "22",
