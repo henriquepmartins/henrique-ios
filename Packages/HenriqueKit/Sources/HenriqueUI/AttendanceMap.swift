@@ -6,6 +6,7 @@ import SwiftUI
 /// o servidor; assim o preview roda com dados fabricados.
 struct AttendanceMap: View {
   @Environment(\.locale) private var locale
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var period: AttendancePeriod = .month(containing: .today)
   @State private var grid = AttendanceGrid(period: .month(containing: .today), attendance: [:])
   @State private var answered = false
@@ -16,14 +17,21 @@ struct AttendanceMap: View {
     VStack(alignment: .leading, spacing: 16) {
       AttendanceHeader(period: $period, title: period.title(locale: locale))
       AttendanceCount(total: grid.total, name: period.name(locale: locale), answered: answered)
-      switch period {
-      case .month: MonthGrid(grid: grid)
-      case .year: YearGrid(grid: grid)
+      // A grade é uma peça só. Cada casa só muda de cor quando a frequência
+      // chega da rede ou quando o período troca, então o que anima é a cor no
+      // lugar, não a casa entrando.
+      Group {
+        switch period {
+        case .month: MonthGrid(grid: grid)
+        case .year: YearGrid(grid: grid)
+        }
       }
+      .animation(reduceMotion ? nil : Motion.crossfade, value: grid)
       if grid.total > 0 {
         AttendanceLegend()
       }
     }
+    .animation(reduceMotion ? nil : Motion.crossfade, value: grid.total > 0)
     .padding(22).paperCard(radius: 32)
     .onChange(of: period) { grid = AttendanceGrid(period: period, attendance: attendance) }
     .onChange(of: attendance, initial: true) { grid = AttendanceGrid(period: period, attendance: attendance) }
@@ -91,8 +99,9 @@ private struct AttendanceCount: View {
     Text(text)
       .font(.title2.weight(.medium)).monospacedDigit().foregroundStyle(Color.ink)
       .contentTransition(.numericText(value: Double(total)))
-      .animation(reduceMotion ? nil : .default, value: total)
       .opacity(answered || total > 0 ? 1 : 0)
+      .animation(reduceMotion ? nil : Motion.crossfade, value: total)
+      .animation(reduceMotion ? nil : Motion.crossfade, value: answered)
   }
 
   private var text: String {
@@ -129,14 +138,13 @@ private struct MonthGrid: View {
         }
       }
       .accessibilityHidden(true)
-      ForEach(Array(grid.weeks.enumerated()), id: \.element.id) { index, week in
+      ForEach(grid.weeks) { week in
         HStack(spacing: 4) {
           ForEach(week.cells) { cell in
             DaySquare(cell: cell, radius: 6)
               .aspectRatio(1, contentMode: .fit).frame(maxWidth: .infinity)
           }
         }
-        .staggeredEntrance(index: index, isReady: true)
       }
     }
   }
@@ -150,7 +158,7 @@ private struct YearGrid: View {
   var body: some View {
     ScrollView(.horizontal) {
       HStack(alignment: .top, spacing: 3) {
-        ForEach(Array(grid.weeks.enumerated()), id: \.element.id) { index, week in
+        ForEach(grid.weeks) { week in
           VStack(spacing: 3) {
             // O rótulo transborda a coluna de propósito: o mês tem quatro
             // semanas de largura e a inicial sozinha confunde janeiro, junho e
@@ -162,7 +170,6 @@ private struct YearGrid: View {
               DaySquare(cell: cell, radius: 3).frame(width: side, height: side)
             }
           }
-          .staggeredEntrance(index: index, isReady: true)
         }
       }
     }

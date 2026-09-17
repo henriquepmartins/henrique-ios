@@ -9,7 +9,6 @@ struct PlanCalendarCard: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var period: AttendancePeriod = .month(containing: .today)
   @State private var calendarGrid: PlanCalendar
-  @State private var direction: CGFloat = 1
   let attendance: [CalendarDate: AttendanceDay]
   let weekPlan: [WeekPlanItem]
   let load: (CalendarDate, CalendarDate) async -> Void
@@ -37,13 +36,20 @@ struct PlanCalendarCard: View {
     VStack(alignment: .leading, spacing: 16) {
       header
       ZStack {
+        // Um mês é uma peça só, e o mês seguinte tem a mesma forma. Deslizar
+        // uma grade 10pt por cima da outra deixava as duas legíveis ao mesmo
+        // tempo, com os números de dois meses sobrepostos. `blurReplace` é a
+        // troca que o sistema usa para conteúdo que muda no lugar.
         PlanMonthGrid(grid: calendarGrid, workoutsById: workoutsById)
+          // A frequência chega depois da rede, e sem isto as casas saltavam do
+          // cinza para a cor do treino no quadro em que a resposta volta. Fica
+          // dentro do `id` de propósito: mês novo é view nova, não tem cor
+          // velha para atravessar.
+          .animation(reduceMotion ? nil : Motion.crossfade, value: calendarGrid)
           .id(period)
-          .transition(.asymmetric(
-            insertion: .offset(x: 10 * direction).combined(with: .opacity),
-            removal: .offset(x: -10 * direction).combined(with: .opacity)))
+          .transition(.blurReplace)
       }
-      .animation(reduceMotion ? nil : .easeOut(duration: 0.26), value: period)
+      .animation(reduceMotion ? nil : Motion.tap, value: period)
       PlanLegend()
     }
     .padding(18).paperCard(radius: 28)
@@ -61,14 +67,8 @@ struct PlanCalendarCard: View {
       Text(period.title(locale: locale)).font(.subheadline).foregroundStyle(Color.ink)
         .lineLimit(1).minimumScaleFactor(0.8)
       Spacer(minLength: 4)
-      Button("Mês anterior", systemImage: "chevron.left") {
-        direction = -1
-        period = period.previous
-      }
-      Button("Próximo mês", systemImage: "chevron.right") {
-        direction = 1
-        period = period.next
-      }
+      Button("Mês anterior", systemImage: "chevron.left") { period = period.previous }
+      Button("Próximo mês", systemImage: "chevron.right") { period = period.next }
       .disabled(nextIsFuture)
     }
     .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.small)

@@ -12,7 +12,6 @@ struct StudyAssignmentsCalendarCard: View {
   @Binding var selectedDay: CalendarDate?
   @State private var month: CalendarDate
   @State private var grid: AssignmentCalendar
-  @State private var direction: CGFloat = 1
 
   init(
     assignments: [StudyAssignment], now: Date, selectedDay: Binding<CalendarDate?>
@@ -41,13 +40,14 @@ struct StudyAssignmentsCalendarCard: View {
             selectedDay = selectedDay == cell.slot ? nil : cell.slot
           }
         }
+        // A mesma troca do calendário do plano: um mês tem a forma do
+        // seguinte, então o que muda é o conteúdo no lugar, não uma grade
+        // passando por cima da outra.
+        .animation(reduceMotion ? nil : Motion.crossfade, value: grid)
         .id(month)
-        .transition(
-          .asymmetric(
-            insertion: .offset(x: 10 * direction).combined(with: .opacity),
-            removal: .offset(x: -10 * direction).combined(with: .opacity)))
+        .transition(.blurReplace)
       }
-      .animation(reduceMotion ? nil : .easeOut(duration: 0.26), value: month)
+      .animation(reduceMotion ? nil : Motion.tap, value: month)
     }
     .padding(16)
     .background(.white, in: .rect(cornerRadius: StudyRadius.card))
@@ -62,11 +62,9 @@ struct StudyAssignmentsCalendarCard: View {
         .lineLimit(1).minimumScaleFactor(0.8)
       Spacer(minLength: 4)
       Button("Mês anterior", systemImage: "chevron.left") {
-        direction = -1
         month = previousMonth(of: month)
       }
       Button("Próximo mês", systemImage: "chevron.right") {
-        direction = 1
         month = nextMonth(of: month)
       }
     }
