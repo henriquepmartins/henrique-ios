@@ -22,6 +22,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "16",
+          "date": "2026-09-17T11:28:46-03:00",
+          "localizedDescription": "• cascata de entrada só na vertical",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-16/Henrique.ipa",
+          "size": 3790130,
+          "sha256": "b5612bd5af9d08c5cf23f9b9cf09fecf465ac2ea66b4c0b5c023cc6d54e50cc4",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "15",
           "date": "2026-09-17T11:18:50-03:00",
           "localizedDescription": "• calendários entram como uma peça só",
