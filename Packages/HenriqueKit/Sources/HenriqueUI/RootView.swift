@@ -44,6 +44,7 @@ public struct RootView: View {
   @State private var idiomasTab: IdiomasTab
   @State private var appliedInitialSection = false
   @State private var showingApps = false
+  @State private var foco: FocoStore
   private let store: AcademiaStore
   private let estudos: EstudosStore
   private let idiomas: IdiomasStore
@@ -67,6 +68,7 @@ public struct RootView: View {
     tab = initialTab
     estudosTab = initialEstudosTab
     idiomasTab = initialIdiomasTab
+    foco = FocoStore(estudos: estudos)
   }
 
   public var body: some View {
@@ -107,6 +109,7 @@ public struct RootView: View {
     .environment(store)
     .environment(estudos)
     .environment(idiomas)
+    .environment(foco)
     .environment(\.accent, accent)
     .environment(\.locale, Locale(identifier: "pt_BR"))
     .preferredColorScheme(.light)
