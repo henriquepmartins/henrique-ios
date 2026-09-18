@@ -139,12 +139,12 @@ public struct FocoScreen: View {
   }
 
   /// A fatia de cada trilha no dia, na ordem da lista. É a faixa colorida do YPT.
-  private func trackShares(ledger: FocoLedger, today: CalendarDate, now: Date) -> [(color: String, fraction: Double)] {
+  private func trackShares(ledger: FocoLedger, today: CalendarDate, now: Date) -> [(name: String, color: String, fraction: Double)] {
     let total = ledger.seconds(on: today, now: now, calendar: calendar)
     guard total > 0 else { return [] }
     return tracks.compactMap { track in
       let seconds = ledger.seconds(on: today, track: track.id, now: now, calendar: calendar)
-      return seconds > 0 ? (track.color, seconds / total) : nil
+      return seconds > 0 ? (track.name, track.color, seconds / total) : nil
     }
   }
 
@@ -267,21 +267,36 @@ struct FocoGoalBar: View {
 /// Uma cápsula fina dividida nas cores das trilhas do dia, proporcional ao
 /// tempo de cada uma.
 struct FocoDayBand: View {
-  let shares: [(color: String, fraction: Double)]
+  let shares: [(name: String, color: String, fraction: Double)]
 
   var body: some View {
-    GeometryReader { proxy in
-      HStack(spacing: 2) {
-        ForEach(shares.indices, id: \.self) { index in
-          Rectangle()
-            .fill(Color(hexString: shares[index].color))
-            .frame(width: max(2, proxy.size.width * shares[index].fraction - 2))
+    VStack(alignment: .leading, spacing: 8) {
+      GeometryReader { proxy in
+        HStack(spacing: 2) {
+          ForEach(shares.indices, id: \.self) { index in
+            Rectangle()
+              .fill(Color(hexString: shares[index].color))
+              .frame(width: max(2, proxy.size.width * shares[index].fraction - 2))
+          }
         }
       }
+      .frame(height: 6)
+      .clipShape(.capsule)
+      // Sem a legenda a faixa lia como uma segunda barra de meta, cheia.
+      StudyWrap(spacing: 12, lineSpacing: 4) {
+        ForEach(shares.indices, id: \.self) { index in
+          HStack(spacing: 4) {
+            StudyDot(color: shares[index].color)
+            Text("\(shares[index].name) \(Int((shares[index].fraction * 100).rounded()))%")
+              .monospacedDigit()
+          }
+        }
+      }
+      .font(.caption)
+      .foregroundStyle(Color.studyInk60)
     }
-    .frame(height: 6)
-    .clipShape(.capsule)
-    .accessibilityHidden(true)
+    .padding(.top, 4)
+    .accessibilityElement(children: .combine)
   }
 }
 
@@ -327,7 +342,7 @@ struct FocoTrackRow: View {
       .animation(reduceMotion ? nil : Motion.tap, value: isRunning)
     }
     .buttonStyle(StudyPressStyle())
-    .accessibilityLabel(isRunning ? "parar" : "começar \(track.name)")
+    .accessibilityLabel(isRunning ? "parar \(track.name)" : "começar \(track.name)")
     .accessibilityValue("\(FocoFormat.spoken(seconds)) hoje")
   }
 }

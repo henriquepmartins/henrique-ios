@@ -165,13 +165,13 @@ private struct FocoResultView: View {
     VStack(spacing: 24) {
       Spacer(minLength: 0)
       if let entry = result.entry {
-        Text("+\(minutes) min")
+        Text(entry.seconds < 60 ? "+\(minutes) s" : "+\(minutes) min")
           .font(.system(size: bigSize, weight: .semibold).leading(.tight))
           .monospacedDigit()
           .tracking(-bigSize * 0.02)
           .contentTransition(.numericText(value: Double(minutes)))
           .animation(reduceMotion ? nil : .easeOut(duration: 0.8), value: minutes)
-          .accessibilityLabel("mais \(Int(entry.seconds / 60)) minutos")
+          .accessibilityLabel(entry.seconds < 60 ? "mais \(minutes) segundos" : "mais \(minutes) minutos")
         if streakRose {
           VStack(spacing: 8) {
             flame
@@ -207,7 +207,7 @@ private struct FocoResultView: View {
     .task {
       guard let entry = result.entry else { return }
       try? await Task.sleep(for: .milliseconds(150))
-      minutes = Int(entry.seconds / 60)
+      minutes = entry.seconds < 60 ? Int(entry.seconds) : Int(entry.seconds / 60)
       celebrate = true
       try? await Task.sleep(for: .milliseconds(400))
       streakShown = result.streakAfter.current

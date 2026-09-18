@@ -431,6 +431,14 @@ final class FluxoDrive: XCTestCase {
         .waitForExistence(timeout: 3),
       "a sessão aparece na lista de hoje")
     shot("foco-04-depois")
+    app.swipeUp()
+    app.swipeUp()
+    shot("foco-05-historico")
+    app.terminate()
+    app.launchArguments = ["--app", "estudos", "--aba", "hoje"]
+    app.launch()
+    XCTAssert(app.buttons["focar"].waitForExistence(timeout: 15), "cartão de foco na aba hoje de estudos")
+    shot("foco-06-estudos")
   }
 
   func testFluxo() {
