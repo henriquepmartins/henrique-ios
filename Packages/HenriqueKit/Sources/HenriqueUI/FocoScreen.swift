@@ -20,6 +20,7 @@ enum FocoFormat {
     let minutes = Int(seconds / 60)
     let hours = minutes / 60
     let rest = minutes % 60
+    if minutes == 0 { return "\(Int(seconds)) segundos" }
     if hours == 0 { return "\(rest) minutos" }
     return "\(hours) \(hours == 1 ? "hora" : "horas") e \(rest) minutos"
   }
@@ -109,6 +110,7 @@ public struct FocoScreen: View {
           .animation(reduceMotion ? nil : Motion.crossfade, value: Int(seconds))
           .lineLimit(1)
           .minimumScaleFactor(0.5)
+          .accessibilityIdentifier("foco.relogio")
           .accessibilityLabel("\(FocoFormat.spoken(seconds)) hoje")
         FocoGoalBar(fraction: fraction, color: .studyBlue)
         HStack(spacing: 6) {

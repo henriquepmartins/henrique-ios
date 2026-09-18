@@ -401,6 +401,38 @@ final class FluxoDrive: XCTestCase {
     XCTAssert(app.buttons["Mês anterior"].waitForExistence(timeout: 3), "voltou ao mês atual")
   }
 
+  /// A aba de foco em idiomas: começa o alemão, para, vê o resultado e volta
+  /// com o relógio do dia fora do zero.
+  func testFoco() {
+    launch()
+    app.terminate()
+    app.launchArguments = ["--app", "idiomas", "--aba", "foco"]
+    app.launch()
+    let start = app.buttons["começar alemão"]
+    XCTAssert(start.waitForExistence(timeout: 15), "aba de foco abriu com o alemão na lista")
+    shot("foco-01-home")
+    start.tap()
+    let stop = app.buttons["parar"]
+    XCTAssert(stop.waitForExistence(timeout: 5), "cronômetro abriu")
+    // Abaixo de 10 s a sessão não grava, então a espera passa disso.
+    sleep(11)
+    shot("foco-02-rodando")
+    stop.tap()
+    let close = app.buttons["fechar"]
+    XCTAssert(close.waitForExistence(timeout: 5), "resultado apareceu")
+    shot("foco-03-resultado")
+    close.tap()
+    XCTAssert(close.waitForNonExistence(timeout: 5), "resultado fechou")
+    let clock = app.staticTexts["foco.relogio"]
+    XCTAssert(clock.waitForExistence(timeout: 3), "relógio do dia visível")
+    XCTAssertNotEqual(clock.label, "0 segundos hoje", "a sessão entrou no total de hoje")
+    XCTAssert(
+      app.staticTexts.matching(NSPredicate(format: "label CONTAINS '· alemão ·'")).firstMatch
+        .waitForExistence(timeout: 3),
+      "a sessão aparece na lista de hoje")
+    shot("foco-04-depois")
+  }
+
   func testFluxo() {
     launch()
     ensureWorkoutToday()
