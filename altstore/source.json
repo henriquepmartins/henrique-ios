@@ -26,6 +26,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "26",
+          "date": "2026-09-18T10:10:37-03:00",
+          "localizedDescription": "• feat: FocoStore sincroniza com o servidor\n• feat: fila de sincronização no registro de foco e rotas /foco no cliente",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-26/Henrique.ipa",
+          "size": 4322513,
+          "sha256": "c87ea9e5ff039bdc29f6f916a97743441ee26a60909bbd17a7b9ee045e1ad965",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "25",
           "date": "2026-09-18T09:58:11-03:00",
           "localizedDescription": "• fix: foco mostra segundos em sessão curta e legenda na faixa do dia\n• test: fluxo de foco em idiomas\n• feat: tela de foco no estilo YPT com aba em idiomas e cartão em estudos\n• feat: store de foco com espelho no servidor\n• feat: registro de foco com streak e grade de dias",
