@@ -129,8 +129,10 @@ Verificação final. `testZCargaETeclado`, `testZTreinoSemDia` e `testZZTecladoE
   - Independent workstreams. Repo web e repo iOS são disjuntos. Dentro do iOS, heatmap e folders só ficam disjuntos depois do commit de Core.
   - Shared mutable state. `Training.swift`, `Inputs.swift`, `APIClient.swift` e `AcademiaStore.swift` são escritos por um dono só, na fase 1. Depois cada worker tem seu worktree e seus arquivos de tela.
   - Smallest safe decomposition. Três donos: servidor, Core+polish do iOS, e depois dois de tela em paralelo.
-- [ ] 4. Delegate code-writing to a subagent.
+- [x] 4. Delegate code-writing to a subagent.
+  - Worker em `/private/tmp/henrique-ios-session-timing`; diff revisado e integrado manualmente para preservar as mudanças locais do checkout.
 - [ ] 5. Verify on the matching surface.
+  - Testes iOS passaram com 140 testes em 18 suítes e o app compilou no scheme `Henrique`. O fluxo UI focado ficou inconclusivo porque o cenário resetado não encontrou `Superiores`; a inspeção manual ficou bloqueada com o Mac travado.
 - [ ] 6. Rebase into small, ordered commits; stack follow-ups.
 - [ ] 7. If the design is contested, `interrogate` before shipping.
 - [ ] 8. Run Opening a PR.
@@ -220,3 +222,57 @@ A verificação no maior tamanho de acessibilidade passou em 34 s após corrigir
 Fix Root Causes identificou outra borda além do separador já removido. A onda fechada terminava com opacidade 0,12 em y347 da geometria normalizada. O preenchimento agora desaparece gradualmente, mantendo o traço curvo.
 
 Reprodução sem o separador em output/verify/20260916-083332/06-plano.png. Correção em output/verify/20260916-083829/pasta-ativa.png. check-seam.py mediu salto RGB entre linhas de 19,02 antes e 1,49 depois. testPastaAtiva passou em 29,965 s. Build passou. O teste amplo intermediário falhou ao abrir a tela de sequência, antes do componente; a verificação focada chegou à pasta com série marcada e comprovou o resultado. Nenhum deploy.
+
+# Sincronizar cargas entre treinos
+
+- [x] `how` over the affected subsystem.
+- [x] `architect` for parallel design exploration. Two candidate runners timed out; the design was selected from the traced API and store flow after comparing server transaction, client fan-out, and local-only overlay.
+- [x] Write the throughput checkpoint as four todo items:
+  - [x] Blocking first steps. Confirm the iOS and API contracts before fan-out.
+  - [x] Independent workstreams. Backend transaction and iOS state projection use separate repositories and worktrees.
+  - [x] Shared mutable state. Each worker owns one repository; the backend transaction serializes the shared exercise-weight invariant.
+  - [x] Smallest safe decomposition. One worker per repository keeps each change coherent and avoids cross-repository merge races.
+- [x] Delegate code-writing to a subagent with an exclusive worktree and review its diff. The workers timed out before returning patches; the parent completed the bounded edits and reviewed both diffs.
+- [x] Verify on the matching surface.
+- [ ] Rebase into small, ordered commits; stack follow-ups.
+  - skip: the repositories contain unrelated local changes and the workspace does not allow creating commits.
+- [ ] If the design is contested, `interrogate` before shipping.
+  - skip: the server transaction is the only durable shape that avoids stale client fan-out.
+- [ ] Run `Opening a PR`.
+  - skip: no PR or deploy was requested.
+
+## Decisão
+
+`exerciseId` identifica o exercício compartilhado. Uma alteração de série de trabalho atualiza `startingWeightKg` em todos os `workoutTemplateExercise` do plano ativo na mesma transação. Séries de aquecimento continuam isoladas. O iOS aplica o mesmo valor a todos os itens de `weekPlan` que tenham o exercício enquanto renderiza a resposta confirmada.
+
+## Throughput checkpoint
+
+O backend e o iOS são workstreams independentes. O backend não pode ser alterado no checkout do iOS. Os dois repositórios já têm mudanças locais, então cada worker preserva o diff existente e escreve apenas em seu repositório.
+
+## Verificação
+
+O simulador iOS passou com 133 testes em 17 suítes. A API passou na checagem TypeScript, em 27 testes da API, 43 testes do domínio e no fluxo Postgres descartável com dois treinos compartilhando um exercício. A checagem geral continua apontando apenas dois snapshots de formatação já existentes no pacote de banco.
+
+# Cronômetro da sessão de treino
+
+- [x] 1. `how` over the affected subsystem.
+  - A sessão usa `WorkoutSessionScreen`, `TrainingSetRow` e `AcademiaStore`; `PrepSet.completedAt` e `WorkSet.completedAt` já são os timestamps disponíveis. A projeção otimista recria timestamps pendentes com `.now`, então o cronômetro não pode depender desse valor sem estabilizá-lo.
+- [x] 2. `architect` for parallel design exploration.
+  - Duas propostas foram comparadas com uma revisão independente. Escolhida a derivação pura de `WorkoutSessionTiming` com `completedAt` estável no `PendingSet`, sem ledger paralelo ou endpoint novo.
+- [x] 3. Write the throughput checkpoint as four todo items.
+  - Blocking first steps. Mapear o toque que conclui a primeira série, a conclusão da última série e o ciclo de vida da tela antes de escrever o cronômetro.
+  - Independent workstreams. A investigação de fluxo e o desenho do estado podem correr em paralelo; a implementação da tela e os testes compartilham o mesmo caminho e ficam serializados.
+  - Shared mutable state. O estado do cronômetro pertence à sessão aberta, então um único writer altera `WorkoutSessionScreen` e os testes associados.
+  - Smallest safe decomposition. Um worker implementa o tipo de estado e a tela, porque a regra de início e fim depende do mesmo snapshot do treino.
+- [ ] 4. Delegate code-writing to a subagent.
+- [ ] 5. Verify on the matching surface.
+- [ ] 6. Rebase into small, ordered commits; stack follow-ups.
+  - skip: o projeto entrega mudanças locais em main e não foi solicitado abrir PR.
+- [ ] 7. If the design is contested, `interrogate` before shipping.
+  - skip: só será necessário se as alternativas de estado produzirem comportamentos diferentes no fluxo real.
+- [ ] 8. Run Opening a PR.
+  - skip: o pedido é uma alteração local no app, sem publicação solicitada.
+
+## Decisão de dados
+
+`WorkoutSessionTiming` deriva `startedAt` do menor `completedAt` nas séries de aquecimento e `finishedAt` do maior timestamp quando todas as séries estão concluídas. Uma pendência offline conserva o instante capturado no toque. A tela calcula `Date.now - startedAt` enquanto a sessão corre e congela o valor final. O contador não incrementa estado a cada segundo e não cria uma segunda fonte de verdade para as séries.

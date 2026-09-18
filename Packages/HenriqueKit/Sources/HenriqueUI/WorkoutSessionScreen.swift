@@ -126,6 +126,9 @@ struct WorkoutSessionScreen: View {
         .frame(height: 8)
       }
       .animation(settle, value: progress.done)
+      if let timing = WorkoutSessionTiming(workout) {
+        WorkoutSessionClock(timing: timing)
+      }
     }
     .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 14)
   }
@@ -189,5 +192,31 @@ struct WorkoutSessionScreen: View {
     .font(.subheadline.weight(.medium)).foregroundStyle(accent.deep)
     .padding(.horizontal, 16).padding(.vertical, 10)
     .glassEffect(.regular.tint(accent.mint.opacity(0.55)), in: .capsule)
+  }
+}
+
+private struct WorkoutSessionClock: View {
+  let timing: WorkoutSessionTiming
+
+  var body: some View {
+    if timing.finishedAt == nil {
+      TimelineView(.periodic(from: .now, by: 1)) { context in
+        readout(at: context.date)
+      }
+    } else {
+      readout(at: .now)
+    }
+  }
+
+  private func readout(at now: Date) -> some View {
+    let seconds = Int(timing.elapsed(at: now))
+    let time = Duration.seconds(seconds).formatted(.time(pattern: seconds >= 3600
+      ? .hourMinuteSecond : .minuteSecond(padMinuteToLength: 2)))
+    return Text("tempo \(time)")
+      .font(.subheadline.weight(.medium)).monospacedDigit()
+      .foregroundStyle(Color.ink)
+      .accessibilityLabel("tempo de treino")
+      .accessibilityValue(time)
+      .accessibilityIdentifier("sessao.tempo")
   }
 }

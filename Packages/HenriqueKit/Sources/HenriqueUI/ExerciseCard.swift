@@ -165,25 +165,34 @@ struct TrainingSetRow: View {
         focused = nil
         tapCount += 1
       } label: {
-        Image(systemName: "checkmark").font(.body.weight(.semibold))
-          .foregroundStyle(done ? accent.deep : Color.mutedInk.opacity(0.35))
-          .scaleEffect(done ? 1 : 0.7)
-          .frame(width: scale.check, height: scale.check)
-          .background(done ? accent.acid : .white, in: .circle)
-          .overlay(Circle().strokeBorder(Color.ink.opacity(done ? 0 : 0.12), lineWidth: 1.5))
-          // Borda tracejada enquanto a marcação não chegou ao servidor. O visto
-          // cheio sozinho prometia coisa que às vezes não tinha acontecido.
-          .overlay {
-            if waiting {
-              Circle().strokeBorder(
-                accent.deep.opacity(0.55),
-                style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
-            }
+        // O círculo vazio com a borda é o estado não marcado, e o visto entra
+        // por cima dele. Um visto fantasma parado no lugar não deixava espaço
+        // para a entrada, e era o que fazia a confirmação passar em branco.
+        ZStack {
+          if done {
+            Image(systemName: "checkmark").font(.body.weight(.semibold))
+              .foregroundStyle(accent.deep)
+              .transition(.iconAppear)
           }
-          .scaleEffect(done ? 1 : 0.94)
+        }
+        .frame(width: scale.check, height: scale.check)
+        .background(done ? accent.acid : .white, in: .circle)
+        // A borda carrega sozinha o estado não marcado agora que o visto
+        // fantasma saiu, então ela ganhou o peso que ele tinha.
+        .overlay(Circle().strokeBorder(Color.ink.opacity(done ? 0 : 0.18), lineWidth: 1.5))
+        // Borda tracejada enquanto a marcação não chegou ao servidor. O visto
+        // cheio sozinho prometia coisa que às vezes não tinha acontecido.
+        .overlay {
+          if waiting {
+            Circle().strokeBorder(
+              accent.deep.opacity(0.55),
+              style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+          }
+        }
+        .scaleEffect(done ? 1 : 0.94)
       }.buttonStyle(SetCompletionStyle()).disabled(!Limits.setWeightKg.contains(weightDraft ?? -1) || !Limits.reps.contains(repsDraft ?? 0))
         .accessibilityIdentifier(fieldID + ".completion")
-        .animation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.74), value: done)
+        .animation(reduceMotion ? nil : Motion.confirm, value: done)
         .accessibilityLabel(done ? "Desmarcar série \(index)" : "Concluir série \(index)")
         .accessibilityValue(waiting ? "esperando enviar" : "")
         .sensoryFeedback(currentDone ? .success : .impact(weight: .light), trigger: tapCount)
@@ -217,9 +226,9 @@ private struct SetCompletionStyle: ButtonStyle {
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.9 : 1)
+      .scaleEffect(configuration.isPressed && !reduceMotion ? Motion.press : 1)
       .opacity(configuration.isPressed ? 0.8 : 1)
-      .animation(configuration.isPressed || reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.74), value: configuration.isPressed)
+      .animation(configuration.isPressed || reduceMotion ? nil : Motion.tap, value: configuration.isPressed)
   }
 }
 

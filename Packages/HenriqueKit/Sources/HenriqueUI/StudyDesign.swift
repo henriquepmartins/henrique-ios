@@ -550,7 +550,7 @@ struct StudyMetric: View {
         .monospacedDigit()
         .tracking(-valueSize * 0.02)
         .contentTransition(.numericText())
-        .animation(.smooth(duration: 0.3), value: value)
+        .animation(Motion.crossfade, value: value)
       Text(caption)
         .font(.caption)
         .foregroundStyle(Color.studyInk60)
@@ -570,6 +570,7 @@ struct StudyMetric: View {
 // MARK: - Tarefa
 
 struct StudyTaskCard: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let assignment: StudyAssignment
   let now: Date
   var onToggle: ((AssignmentStatus) -> Void)?
@@ -627,14 +628,15 @@ struct StudyTaskCard: View {
           RoundedRectangle(cornerRadius: 5)
             .strokeBorder(done ? Color.studyBlue : Color.studyInk20, lineWidth: 1.5)
         )
-        .overlay(
-          Image(systemName: "checkmark")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(.white)
-            .opacity(done ? 1 : 0)
-            .scaleEffect(done ? 1 : 0.6)
-            .animation(.easeOut(duration: 0.16), value: done)
-        )
+        .overlay {
+          if done {
+            Image(systemName: "checkmark")
+              .font(.system(size: 12, weight: .bold))
+              .foregroundStyle(.white)
+              .transition(.iconAppear)
+          }
+        }
+        .animation(reduceMotion ? nil : Motion.confirm, value: done)
         .frame(width: 20, height: 20)
         .padding(12)
         .contentShape(.rect)

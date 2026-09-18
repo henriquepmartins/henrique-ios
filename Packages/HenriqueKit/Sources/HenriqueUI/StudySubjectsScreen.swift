@@ -8,6 +8,7 @@ public struct StudySubjectRoute: Hashable, Sendable {
 
 public struct StudySubjectsScreen: View {
   @Environment(EstudosStore.self) private var store
+  @Namespace private var cardSource
 
   public init() {}
 
@@ -16,22 +17,27 @@ public struct StudySubjectsScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         switch store.subjects {
         case .idle, .loading:
-          StudyLoadingState().transition(.opacity)
+          StudyLoadingState().transition(.blurReplace)
         case .failed(let message):
           StudyFailedState(message: message) { Task { await store.loadSubjects(force: true) } }
-            .transition(.opacity)
+            .transition(.blurReplace)
         case .ready(let subjects):
-          content(subjects).transition(.opacity)
+          content(subjects).transition(.blurReplace)
         }
       }
-      .animation(.easeOut(duration: 0.25), value: store.subjects.phase)
+      .animation(Motion.crossfade, value: store.subjects.phase)
       .padding(.horizontal, 16)
       .padding(.bottom, 32)
     }
     .studyPage()
     .task { await store.loadSubjects() }
     .refreshable { await store.loadSubjects(force: true) }
-    .navigationDestination(for: StudySubjectRoute.self) { StudySubjectScreen(id: $0.id) }
+    // O cartão da grade cresce e vira a tela em vez de empurrar de lado. Quem
+    // toca sabe de onde a tela veio, e voltar devolve a peça ao mesmo lugar.
+    .navigationDestination(for: StudySubjectRoute.self) { route in
+      StudySubjectScreen(id: route.id)
+        .navigationTransition(.zoom(sourceID: route.id, in: cardSource))
+    }
     .navigationDestination(for: NotebookPageRoute.self) { NotebookPageScreen(id: $0.id) }
   }
 
@@ -48,6 +54,7 @@ public struct StudySubjectsScreen: View {
             StudySubjectCard(subject: subject)
           }
           .buttonStyle(StudyPressStyle())
+          .matchedTransitionSource(id: subject.id, in: cardSource)
           .staggeredEntrance(index: index, columns: 2, isReady: true)
         }
       }
@@ -136,15 +143,15 @@ public struct StudySubjectScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         switch state {
         case .loading:
-          StudyLoadingState().transition(.opacity)
+          StudyLoadingState().transition(.blurReplace)
         case .failed(let message):
           StudyFailedState(message: message) { Task { await load(force: true) } }
-            .transition(.opacity)
+            .transition(.blurReplace)
         case .ready(let detail):
-          content(detail).transition(.opacity)
+          content(detail).transition(.blurReplace)
         }
       }
-      .animation(.easeOut(duration: 0.25), value: state.isReady)
+      .animation(Motion.crossfade, value: state.isReady)
       .padding(.horizontal, 16)
       .padding(.bottom, 32)
     }
@@ -205,7 +212,7 @@ public struct StudySubjectScreen: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .id(tab)
     .transition(.opacity)
-    .animation(.easeOut(duration: 0.12), value: tab)
+    .animation(Motion.swap, value: tab)
   }
 
   @ViewBuilder

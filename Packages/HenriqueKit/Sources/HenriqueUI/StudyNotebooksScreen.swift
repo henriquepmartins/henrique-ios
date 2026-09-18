@@ -29,16 +29,16 @@ public struct SubjectNotebookSection: View {
     VStack(alignment: .leading, spacing: 12) {
       switch store.notebooks {
       case .idle, .loading:
-        StudyLoadingState().transition(.opacity)
+        StudyLoadingState().transition(.blurReplace)
       case .failed(let message):
         StudyFailedState(message: message) { Task { await store.loadNotebooks(force: true) } }
-          .transition(.opacity)
+          .transition(.blurReplace)
       case .ready(let notebooks):
-        pages(notebooks.first { $0.subject.id == subjectId }?.pages ?? []).transition(.opacity)
+        pages(notebooks.first { $0.subject.id == subjectId }?.pages ?? []).transition(.blurReplace)
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .animation(.easeOut(duration: 0.25), value: store.notebooks.phase)
+    .animation(Motion.crossfade, value: store.notebooks.phase)
     .task { await store.loadNotebooks() }
     .navigationDestination(item: $created) { NotebookPageScreen(id: $0.id) }
   }

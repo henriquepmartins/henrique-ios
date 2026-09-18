@@ -88,6 +88,23 @@ public struct WorkoutSummary: Codable, Hashable, Sendable, Identifiable {
   public var exercises: [DashboardExercise]
 }
 
+public struct WorkoutSessionTiming: Equatable, Sendable {
+  public let startedAt: Date
+  public let finishedAt: Date?
+
+  public init?(_ workout: WorkoutSummary) {
+    let prepDates = workout.exercises.flatMap { $0.sets.prep.map(\.completedAt) }
+    guard let startedAt = prepDates.compactMap({ $0 }).min() else { return nil }
+    let dates = prepDates + workout.exercises.flatMap { $0.sets.work.map(\.completedAt) }
+    self.startedAt = startedAt
+    finishedAt = dates.allSatisfy { $0 != nil } ? dates.compactMap { $0 }.max() : nil
+  }
+
+  public func elapsed(at now: Date) -> TimeInterval {
+    max(0, (finishedAt ?? now).timeIntervalSince(startedAt))
+  }
+}
+
 public struct ProgressPoint: Codable, Hashable, Sendable, Identifiable {
   public var date: CalendarDate
   public var estimatedOneRepMax: Double
@@ -349,6 +366,25 @@ public struct Dashboard: Codable, Hashable, Sendable {
 }
 
 extension Dashboard {
+  /// A carga de trabalho é uma propriedade do exercício no plano, não de um
+  /// treino específico. A API devolve o plano inteiro, então esta regra
+  /// mantém todos os treinos do usuário alinhados enquanto uma resposta chega.
+  public func applyingSharedExerciseWeight(_ weightKg: Double, exerciseId: String) -> Dashboard {
+    var copy = self
+    for planIndex in copy.weekPlan.indices {
+      for exerciseIndex in copy.weekPlan[planIndex].exercises.indices
+      where copy.weekPlan[planIndex].exercises[exerciseIndex].exerciseId == exerciseId {
+        copy.weekPlan[planIndex].exercises[exerciseIndex].startingWeightKg = weightKg
+      }
+    }
+    if var workout = copy.workout,
+      let exerciseIndex = workout.exercises.firstIndex(where: { $0.id == exerciseId }) {
+      workout.exercises[exerciseIndex].prescription.startingWeightKg = weightKg
+      copy.workout = workout
+    }
+    return copy
+  }
+
   public var highlightedWorkoutIDs: Set<String> {
     let sessions = weeklyWorkoutSessions ?? []
     let maximum = sessions.map(\.count).max() ?? 0

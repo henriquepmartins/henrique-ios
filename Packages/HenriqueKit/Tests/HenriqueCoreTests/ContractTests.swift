@@ -87,6 +87,21 @@ struct ContractTests {
     #expect(exercises[0].prescription.repsLabel == "6–10")
   }
 
+  @Test("a carga de trabalho se repete nos treinos com o mesmo exercício")
+  func sharedWorkWeightUpdatesEveryPlanItem() throws {
+    var dashboard = try Self.dashboard()
+    var otherWorkout = try #require(dashboard.weekPlan.first)
+    otherWorkout.id = "tpl-quinta"
+    otherWorkout.weekdays = [4]
+    otherWorkout.exercises[0].startingWeightKg = 20
+    dashboard.weekPlan.append(otherWorkout)
+
+    let updated = dashboard.applyingSharedExerciseWeight(50, exerciseId: "supino-reto")
+
+    #expect(updated.weekPlan.map { $0.exercises[0].startingWeightKg } == [50, 50])
+    #expect(updated.workout?.exercises.first?.prescription.startingWeightKg == 50)
+  }
+
   @Test("o aquecimento sai sem o campo de falha")
   func prepSetOmitsToFailure() throws {
     let input = RecordSetInput.prep(

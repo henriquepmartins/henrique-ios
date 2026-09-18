@@ -14,15 +14,15 @@ public struct StudyAssignmentsScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         switch store.assignments {
         case .idle, .loading:
-          StudyLoadingState().transition(.opacity)
+          StudyLoadingState().transition(.blurReplace)
         case .failed(let message):
           StudyFailedState(message: message) { Task { await store.loadAssignments(force: true) } }
-            .transition(.opacity)
+            .transition(.blurReplace)
         case .ready(let groups):
-          content(groups).transition(.opacity)
+          content(groups).transition(.blurReplace)
         }
       }
-      .animation(.easeOut(duration: 0.25), value: store.assignments.phase)
+      .animation(Motion.crossfade, value: store.assignments.phase)
       .padding(.horizontal, 16)
       .padding(.bottom, 32)
     }
@@ -113,7 +113,7 @@ public struct StudyAssignmentsScreen: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .id("\(filter.rawValue)-\(selectedDay?.iso ?? "")")
     .transition(.opacity)
-    .animation(.easeOut(duration: 0.12), value: filter)
+    .animation(Motion.swap, value: filter)
     .onChange(of: selectedDay) { switched = true }
   }
 

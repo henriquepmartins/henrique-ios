@@ -59,6 +59,7 @@ struct MeasurementsScreen: View {
 /// resumo mostra o número mais recente e o toque abre a tela inteira.
 struct MeasurementsLink: View {
   @Environment(\.accent) private var accent
+  @Namespace private var cardSource
   let latest: BodyMeasurement?
 
   var body: some View {
@@ -67,6 +68,10 @@ struct MeasurementsLink: View {
         .background(Color.canvas.ignoresSafeArea())
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
+        // O cartão cresce e vira a tela, o mesmo gesto do botão de começar
+        // treino. Empurrar de lado fazia um resumo e o detalhe dele parecerem
+        // duas telas sem parentesco.
+        .navigationTransition(.zoom(sourceID: "medidas", in: cardSource))
     } label: {
       HStack(alignment: .top, spacing: 16) {
         VStack(alignment: .leading, spacing: 10) {
@@ -99,6 +104,7 @@ struct MeasurementsLink: View {
       .contentShape(.rect(cornerRadius: 32))
     }
     .buttonStyle(StudyPressStyle())
+    .matchedTransitionSource(id: "medidas", in: cardSource)
     .foregroundStyle(Color.ink)
   }
 
@@ -106,7 +112,7 @@ struct MeasurementsLink: View {
     VStack(alignment: .leading, spacing: 2) {
       Text(text).font(.system(size: 30, weight: .medium)).monospacedDigit()
         .contentTransition(.numericText())
-        .animation(.smooth(duration: 0.3), value: text)
+        .animation(Motion.crossfade, value: text)
       Text(caption).font(.caption).foregroundStyle(Color.mutedInk)
     }
   }

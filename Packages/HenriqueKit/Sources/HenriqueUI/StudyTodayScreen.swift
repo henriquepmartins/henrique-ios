@@ -7,14 +7,18 @@ private let blocoMinutos = 50
 
 public struct StudyTodayScreen: View {
   @Environment(EstudosStore.self) private var store
+  /// O espaço que liga o botão de começar à sessão que ele abre. Mora na raiz
+  /// das abas, que é quem apresenta a sessão, do mesmo jeito que a academia faz.
+  let sessionSource: Namespace.ID
   let onSession: () -> Void
   let onAssignments: () -> Void
   let onReview: () -> Void
 
   public init(
-    onSession: @escaping () -> Void, onAssignments: @escaping () -> Void,
-    onReview: @escaping () -> Void
+    sessionSource: Namespace.ID, onSession: @escaping () -> Void,
+    onAssignments: @escaping () -> Void, onReview: @escaping () -> Void
   ) {
+    self.sessionSource = sessionSource
     self.onSession = onSession
     self.onAssignments = onAssignments
     self.onReview = onReview
@@ -25,10 +29,10 @@ public struct StudyTodayScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         switch store.overview {
         case .idle, .loading:
-          StudyLoadingState().transition(.opacity)
+          StudyLoadingState().transition(.blurReplace)
         case .failed(let message):
           StudyFailedState(message: message) { Task { await store.loadOverview(force: true) } }
-            .transition(.opacity)
+            .transition(.blurReplace)
         case .ready(let overview):
           // A tela chegava inteira num quadro só. Numerar os blocos faz a
           // abertura descer de cima para baixo, na ordem em que o olho lê, e o
@@ -37,7 +41,7 @@ public struct StudyTodayScreen: View {
             StudyHeading(
               title: StudyFormat.weekdayLong(overview.date.date(in: StudyFormat.calendar)))
               .staggeredEntrance(index: 0, isReady: true)
-            StudyTodayHero(overview: overview, onSession: onSession)
+            StudyTodayHero(overview: overview, sessionSource: sessionSource, onSession: onSession)
               .staggeredEntrance(index: 1, isReady: true)
             StudyTodayMetrics(overview: overview)
               .staggeredEntrance(index: 2, isReady: true)
@@ -47,7 +51,7 @@ public struct StudyTodayScreen: View {
                 .staggeredEntrance(index: 5, isReady: true)
             }
           }
-          .transition(.opacity)
+          .transition(.blurReplace)
         }
       }
       .animation(Motion.crossfade, value: store.overview.phase)
@@ -68,6 +72,7 @@ private func contagem(_ total: Int, _ singular: String, _ plural: String) -> Str
 
 struct StudyTodayHero: View {
   let overview: StudyOverview
+  let sessionSource: Namespace.ID
   let onSession: () -> Void
 
   var body: some View {
@@ -87,6 +92,7 @@ struct StudyTodayHero: View {
           .tint(.studyBlue)
           .font(.subheadline)
           .padding(.top, 4)
+          .matchedTransitionSource(id: "sessao", in: sessionSource)
       }
     }
   }

@@ -87,6 +87,7 @@ struct ProgressScreen: View {
     .sheet(item: $editing) { kind in
       if let dashboard = store.dashboard {
         GoalEditor(kind: kind, dashboard: dashboard)
+          .presentationDetents([.medium, .large])
       }
     }
   }
@@ -124,7 +125,7 @@ struct StreakGoalCard: View {
         .monospacedDigit()
         ProgressView(value: progress)
           .tint(accent.signal)
-          .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: progress)
+          .animation(reduceMotion ? nil : Motion.crossfade, value: progress)
         if current >= target {
           Text("meta batida").font(.footnote).foregroundStyle(.secondary)
         }
@@ -454,7 +455,10 @@ struct MetricDetailScreen: View {
       .sheet(isPresented: $isAddingMeasurement) { MeasurementEditor(previous: store.dashboard?.measurements.first) }
       .sheet(isPresented: $isEditingGoal) {
         if let dashboard = store.dashboard {
+          // Uma meta são dois campos. Subir até o topo dava peso de tela nova
+          // a um ajuste, e escondia de onde ele saiu.
           GoalEditor(kind: .strength, dashboard: dashboard)
+            .presentationDetents([.medium, .large])
         }
       }
   }

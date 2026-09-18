@@ -176,14 +176,67 @@ enum Motion {
   static let tap = Animation.snappy(duration: 0.22)
   /// Troca de uma tela inteira por outra.
   static let crossfade = Animation.smooth(duration: 0.3)
+  /// Troca de filtro, de aba ou de chip. Mais curta que `tap` porque nada se
+  /// move de lugar, só o conteúdo troca embaixo do dedo.
+  static let swap = Animation.easeOut(duration: 0.12)
+  /// Confirmar. O visto de série e o de entrega correm nesta, e sem repique:
+  /// um pulo no fim deixa dúvida se a marcação pegou ou voltou.
+  static let confirm = Animation.spring(duration: 0.3, bounce: 0)
+  /// Seção que abre ou fecha crescendo em altura, empurrando o resto.
+  static let expand = Animation.spring(duration: 0.38, bounce: 0.1)
   /// Com movimento reduzido só a opacidade muda, e rápido.
   static let plain = Animation.easeOut(duration: 0.15)
   /// O quanto um item sobe ao entrar.
   static let rise: CGFloat = 8
+  /// O quanto um botão encolhe sob o dedo. Abaixo de 0.95 o botão parece
+  /// afundar, e aí o toque vira um evento em vez de uma resposta.
+  static let press: CGFloat = 0.96
+  /// De que tamanho e de quanto desfoque um ícone entra.
+  static let iconScale: CGFloat = 0.25
+  static let iconBlur: CGFloat = 4
 
   /// O passo entre um item e o seguinte. O atraso para de crescer no sétimo
   /// para a última linha de uma lista longa não esperar a lista inteira.
   static func delay(index: Int) -> Double { 0.05 * Double(min(index, 6)) }
+}
+
+/// Uma barra fina que diz quanto falta. O número sozinho conta o que já foi;
+/// a barra mostra o que sobra, e é o que tira o número de trivia. Cresce a
+/// partir da esquerda, no mesmo tempo em que o número troca.
+struct ProgressTrack: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  let fraction: Double
+  let color: Color
+  var height: CGFloat = 4
+
+  var body: some View {
+    Capsule().fill(color.opacity(0.18))
+      .frame(height: height)
+      .overlay(alignment: .leading) {
+        // Escalar no eixo x evita um GeometryReader só para medir a largura.
+        // Numa barra de 4pt a deformação das pontas não dá para ver.
+        Capsule().fill(color)
+          .scaleEffect(x: min(max(fraction, 0), 1), y: 1, anchor: .leading)
+      }
+      .animation(reduceMotion ? nil : Motion.crossfade, value: fraction)
+      .accessibilityHidden(true)
+  }
+}
+
+/// Um ícone que entra. Opacidade, escala e desfoque ao mesmo tempo. Sem o
+/// desfoque, um glifo crescendo de 0.25 lê como estalo; com ele, lê como uma
+/// coisa entrando em foco, que é o que o iOS faz quando um ícone troca.
+struct IconAppear: Transition {
+  func body(content: Content, phase: TransitionPhase) -> some View {
+    content
+      .scaleEffect(phase.isIdentity ? 1 : Motion.iconScale)
+      .opacity(phase.isIdentity ? 1 : 0)
+      .blur(radius: phase.isIdentity ? 0 : Motion.iconBlur)
+  }
+}
+
+extension Transition where Self == IconAppear {
+  static var iconAppear: IconAppear { IconAppear() }
 }
 
 struct StudyPressStyle: ButtonStyle {
@@ -197,7 +250,7 @@ struct StudyPressStyle: ButtonStyle {
 
     var body: some View {
       configuration.label
-        .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+        .scaleEffect(configuration.isPressed && !reduceMotion ? Motion.press : 1)
         .opacity(configuration.isPressed && reduceMotion ? 0.7 : 1)
         // O encolher acontece no mesmo quadro do toque. Só a volta tem curva,
         // senão o botão parece responder atrasado ao dedo.

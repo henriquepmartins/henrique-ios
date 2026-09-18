@@ -65,7 +65,7 @@ public struct TodayScreen: View {
             .firstEntrance(index: 2, settled: enteredDates.contains(data.date.iso))
             ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { index, exercise in
               ExerciseCard(exercise: exercise, date: data.date, templateId: workout.id, isOpen: openIds.contains(exercise.id)) {
-                withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 1)) {
+                withAnimation(reduceMotion ? nil : Motion.expand) {
                   if !openIds.insert(exercise.id).inserted { openIds.remove(exercise.id) }
                 }
               }
@@ -160,6 +160,7 @@ struct TodaySkeleton: View {
 
 struct WorkoutHero: View {
   @Environment(\.accent) private var accent
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 46.0
   let workout: WorkoutSummary?
   let notch: CGFloat
@@ -182,8 +183,17 @@ struct WorkoutHero: View {
           Text("\(workout.exerciseCount) exercícios · \(workout.workSetCount) séries")
             .font(.subheadline)
           if workout.completionPercent > 0 {
-            Text("\(workout.completionPercent)% feito")
-              .font(.caption).foregroundStyle(Color.mutedInk)
+            VStack(alignment: .leading, spacing: 6) {
+              Text("\(workout.completionPercent)% feito")
+                .font(.caption).monospacedDigit().foregroundStyle(Color.mutedInk)
+                .contentTransition(.numericText())
+              // Largura presa ao número, não ao cartão. Atravessando o hero
+              // inteiro a barra lia como um filete separando seções.
+              ProgressTrack(fraction: Double(workout.completionPercent) / 100, color: accent.deep)
+                .frame(maxWidth: 160)
+            }
+            .animation(reduceMotion ? nil : Motion.crossfade, value: workout.completionPercent)
+            .transition(.blurReplace)
           }
           Button(workout.completionPercent > 0 ? "continuar" : "começar", systemImage: "play.fill", action: onStart)
             .buttonStyle(.glassProminent).tint(accent.deep).foregroundStyle(.white).controlSize(.large)

@@ -106,16 +106,82 @@ struct PendingSetQueueTests {
     #expect(FakeNetwork.recordedSets > tentativasOffline)
   }
 
+  @Test("leituras e edições offline conservam a data da marcação", arguments: [SetKey.Kind.prep, .work])
+  func preservesPendingCompletionDate(kind: SetKey.Kind) async throws {
+    let store = await lojaComPainel()
+    let key = SetKey(
+      date: .today, templateId: chave.templateId, exerciseId: chave.exerciseId, kind: kind, index: 2)
+    let before = Date.now
+    _ = await store.record(key: key, weightKg: 30, reps: 10, completed: true, toFailure: false)?.value
+    let after = Date.now
+    let first = try #require(completionDate(in: store, key: key))
+    #expect(first >= before && first <= after)
+    #expect(store.isWaiting(key))
+    #expect(completionDate(in: store, key: key) == first)
+
+    _ = await store.record(key: key, weightKg: 35, reps: 8, completed: true, toFailure: false)?.value
+    #expect(completionDate(in: store, key: key) == first)
+    let sets = try #require(store.dashboard?.workout?.exercises.first?.sets)
+    #expect(kind == .prep ? sets.prep[1].weightKg == 35 : sets.work[1].weightKg == 35)
+    #expect(kind == .prep ? sets.prep[1].reps == 8 : sets.work[1].reps == 8)
+
+    _ = await store.record(key: key, weightKg: 35, reps: 8, completed: false, toFailure: false)?.value
+    #expect(completionDate(in: store, key: key) == nil)
+    let remarkedAfter = Date.now
+    _ = await store.record(key: key, weightKg: 35, reps: 8, completed: true, toFailure: false)?.value
+    let remarked = try #require(completionDate(in: store, key: key))
+    #expect(remarked >= remarkedAfter)
+    #expect(remarked > first)
+  }
+
+  @Test("editar série já salva conserva a data do servidor", arguments: [SetKey.Kind.prep, .work])
+  func preservesAcceptedCompletionDate(kind: SetKey.Kind) async throws {
+    let store = await lojaComPainel()
+    let key = SetKey(
+      date: .today, templateId: chave.templateId, exerciseId: chave.exerciseId, kind: kind, index: 1)
+    let expected = try Date.ISO8601FormatStyle(includingFractionalSeconds: kind == .prep).parse(
+      kind == .prep ? "2026-09-08T13:02:11.482Z" : "2026-09-08T13:09:40Z")
+    let original = try #require(completionDate(in: store, key: key))
+    #expect(abs(original.timeIntervalSince(expected)) < 0.000001)
+    _ = await store.record(key: key, weightKg: 45, reps: 8, completed: true, toFailure: true)?.value
+    #expect(completionDate(in: store, key: key) == original)
+  }
+
+  @Test("rascunho antigo sem data continua decodificando")
+  func decodesLegacyDraft() throws {
+    let legacy = Data(#"{"weightKg":30,"reps":10,"completed":true,"toFailure":false}"#.utf8)
+    let draft = try JSONDecoder.henrique().decode(SetDraft.self, from: legacy)
+    #expect(draft.completed)
+    #expect(draft.weightKg == 30)
+    #expect(draft.completedAt == nil)
+
+    let dated = SetDraft(weightKg: 30, reps: 10, completed: true, toFailure: false,
+      completedAt: Date(timeIntervalSince1970: 100))
+    let restored = try JSONDecoder.henrique().decode(
+      SetDraft.self, from: JSONEncoder.henrique().encode(dated))
+    #expect(restored.completedAt == Date(timeIntervalSince1970: 100))
+  }
+
   @Test("a série guardada sobrevive ao app fechar")
-  func survivesRelaunch() async {
+  func survivesRelaunch() async throws {
     let primeiro = await lojaComPainel()
     _ = await primeiro.record(
       key: chave, weightKg: 42.5, reps: 9, completed: true, toFailure: true)?.value
     #expect(primeiro.isWaiting(chave))
+    let completedAt = try #require(completionDate(in: primeiro, key: chave))
 
     let segundo = makeStore()
     #expect(segundo.isWaiting(chave))
+    #expect(completionDate(in: segundo, key: chave) == completedAt)
   }
+}
+
+@MainActor
+private func completionDate(in store: AcademiaStore, key: SetKey) -> Date? {
+  let sets = store.dashboard?.workout?.exercises.first { $0.id == key.exerciseId }?.sets
+  return key.kind == .prep
+    ? sets?.prep.first { $0.index == key.index }?.completedAt
+    : sets?.work.first { $0.index == key.index }?.completedAt
 }
 
 /// O disco é o mesmo para toda a suíte, então cada teste começa com ele limpo.

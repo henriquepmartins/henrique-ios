@@ -25,6 +25,7 @@ struct SetDraft: Equatable, Sendable, Codable {
   let reps: Int
   let completed: Bool
   let toFailure: Bool
+  var completedAt: Date? = nil
 }
 
 @MainActor
@@ -66,10 +67,8 @@ public final class AcademiaStore {
     for pending in pendingSets.values.sorted(by: { $0.revision < $1.revision }) {
       let key = pending.key
       let draft = pending.draft
-      if key.kind == .work,
-        let plan = value.weekPlan.firstIndex(where: { $0.id == key.templateId }),
-        let exercise = value.weekPlan[plan].exercises.firstIndex(where: { $0.exerciseId == key.exerciseId }) {
-        value.weekPlan[plan].exercises[exercise].startingWeightKg = draft.weightKg
+      if key.kind == .work {
+        value = value.applyingSharedExerciseWeight(draft.weightKg, exerciseId: key.exerciseId)
       }
       guard value.date == key.date, value.workout?.id == key.templateId,
         var workout = value.workout,
@@ -78,14 +77,14 @@ public final class AcademiaStore {
         let row = workout.exercises[exercise].sets.prep.firstIndex(where: { $0.index == key.index }) {
         workout.exercises[exercise].sets.prep[row].weightKg = draft.weightKg
         workout.exercises[exercise].sets.prep[row].reps = draft.reps
-        workout.exercises[exercise].sets.prep[row].completedAt = draft.completed ? .now : nil
+        workout.exercises[exercise].sets.prep[row].completedAt = draft.completedAt
       } else if key.kind == .work,
         let row = workout.exercises[exercise].sets.work.firstIndex(where: { $0.index == key.index }) {
         workout.exercises[exercise].prescription.startingWeightKg = draft.weightKg
         workout.exercises[exercise].sets.work[row].weightKg = draft.weightKg
         workout.exercises[exercise].sets.work[row].reps = draft.reps
         workout.exercises[exercise].sets.work[row].toFailure = draft.toFailure
-        workout.exercises[exercise].sets.work[row].completedAt = draft.completed ? .now : nil
+        workout.exercises[exercise].sets.work[row].completedAt = draft.completedAt
       }
       workout.completedWorkSetCount = workout.exercises.reduce(0) { $0 + $1.sets.completedWorkCount }
       workout.completionPercent = workout.workSetCount == 0 ? 0
@@ -336,9 +335,16 @@ public final class AcademiaStore {
     key: SetKey, weightKg: Double, reps: Int,
     completed: Bool, toFailure: Bool
   ) -> Task<Bool, Never>? {
-    guard key.date == selectedDate, dashboard?.date == key.date, dashboard?.workout?.id == key.templateId,
+    guard key.date == selectedDate, let dashboard, dashboard.date == key.date,
+      let workout = dashboard.workout, workout.id == key.templateId,
       weightKg.isFinite, weightKg >= 0, reps > 0 else { return nil }
-    let draft = SetDraft(weightKg: weightKg, reps: reps, completed: completed, toFailure: toFailure)
+    let exercise = workout.exercises.first { $0.id == key.exerciseId }
+    let existingDate = key.kind == .prep
+      ? exercise?.sets.prep.first { $0.index == key.index }?.completedAt
+      : exercise?.sets.work.first { $0.index == key.index }?.completedAt
+    let draft = SetDraft(
+      weightKg: weightKg, reps: reps, completed: completed, toFailure: toFailure,
+      completedAt: completed ? (existingDate ?? .now) : nil)
     if pendingSets[key]?.draft == draft { return mutationTail }
     revision += 1
     let pending = PendingSet(key: key, draft: draft, revision: revision, failed: false)
@@ -355,7 +361,11 @@ public final class AcademiaStore {
       setIndex: key.index, weightKg: draft.weightKg, reps: draft.reps, completed: draft.completed)
     let input: RecordSetInput = key.kind == .prep
       ? .prep(fields) : .work(fields, toFailure: draft.toFailure)
-    return enqueue(pending: pending) { try await self.client.recordSet(input) }
+    return enqueue(pending: pending) {
+      let received = try await self.client.recordSet(input)
+      guard key.kind == .work else { return received }
+      return received.applyingSharedExerciseWeight(draft.weightKg, exerciseId: key.exerciseId)
+    }
   }
 
   /// Gravar série é idempotente no servidor, que casa por sessão, exercício,
