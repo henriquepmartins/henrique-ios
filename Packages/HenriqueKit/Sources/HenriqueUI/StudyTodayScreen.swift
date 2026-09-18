@@ -1,24 +1,16 @@
 import HenriqueCore
 import SwiftUI
 
-/// A sessão de foco é de 50 minutos porque é o que o cronômetro dela conta.
-/// Mudar aqui sem mudar lá faz a promessa da home mentir.
-private let blocoMinutos = 50
-
 public struct StudyTodayScreen: View {
   @Environment(EstudosStore.self) private var store
-  /// O espaço que liga o botão de começar à sessão que ele abre. Mora na raiz
-  /// das abas, que é quem apresenta a sessão, do mesmo jeito que a academia faz.
-  let sessionSource: Namespace.ID
   let onSession: () -> Void
   let onAssignments: () -> Void
   let onReview: () -> Void
 
   public init(
-    sessionSource: Namespace.ID, onSession: @escaping () -> Void,
-    onAssignments: @escaping () -> Void, onReview: @escaping () -> Void
+    onSession: @escaping () -> Void, onAssignments: @escaping () -> Void,
+    onReview: @escaping () -> Void
   ) {
-    self.sessionSource = sessionSource
     self.onSession = onSession
     self.onAssignments = onAssignments
     self.onReview = onReview
@@ -41,7 +33,7 @@ public struct StudyTodayScreen: View {
             StudyHeading(
               title: StudyFormat.weekdayLong(overview.date.date(in: StudyFormat.calendar)))
               .staggeredEntrance(index: 0, isReady: true)
-            StudyTodayHero(overview: overview, sessionSource: sessionSource, onSession: onSession)
+            FocoTodayCard()
               .staggeredEntrance(index: 1, isReady: true)
             StudyTodayMetrics(overview: overview)
               .staggeredEntrance(index: 2, isReady: true)
@@ -66,36 +58,6 @@ public struct StudyTodayScreen: View {
 
 private func contagem(_ total: Int, _ singular: String, _ plural: String) -> String {
   "\(total) \(total == 1 ? singular : plural)"
-}
-
-// MARK: - Herói
-
-struct StudyTodayHero: View {
-  let overview: StudyOverview
-  let sessionSource: Namespace.ID
-  let onSession: () -> Void
-
-  var body: some View {
-    let focus = StudyFocus(overview: overview)
-    StudyCard {
-      VStack(alignment: .leading, spacing: 12) {
-        StudyPill(tone: .outline, systemImage: "clock", text: StudyFormat.minutes(blocoMinutos))
-        StudyHeroTitle(words: focus.heroWords)
-        if let line = focus.line(now: overview.date.date(in: StudyFormat.calendar)) {
-          Text(line)
-            .font(.subheadline)
-            .foregroundStyle(Color.studyGraphite)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-        Button("começar", systemImage: "play.fill", action: onSession)
-          .buttonStyle(.glassProminent)
-          .tint(.studyBlue)
-          .font(.subheadline)
-          .padding(.top, 4)
-          .matchedTransitionSource(id: "sessao", in: sessionSource)
-      }
-    }
-  }
 }
 
 struct StudyTodayMetrics: View {
@@ -181,96 +143,5 @@ struct StudyTodayContinue: View {
   private func sessionDetail(_ session: StudySession) -> String {
     let minutes = StudyFormat.minutes(session.completedMinutes)
     return "\(minutes) · \(StudyFormat.relative(session.startedAt, now: Date()))"
-  }
-}
-
-// MARK: - Foco do dia
-
-/// Quem manda no herói. A matéria sai da entrega pendente mais próxima; sem
-/// entrega, da última sessão; sem sessão, da primeira matéria da lista.
-struct StudyFocus {
-  struct Subject {
-    let name: String
-    let color: String?
-  }
-
-  let subject: Subject?
-  let assignment: StudyAssignment?
-  private let lastSession: StudySession?
-
-  init(overview: StudyOverview) {
-    assignment = overview.dueSoon.first { $0.status != .done }
-    lastSession = overview.lastSession
-    if let withSubject = overview.dueSoon.first(where: {
-      $0.status != .done && $0.subjectName != nil
-    }), let name = withSubject.subjectName {
-      subject = Subject(name: name, color: withSubject.subjectColor)
-    } else if let first = overview.subjects.first(where: {
-      $0.id == overview.lastSession?.subjectId
-    }) ?? overview.subjects.first {
-      subject = Subject(name: first.name, color: first.color)
-    } else {
-      subject = nil
-    }
-  }
-
-  func line(now: Date) -> String? {
-    if let assignment {
-      return "\(assignment.title) · \(StudyFormat.due(assignment.dueAt, now: now))"
-    }
-    if let lastSession {
-      // O prazo se mede em dias, e "há 3 h" se mede no relógio. O meio-dia da
-      // data do overview serve ao primeiro e faria a tarde inteira virar "agora".
-      let when = StudyFormat.relative(lastSession.startedAt, now: Date())
-      let clock = StudyFormat.minutes(lastSession.completedMinutes)
-      return "\(clock) · \(when)"
-    }
-    return nil
-  }
-
-  /// O destaque cobre a primeira palavra da matéria, então a frase é montada
-  /// palavra por palavra para o pêssego terminar onde a palavra termina.
-  var heroWords: [StudyHeroWord] {
-    guard let subject else { return StudyHeroWord.line(head: "sem", highlight: "matérias") }
-    let name = subject.name.lowercased(with: StudyFormat.locale)
-    guard let space = name.firstIndex(of: " ") else {
-      return StudyHeroWord.line(highlight: name)
-    }
-    return StudyHeroWord.line(
-      highlight: String(name[name.startIndex..<space]),
-      tail: String(name[name.index(after: space)...]))
-  }
-}
-
-// MARK: - Título do herói
-
-struct StudyHeroWord: Identifiable {
-  let id: Int
-  let text: String
-  let highlighted: Bool
-
-  static func line(head: String = "", highlight: String, tail: String = "") -> [StudyHeroWord] {
-    let plain = { (text: String) in text.split(separator: " ").map { (String($0), false) } }
-    let words = plain(head) + [(highlight, true)] + plain(tail)
-    return words.enumerated().map { StudyHeroWord(id: $0, text: $1.0, highlighted: $1.1) }
-  }
-}
-
-struct StudyHeroTitle: View {
-  @ScaledMetric(relativeTo: .title) private var size = 30.0
-  let words: [StudyHeroWord]
-
-  var body: some View {
-    StudyWrap(spacing: size * 0.24, lineSpacing: 2) {
-      ForEach(words) { word in
-        Text(word.text)
-          .padding(.horizontal, word.highlighted ? 10 : 0)
-          .background(word.highlighted ? Color.studyPeach : .clear, in: .capsule)
-      }
-    }
-    .font(.system(size: size, weight: .semibold))
-    .tracking(-size * 0.03)
-    .accessibilityElement(children: .combine)
-    .accessibilityAddTraits(.isHeader)
   }
 }

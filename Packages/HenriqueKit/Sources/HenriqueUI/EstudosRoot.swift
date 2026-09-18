@@ -22,7 +22,6 @@ struct EstudosTabs: View {
   @State private var showingSession: Bool
   @State private var showingWrite: Bool
   @Binding var showingApps: Bool
-  @Namespace private var sessionSource
 
   init(
     tab: Binding<EstudosTab>, accent: Binding<Accent>, showingApps: Binding<Bool>,
@@ -40,7 +39,6 @@ struct EstudosTabs: View {
       Tab("hoje", systemImage: "house", value: EstudosTab.hoje) {
         shell {
           StudyTodayScreen(
-            sessionSource: sessionSource,
             onSession: { showingSession = true },
             onAssignments: { tab = .entregas },
             onReview: { tab = .revisar })
@@ -68,7 +66,6 @@ struct EstudosTabs: View {
     #if os(iOS)
       .fullScreenCover(isPresented: $showingSession) {
         FocusSessionScreen(onReview: { tab = .revisar })
-          .navigationTransition(.zoom(sourceID: "sessao", in: sessionSource))
       }
     #endif
     .sheet(isPresented: $showingWrite) { WriteScreen() }

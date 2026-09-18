@@ -38,8 +38,8 @@ extension LaunchArguments {
   /// `--app estudos` abre o outro app. `--aba <nome>` abre direto naquela aba,
   /// lida como aba de estudos quando veio `--app estudos`, onde ela também
   /// aceita `sessao` e `escrever`, que não são abas e sim o bloco de foco e a
-  /// folha de escrever. Com `--app idiomas` a aba é `rotina`, `revisar` ou
-  /// `progresso`. Os nomes aposentados continuam valendo: `medidas` cai
+  /// folha de escrever. Com `--app idiomas` a aba é `rotina`, `foco`, `revisar`
+  /// ou `progresso`. Os nomes aposentados continuam valendo: `medidas` cai
   /// em progresso e `cadernos` cai em matérias, que é onde essas telas moram
   /// agora.
   ///

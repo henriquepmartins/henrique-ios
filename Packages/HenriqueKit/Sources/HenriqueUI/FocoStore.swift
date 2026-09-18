@@ -17,8 +17,9 @@ public struct FocoResult: Hashable, Sendable {
 @MainActor
 public final class FocoStore {
   public private(set) var ledger: FocoLedger
-  public private(set) var lastResult: FocoResult?
-
+  /// Verdadeiro só entre abrir o app com uma corrida gravada e a primeira tela
+  /// de foco reabrir o cronômetro. Minimizar depois disso não reabre.
+  private var resumePending: Bool
   private let fileURL: URL
   private let estudos: EstudosStore?
   private let calendar = StudyFormat.calendar
@@ -26,7 +27,14 @@ public final class FocoStore {
   public init(fileURL: URL = FocoStore.defaultFileURL, estudos: EstudosStore?) {
     self.fileURL = fileURL
     self.estudos = estudos
-    ledger = Self.load(from: fileURL)
+    let loaded = Self.load(from: fileURL)
+    ledger = loaded
+    resumePending = loaded.running != nil
+  }
+
+  public func takeResume() -> Bool {
+    defer { resumePending = false }
+    return resumePending
   }
 
   public static var defaultFileURL: URL {
@@ -70,7 +78,6 @@ public final class FocoStore {
     let result = FocoResult(
       entry: entry, streakBefore: before, streakAfter: after,
       goalJustReached: goalAfter && !goalBefore)
-    lastResult = result
     return result
   }
 

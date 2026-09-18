@@ -1,7 +1,7 @@
 import SwiftUI
 
 public enum IdiomasTab: String, Hashable, Sendable, CaseIterable {
-  case rotina, revisar, progresso, apps
+  case rotina, foco, revisar, progresso, apps
 
   public init?(named name: String) {
     self.init(rawValue: name)
@@ -19,6 +19,9 @@ struct IdiomasTabs: View {
     TabView(selection: appSwitcherSelection($tab, isPresented: $showingApps, bubble: .apps)) {
       Tab("rotina", systemImage: "bubble.left.and.text.bubble.right", value: IdiomasTab.rotina) {
         shell { IdiomasRotinaScreen() }
+      }
+      Tab("foco", systemImage: "timer", value: IdiomasTab.foco) {
+        shell { FocoScreen(leading: .idiomas) }
       }
       Tab("revisar", systemImage: "rectangle.on.rectangle", value: IdiomasTab.revisar) {
         shell { IdiomasRevisarScreen() }
