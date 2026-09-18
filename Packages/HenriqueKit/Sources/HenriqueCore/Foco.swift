@@ -96,14 +96,40 @@ public struct FocoLedger: Codable, Hashable, Sendable {
   public var entries: [FocoEntry] = []
   public var running: FocoRun?
   public var dailyGoalMinutes: Int = 120
+  /// Fila offline. Uma sessão gravada aqui ainda não chegou ao servidor; uma
+  /// apagada aqui ainda não foi apagada lá; a meta suja ainda não subiu.
+  public var pendingUploads: Set<UUID> = []
+  public var pendingRemovals: Set<UUID> = []
+  public var goalDirty = false
 
   public static let minimumSeconds: TimeInterval = 10
   public static let dayCountsMinutes = 25
 
-  public init(entries: [FocoEntry] = [], running: FocoRun? = nil, dailyGoalMinutes: Int = 120) {
+  public init(
+    entries: [FocoEntry] = [], running: FocoRun? = nil, dailyGoalMinutes: Int = 120,
+    pendingUploads: Set<UUID> = [], pendingRemovals: Set<UUID> = [], goalDirty: Bool = false
+  ) {
     self.entries = entries
     self.running = running
     self.dailyGoalMinutes = dailyGoalMinutes
+    self.pendingUploads = pendingUploads
+    self.pendingRemovals = pendingRemovals
+    self.goalDirty = goalDirty
+  }
+
+  /// O JSON gravado antes da fila existir não tem `pendingUploads`. Nesse caso
+  /// todo o histórico do aparelho vira pendente e sobe na primeira sincronização.
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    entries = try container.decodeIfPresent([FocoEntry].self, forKey: .entries) ?? []
+    running = try container.decodeIfPresent(FocoRun.self, forKey: .running)
+    dailyGoalMinutes = try container.decodeIfPresent(Int.self, forKey: .dailyGoalMinutes) ?? 120
+    pendingUploads =
+      try container.decodeIfPresent(Set<UUID>.self, forKey: .pendingUploads)
+      ?? Set(entries.map(\.id))
+    pendingRemovals =
+      try container.decodeIfPresent(Set<UUID>.self, forKey: .pendingRemovals) ?? []
+    goalDirty = try container.decodeIfPresent(Bool.self, forKey: .goalDirty) ?? false
   }
 
   public mutating func start(_ track: FocoTrack, at now: Date) {
@@ -118,11 +144,46 @@ public struct FocoLedger: Codable, Hashable, Sendable {
     guard run.seconds(at: now) >= Self.minimumSeconds else { return nil }
     let entry = FocoEntry(track: run.track, startedAt: run.startedAt, endedAt: now)
     entries.append(entry)
+    pendingUploads.insert(entry.id)
     return entry
   }
 
   public mutating func remove(id: UUID) {
     entries.removeAll { $0.id == id }
+    if pendingUploads.remove(id) == nil {
+      pendingRemovals.insert(id)
+    }
+  }
+
+  public mutating func setGoal(minutes: Int) {
+    dailyGoalMinutes = minutes
+    goalDirty = true
+  }
+
+  // MARK: Sincronização
+
+  /// O servidor manda o que ele tem; o que ainda não subiu daqui fica, e o que
+  /// ainda não foi apagado lá não volta. A corrida em andamento não é tocada.
+  public mutating func merge(server: [FocoEntry], serverGoal: Int?) {
+    var merged = server.filter { !pendingRemovals.contains($0.id) }
+    let seen = Set(merged.map(\.id))
+    merged += entries.filter { pendingUploads.contains($0.id) && !seen.contains($0.id) }
+    entries = merged.sorted { $0.startedAt < $1.startedAt }
+    if !goalDirty, let serverGoal {
+      dailyGoalMinutes = serverGoal
+    }
+  }
+
+  public mutating func markUploaded(_ ids: some Sequence<UUID>) {
+    pendingUploads.subtract(ids)
+  }
+
+  public mutating func markRemoved(_ ids: some Sequence<UUID>) {
+    pendingRemovals.subtract(ids)
+  }
+
+  public mutating func markGoalSynced() {
+    goalDirty = false
   }
 
   public func seconds(on day: CalendarDate, now: Date, calendar: Calendar) -> TimeInterval {
@@ -218,4 +279,46 @@ public struct FocoLedger: Codable, Hashable, Sendable {
     let floor = Double(Self.dayCountsMinutes) * 60
     return Set(secondsByDay(now: now, calendar: calendar).filter { $0.value >= floor }.keys)
   }
+}
+
+// MARK: - Contrato HTTP
+
+public struct FocoListResponse: Decodable, Hashable, Sendable {
+  public var entries: [FocoEntry]
+  public var dailyGoalMinutes: Int?
+
+  public init(entries: [FocoEntry], dailyGoalMinutes: Int?) {
+    self.entries = entries
+    self.dailyGoalMinutes = dailyGoalMinutes
+  }
+}
+
+public struct FocoSaveInput: Encodable, Hashable, Sendable {
+  public var entries: [FocoEntry]
+  public init(entries: [FocoEntry]) { self.entries = entries }
+}
+
+public struct FocoSaveResponse: Decodable, Hashable, Sendable {
+  public var saved: [UUID]
+  public init(saved: [UUID]) { self.saved = saved }
+}
+
+public struct FocoRemoveInput: Encodable, Hashable, Sendable {
+  public var ids: [UUID]
+  public init(ids: [UUID]) { self.ids = ids }
+}
+
+public struct FocoRemoveResponse: Decodable, Hashable, Sendable {
+  public var removed: Int
+  public init(removed: Int) { self.removed = removed }
+}
+
+public struct FocoGoalInput: Encodable, Hashable, Sendable {
+  public var minutes: Int
+  public init(minutes: Int) { self.minutes = minutes }
+}
+
+public struct FocoGoalResponse: Decodable, Hashable, Sendable {
+  public var dailyGoalMinutes: Int
+  public init(dailyGoalMinutes: Int) { self.dailyGoalMinutes = dailyGoalMinutes }
 }

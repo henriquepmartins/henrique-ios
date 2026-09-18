@@ -50,6 +50,10 @@ public enum Route: String, Sendable {
   case idiomasDrillComplete = "/api/v1/idiomas/drill/complete"
   case idiomasCorrectionGrade = "/api/v1/idiomas/correction/grade"
   case idiomasSessionFinish = "/api/v1/idiomas/session/finish"
+  case focoList = "/api/v1/foco/list"
+  case focoSave = "/api/v1/foco/save"
+  case focoRemove = "/api/v1/foco/remove"
+  case focoGoal = "/api/v1/foco/goal"
 }
 
 public actor APIClient {
@@ -232,6 +236,29 @@ public actor APIClient {
     -> LanguageProgressPayload
   {
     try await call(.idiomasSessionFinish, body: input)
+  }
+
+  // MARK: Foco
+
+  public func focoList() async throws -> FocoListResponse {
+    try await call(.focoList, body: EmptyBody())
+  }
+
+  /// Devolve só os ids que agora existem para este usuário. Um id que já era de
+  /// outro usuário é ignorado pelo servidor e não volta na lista.
+  public func focoSave(_ entries: [FocoEntry]) async throws -> [UUID] {
+    let response: FocoSaveResponse = try await call(.focoSave, body: FocoSaveInput(entries: entries))
+    return response.saved
+  }
+
+  public func focoRemove(ids: [UUID]) async throws -> Int {
+    let response: FocoRemoveResponse = try await call(.focoRemove, body: FocoRemoveInput(ids: ids))
+    return response.removed
+  }
+
+  public func focoSetGoal(minutes: Int) async throws -> Int {
+    let response: FocoGoalResponse = try await call(.focoGoal, body: FocoGoalInput(minutes: minutes))
+    return response.dailyGoalMinutes
   }
 
   private struct EmptyBody: Encodable {}
