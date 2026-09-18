@@ -26,6 +26,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "25",
+          "date": "2026-09-18T09:58:11-03:00",
+          "localizedDescription": "• fix: foco mostra segundos em sessão curta e legenda na faixa do dia\n• test: fluxo de foco em idiomas\n• feat: tela de foco no estilo YPT com aba em idiomas e cartão em estudos\n• feat: store de foco com espelho no servidor\n• feat: registro de foco com streak e grade de dias",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-25/Henrique.ipa",
+          "size": 4283947,
+          "sha256": "b7d1a5c9fc5174760bc8f5d737fc5873e2f2a414e52076fab532495442cfef2e",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "24",
           "date": "2026-09-18T09:16:46-03:00",
           "localizedDescription": "• feat: atualiza treino e estudos",
