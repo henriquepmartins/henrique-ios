@@ -52,7 +52,8 @@ public final class EstudosStore {
   /// mesma sessão, então quem descobre que ela caiu avisa o outro.
   public var onUnauthorized: (@MainActor () async -> Void)?
 
-  private let client: APIClient
+  /// O foco divide o mesmo cliente para a sessão ser uma só.
+  public let client: APIClient
   @ObservationIgnored private var subjectCache: [String: SubjectDetail] = [:]
   @ObservationIgnored private var pageCache: [String: NotebookPage] = [:]
   @ObservationIgnored private var loadedNotesSubject: String?

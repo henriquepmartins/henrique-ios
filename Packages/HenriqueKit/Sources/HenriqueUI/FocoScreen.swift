@@ -49,6 +49,7 @@ public struct FocoScreen: View {
   @Environment(FocoStore.self) private var foco
   @Environment(EstudosStore.self) private var estudos
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.scenePhase) private var scenePhase
   @ScaledMetric(relativeTo: .largeTitle) private var clockSize = 64.0
 
   private let leading: FocoTrack.Source
@@ -87,6 +88,10 @@ public struct FocoScreen: View {
     .task {
       await estudos.loadSubjects()
       if foco.takeResume() { showingRun = true }
+      await foco.sync()
+    }
+    .onChange(of: scenePhase) {
+      if scenePhase == .active { Task { await foco.sync() } }
     }
     #if os(iOS)
       .fullScreenCover(isPresented: $showingRun) { FocoRunningScreen() }
@@ -471,5 +476,6 @@ struct FocoTodayCard: View {
         }
       }
     }
+    .task { await foco.sync() }
   }
 }

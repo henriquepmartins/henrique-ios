@@ -11,8 +11,9 @@ public struct FocoResult: Hashable, Sendable {
   public var goalJustReached: Bool
 }
 
-/// O registro local é a verdade. O servidor só recebe um espelho das sessões
-/// de estudos, e uma falha lá não chega ao usuário.
+/// O registro local é a verdade e a fila offline. O servidor guarda as sessões
+/// e a meta; `sync()` sobe o que está pendente e traz o resto. Uma falha de
+/// rede não chega ao usuário: a fila fica para a próxima.
 @Observable
 @MainActor
 public final class FocoStore {
@@ -23,6 +24,9 @@ public final class FocoStore {
   private let fileURL: URL
   private let estudos: EstudosStore?
   private let calendar = StudyFormat.calendar
+  @ObservationIgnored private var syncing = false
+
+  static let batchSize = 500
 
   public init(fileURL: URL = FocoStore.defaultFileURL, estudos: EstudosStore?) {
     self.fileURL = fileURL
@@ -78,17 +82,69 @@ public final class FocoStore {
     let result = FocoResult(
       entry: entry, streakBefore: before, streakAfter: after,
       goalJustReached: goalAfter && !goalBefore)
+    Task { await sync() }
     return result
   }
 
   public func remove(_ entry: FocoEntry) {
     ledger.remove(id: entry.id)
     save()
+    Task { await sync() }
   }
 
   public func setGoal(minutes: Int) {
-    ledger.dailyGoalMinutes = minutes
+    ledger.setGoal(minutes: minutes)
     save()
+    Task { await sync() }
+  }
+
+  // MARK: Sincronização
+
+  /// Sobe a fila e depois adota a lista do servidor. Um sync por vez; o segundo
+  /// pedido enquanto um roda é descartado, porque o que ele subiria já está na
+  /// fila do primeiro ou entra na próxima chamada.
+  public func sync() async {
+    guard let client = estudos?.client, !syncing else { return }
+    syncing = true
+    defer { syncing = false }
+    do {
+      try await pushUploads(client)
+      try await pushRemovals(client)
+      if ledger.goalDirty {
+        _ = try await client.focoSetGoal(minutes: ledger.dailyGoalMinutes)
+        ledger.markGoalSynced()
+        save()
+      }
+      let list = try await client.focoList()
+      ledger.merge(server: list.entries, serverGoal: list.dailyGoalMinutes)
+      save()
+    } catch {
+      // Sem rede ou sessão caída a fila fica como está. O 401 já derrubou o
+      // token no cliente, e a próxima tela que falar com o servidor desloga.
+    }
+  }
+
+  private func pushUploads(_ client: APIClient) async throws {
+    while !ledger.pendingUploads.isEmpty {
+      let batch = ledger.entries
+        .filter { ledger.pendingUploads.contains($0.id) }
+        .prefix(Self.batchSize)
+      guard !batch.isEmpty else { return }
+      // `saved` volta sem o id que já pertence a outro usuário. Insistir nele
+      // não muda nada, então o lote inteiro sai da fila.
+      _ = try await client.focoSave(Array(batch))
+      ledger.markUploaded(batch.map(\.id))
+      save()
+    }
+  }
+
+  private func pushRemovals(_ client: APIClient) async throws {
+    while !ledger.pendingRemovals.isEmpty {
+      let batch = Array(ledger.pendingRemovals.prefix(Self.batchSize))
+      _ = try await client.focoRemove(ids: batch)
+      ledger.markRemoved(batch)
+      save()
+    }
   }
 
   private var goalSeconds: TimeInterval { Double(ledger.dailyGoalMinutes) * 60 }
@@ -116,15 +172,8 @@ public final class FocoStore {
     }
   }
 
-  private static let encoder: JSONEncoder = {
-    let encoder = JSONEncoder()
-    encoder.dateEncodingStrategy = .iso8601
-    return encoder
-  }()
-
-  private static let decoder: JSONDecoder = {
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
-    return decoder
-  }()
+  /// O JSON no disco usa o mesmo codificador do cliente HTTP. O antigo gravava
+  /// sem fração de segundo, e o `henrique()` lê os dois formatos.
+  private static let encoder = JSONEncoder.henrique()
+  private static let decoder = JSONDecoder.henrique()
 }
