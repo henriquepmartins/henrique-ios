@@ -140,10 +140,88 @@ struct WorkoutColor: Hashable, Sendable {
   }
 }
 
+/// O passo entre peças de uma tela. Dentro de uma peça (ícone e texto, número e
+/// unidade) o 2 e o 6 continuam valendo; entre peças, só estes.
+enum Space {
+  static let xs: CGFloat = 4
+  static let s: CGFloat = 8
+  static let m: CGFloat = 12
+  static let l: CGFloat = 16
+  static let xl: CGFloat = 20
+  static let xxl: CGFloat = 24
+  static let page: CGFloat = 32
+}
+
+/// Os raios da academia. Estudos tem os seus em `StudyRadius`.
+enum Radius {
+  static let card: CGFloat = 32
+  static let tile: CGFloat = 24
+  static let field: CGFloat = 10
+
+  /// O raio de fora de uma peça que abraça outra: o de dentro mais o respiro
+  /// entre as duas. Acima de 24 de respiro as duas já leem como superfícies
+  /// separadas e cada uma escolhe o seu.
+  static func concentric(_ inner: CGFloat, padding: CGFloat) -> CGFloat { inner + padding }
+}
+
 extension View {
-  func paperCard(radius: CGFloat = 28) -> some View {
-    background(.white, in: .rect(cornerRadius: radius))
-      .overlay(RoundedRectangle(cornerRadius: radius).strokeBorder(Color.ink.opacity(0.08)))
+  /// Cartão sobre o papel. Anel de 1pt a 6% e duas sombras curtas no lugar da
+  /// borda cinza: a sombra é transparente e funciona sobre qualquer fundo, a
+  /// borda sólida só sobre o fundo para o qual foi pintada.
+  func paperCard(radius: CGFloat = Radius.card, fill: Color = .white) -> some View {
+    elevated(RoundedRectangle(cornerRadius: radius), fill: fill)
+  }
+
+  func elevated<S: InsettableShape>(_ shape: S, fill: Color = .white) -> some View {
+    modifier(Elevated(shape: shape, fill: fill))
+  }
+}
+
+private struct Elevated<S: InsettableShape>: ViewModifier {
+  @Environment(\.colorScheme) private var scheme
+  let shape: S
+  let fill: Color
+
+  func body(content: Content) -> some View {
+    content
+      .background {
+        // Uma cópia da forma por sombra. Encadeadas, a segunda sombra também
+        // sombrearia a primeira.
+        ZStack {
+          shape.fill(fill).shadow(color: .black.opacity(scheme == .dark ? 0 : 0.04), radius: 2, y: 2)
+          shape.fill(fill).shadow(color: .black.opacity(scheme == .dark ? 0 : 0.06), radius: 1, y: 1)
+        }
+      }
+      .overlay {
+        shape.strokeBorder(scheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06))
+      }
+  }
+}
+
+/// Botão só de ícone com alvo de 44pt. `glass` põe o disco de vidro de 32pt que
+/// os cabeçalhos de calendário usavam; o alvo continua 44 em volta dele.
+struct IconButton: View {
+  @Environment(\.isEnabled) private var isEnabled
+  let title: String
+  let systemImage: String
+  var size: CGFloat = 15
+  var glass = false
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: systemImage)
+        .font(.system(size: size, weight: .semibold))
+        .foregroundStyle(.tint)
+        .frame(width: 32, height: 32)
+        .glassEffect(glass ? .regular.interactive() : .identity, in: .circle)
+        .frame(width: 44, height: 44)
+        .contentShape(.rect)
+        // Um ButtonStyle próprio não apaga sozinho quando desabilitado.
+        .opacity(isEnabled ? 1 : 0.35)
+    }
+    .buttonStyle(StudyPressStyle())
+    .accessibilityLabel(title)
   }
 }
 
@@ -240,8 +318,16 @@ extension Transition where Self == IconAppear {
 }
 
 struct StudyPressStyle: ButtonStyle {
+  /// Quanto o alvo de toque cresce para cada lado sem mexer no layout. É o
+  /// truque do quadrado de `StudyTaskCard`: o padding estende a área que o dedo
+  /// acerta e o padding negativo devolve o espaço à linha.
+  var slop: CGFloat = 0
+
   func makeBody(configuration: Configuration) -> some View {
     Press(configuration: configuration)
+      .padding(slop)
+      .contentShape(.rect)
+      .padding(-slop)
   }
 
   private struct Press: View {
