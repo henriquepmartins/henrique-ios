@@ -174,7 +174,7 @@ enum StudyPillTone {
   var border: Color {
     switch self {
     case .outline: .studyInk20
-    case .cream: .studyCream25
+    case .cream: Color.white.opacity(0.08)
     default: .clear
     }
   }
@@ -278,12 +278,12 @@ struct StudySectionHeading: View {
         Button(action.label, action: action.perform)
           .font(.footnote.weight(.medium))
           .foregroundStyle(Color.studyInk60)
-          .buttonStyle(StudyPressStyle())
+          .buttonStyle(StudyPressStyle(slop: 13))
       }
     }
     // O respiro até o conteúdo da seção mora aqui, como a margem do web, então
     // a tela empilha título e conteúdo com espaçamento zero.
-    .padding(.bottom, 10)
+    .padding(.bottom, Space.m)
   }
 }
 
@@ -322,6 +322,8 @@ struct StudyPill: View {
     self.text = text
   }
 
+  private var hasGlyph: Bool { color != nil || systemImage != nil }
+
   var body: some View {
     HStack(spacing: 4) {
       if let color { StudyDot(color: color) }
@@ -332,10 +334,26 @@ struct StudyPill: View {
     .foregroundStyle(tone.foreground)
     .lineLimit(1)
     .padding(.vertical, 2)
-    .padding(.horizontal, 8)
+    // O ponto e o ícone parecem afastados da borda com o mesmo padding do texto.
+    .padding(.leading, hasGlyph ? 6 : 8)
+    .padding(.trailing, 8)
     .frame(minHeight: 22)
-    .background(tone.background, in: .capsule)
-    .overlay(Capsule().strokeBorder(tone.border))
+    .modifier(StudyPillSurface(tone: tone))
+  }
+}
+
+private struct StudyPillSurface: ViewModifier {
+  let tone: StudyPillTone
+
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if tone == .outline {
+      content.elevated(Capsule())
+    } else {
+      content
+        .background(tone.background, in: .capsule)
+        .overlay(Capsule().strokeBorder(tone.border))
+    }
   }
 }
 
@@ -361,9 +379,8 @@ struct StudyCard<Content: View>: View {
   var body: some View {
     content
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(16)
-      .background(.white, in: .rect(cornerRadius: StudyRadius.card))
-      .overlay(RoundedRectangle(cornerRadius: StudyRadius.card).strokeBorder(Color.studyLine))
+      .padding(Space.l)
+      .paperCard(radius: StudyRadius.card)
   }
 }
 
@@ -383,10 +400,9 @@ struct StudyDbList<Content: View>: View {
         }
       }
     }
-    .padding(.vertical, 4)
-    .padding(.horizontal, 12)
-    .background(.white, in: .rect(cornerRadius: StudyRadius.card))
-    .overlay(RoundedRectangle(cornerRadius: StudyRadius.card).strokeBorder(Color.studyLine))
+    .padding(.vertical, Space.xs)
+    .padding(.horizontal, Space.m)
+    .paperCard(radius: StudyRadius.card)
   }
 }
 
@@ -487,12 +503,22 @@ struct StudyCallout: View {
       }
       Spacer(minLength: 0)
     }
-    .padding(.vertical, 12)
-    .padding(.horizontal, 14)
-    .background(tone?.background ?? .white, in: .rect(cornerRadius: StudyRadius.card))
-    .overlay(
-      RoundedRectangle(cornerRadius: StudyRadius.card)
-        .strokeBorder(tone == nil ? Color.studyLine : .clear))
+    .padding(.vertical, Space.m)
+    .padding(.horizontal, Space.m)
+    .modifier(StudyCalloutSurface(tone: tone))
+  }
+}
+
+private struct StudyCalloutSurface: ViewModifier {
+  let tone: StudyCalloutTone?
+
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if let tone {
+      content.background(tone.background, in: .rect(cornerRadius: StudyRadius.card))
+    } else {
+      content.paperCard(radius: StudyRadius.card)
+    }
   }
 }
 
@@ -522,6 +548,7 @@ struct StudyEmptyState: View {
       if let action {
         Button(action.label, action: action.perform)
           .buttonStyle(.glass)
+          .controlSize(.large)
           .tint(cream ? Color.studyCream : Color.studyInk)
           .padding(.top, 4)
       }
@@ -562,8 +589,7 @@ struct StudyMetric: View {
     // A legenda de um cartão quebra linha e a do vizinho não. Esticar até a
     // altura do mais alto deixa a fileira reta.
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .background(.white, in: .rect(cornerRadius: StudyRadius.card))
-    .overlay(RoundedRectangle(cornerRadius: StudyRadius.card).strokeBorder(Color.studyLine))
+    .paperCard(radius: StudyRadius.card)
   }
 }
 
@@ -600,26 +626,17 @@ struct StudyTaskCard: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       if let onOpen {
-        Button(action: onOpen) {
-          Image(systemName: "arrow.right")
-            .font(.system(size: 16))
-            .foregroundStyle(Color.studyInk60)
-            .frame(width: 44, height: 44)
-            .contentShape(.rect)
-        }
-        .buttonStyle(StudyPressStyle())
-        .accessibilityLabel("abrir entrega")
+        IconButton(title: "abrir entrega", systemImage: "arrow.right", size: 16, action: onOpen)
+          .tint(Color.studyInk60)
       }
     }
     .padding(.vertical, 10)
-    .padding(.horizontal, 12)
-    .background(.white, in: .rect(cornerRadius: StudyRadius.inner))
-    .overlay(RoundedRectangle(cornerRadius: StudyRadius.inner).strokeBorder(Color.studyLine))
+    .padding(.horizontal, Space.m)
+    .paperCard(radius: StudyRadius.inner)
     .opacity(done ? 0.55 : 1)
   }
 
-  /// O quadrado tem 20pt de desenho. O padding leva o alvo aos 44 da HIG e o
-  /// padding negativo devolve o espaço ao layout, senão a linha inteira cresce.
+  /// O quadrado tem 20pt de desenho; o `slop` leva o alvo aos 44 da HIG.
   private var check: some View {
     Button { onToggle?(assignment.status.next) } label: {
       RoundedRectangle(cornerRadius: 5)
@@ -638,11 +655,8 @@ struct StudyTaskCard: View {
         }
         .animation(reduceMotion ? nil : Motion.confirm, value: done)
         .frame(width: 20, height: 20)
-        .padding(12)
-        .contentShape(.rect)
     }
-    .buttonStyle(StudyPressStyle())
-    .padding(-12)
+    .buttonStyle(StudyPressStyle(slop: 12))
     .disabled(onToggle == nil)
     .accessibilityLabel(done ? "reabrir entrega" : "concluir entrega")
     .sensoryFeedback(.selection, trigger: done)
@@ -667,12 +681,25 @@ struct StudyChip: View {
       .foregroundStyle(isActive ? .white : Color.black.opacity(0.95))
       .padding(.horizontal, 14)
       .frame(minHeight: 44)
-      .background(isActive ? Color.studyInk : .clear, in: .capsule)
-      .overlay(Capsule().strokeBorder(isActive ? Color.studyInk : Color.studyInk20))
+      .modifier(StudyChipSurface(isActive: isActive))
       .contentShape(.capsule)
     }
     .buttonStyle(StudyPressStyle())
     .accessibilityAddTraits(isActive ? .isSelected : [])
+  }
+}
+
+/// Chip inativo é branco com o anel do cartão; ativo é tinta sólida, sem sombra.
+struct StudyChipSurface: ViewModifier {
+  let isActive: Bool
+
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if isActive {
+      content.background(Color.studyInk, in: .capsule)
+    } else {
+      content.elevated(Capsule())
+    }
   }
 }
 
