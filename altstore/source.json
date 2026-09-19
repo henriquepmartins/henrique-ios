@@ -26,6 +26,16 @@
       "versions": [
         {
           "version": "0.1",
+          "buildVersion": "27",
+          "date": "2026-09-19T12:05:16-03:00",
+          "localizedDescription": "• style: shadow-ring grade buttons, 44pt calendar chevrons, tighter covers\n• style: put Estudos and Idiomas screens on the shared primitives\n• style: put Academia screens on the spacing and radius tokens\n• style: move Estudos primitives to the shadow-ring card\n• style: add spacing and radius tokens, shadow-ring card, icon button",
+          "downloadURL": "https://github.com/henriquepmartins/henrique-ios/releases/download/build-27/Henrique.ipa",
+          "size": 4311252,
+          "sha256": "b44724686bb5fcbb260f0a47498e5839a72defc521994b47d2085113e568cd6f",
+          "minOSVersion": "26.0"
+        },
+        {
+          "version": "0.1",
           "buildVersion": "26",
           "date": "2026-09-18T10:10:37-03:00",
           "localizedDescription": "• feat: FocoStore sincroniza com o servidor\n• feat: fila de sincronização no registro de foco e rotas /foco no cliente",
