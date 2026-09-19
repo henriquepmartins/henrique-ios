@@ -118,21 +118,23 @@ public struct FocoScreen: View {
           .accessibilityIdentifier("foco.relogio")
           .accessibilityLabel("\(FocoFormat.spoken(seconds)) hoje")
         FocoGoalBar(fraction: fraction, color: .studyBlue)
-        HStack(spacing: 6) {
-          Text("\(percent)% de \(FocoFormat.short(minutes: ledger.dailyGoalMinutes))")
-            .monospacedDigit()
-            .contentTransition(.numericText())
-          Menu {
-            ForEach(1...8, id: \.self) { hours in
-              Button("\(hours) h") { foco.setGoal(minutes: hours * 60) }
-            }
-          } label: {
+        Menu {
+          ForEach(1...8, id: \.self) { hours in
+            Button("\(hours) h") { foco.setGoal(minutes: hours * 60) }
+          }
+        } label: {
+          HStack(spacing: 4) {
+            Text("\(percent)% de \(FocoFormat.short(minutes: ledger.dailyGoalMinutes))")
+              .monospacedDigit()
+              .contentTransition(.numericText())
             Image(systemName: "chevron.up.chevron.down").imageScale(.small)
           }
-          .accessibilityLabel("trocar meta do dia")
+          // Menu não aceita ButtonStyle, então o alvo de 44 cresce no rótulo.
+          .padding(.vertical, 14).contentShape(.rect).padding(.vertical, -14)
         }
         .font(.caption)
         .foregroundStyle(Color.studyInk60)
+        .accessibilityHint("troca a meta do dia")
         let shares = trackShares(ledger: ledger, today: today, now: now)
         if !shares.isEmpty {
           FocoDayBand(shares: shares)
@@ -327,6 +329,8 @@ struct FocoTrackRow: View {
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(Color.subjectInk(for: track.color))
                 .contentTransition(.symbolEffect(.replace))
+                // O triângulo centrado pela geometria parece à esquerda.
+                .offset(x: isRunning ? 0 : 1)
             }
         }
         .frame(width: 48, height: 48)

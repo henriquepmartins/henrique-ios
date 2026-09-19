@@ -138,6 +138,7 @@ struct AssignmentAppleCalendarCard: View {
             }
           }
           .font(.caption)
+          .monospacedDigit()
           .foregroundStyle(Color.studyInk40)
         }
       ) {

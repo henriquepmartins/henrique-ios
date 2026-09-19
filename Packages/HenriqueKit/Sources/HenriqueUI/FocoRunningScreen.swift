@@ -67,14 +67,7 @@ private struct FocoTimerView: View {
           .font(.title3)
           .lineLimit(1)
         Spacer(minLength: 0)
-        Button(action: minimize) {
-          Image(systemName: "chevron.down")
-            .font(.system(size: 20))
-            .frame(width: 44, height: 44)
-            .contentShape(.rect)
-        }
-        .buttonStyle(StudyPressStyle())
-        .accessibilityLabel("minimizar")
+        IconButton(title: "minimizar", systemImage: "chevron.down", size: 20, action: minimize)
       }
       .padding(.horizontal, 16)
       Spacer(minLength: 0)

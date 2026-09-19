@@ -100,6 +100,7 @@ public struct IdiomasRevisarScreen: View {
             if store.conflictDrillIds.contains(drill.id) {
               Button("atualizar") { Task { await refresh() } }
                 .buttonStyle(.glass)
+                .controlSize(.large)
                 .tint(Color.studyInk)
             }
           }

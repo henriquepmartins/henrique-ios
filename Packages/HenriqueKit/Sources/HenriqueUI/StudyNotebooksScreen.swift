@@ -49,6 +49,7 @@ public struct SubjectNotebookSection: View {
       if let count = pageCountLabel(pages.count) {
         Text(count)
           .font(.footnote)
+          .monospacedDigit()
           .foregroundStyle(Color.studyInk40)
       }
       Spacer(minLength: 0)

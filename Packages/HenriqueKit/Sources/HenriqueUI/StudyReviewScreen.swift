@@ -156,6 +156,7 @@ public struct StudyReviewScreen: View {
       if conflict {
         Button("atualizar") { Task { await refreshQueue() } }
           .buttonStyle(.glass)
+          .controlSize(.large)
           .tint(Color.studyInk)
       }
     }
@@ -176,10 +177,7 @@ public struct StudyReviewScreen: View {
   }
 
   private var slip: some View {
-    RoundedRectangle(cornerRadius: StudyRadius.card)
-      .fill(.white)
-      .overlay(RoundedRectangle(cornerRadius: StudyRadius.card).strokeBorder(Color.studyLine))
-      .frame(height: 40)
+    Color.clear.frame(height: 40).paperCard(radius: StudyRadius.card)
   }
 
   private func face(card: Flashcard, index: Int, total: Int, phase: StudyReviewPhase) -> some View {
@@ -222,8 +220,7 @@ public struct StudyReviewScreen: View {
       .padding(.vertical, 18)
       .padding(.horizontal, 20)
     }
-    .background(.white, in: .rect(cornerRadius: StudyRadius.card))
-    .overlay(RoundedRectangle(cornerRadius: StudyRadius.card).strokeBorder(Color.studyLine))
+    .paperCard(radius: StudyRadius.card)
     .contentShape(.rect)
     .rotation3DEffect(.degrees(flipAngle), axis: (x: 0, y: 1, z: 0), perspective: 0.3)
     .rotationEffect(.degrees(tilt))

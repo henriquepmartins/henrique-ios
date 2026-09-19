@@ -190,15 +190,8 @@ public struct FocusSessionScreen: View {
 
   private var topBar: some View {
     HStack(spacing: 0) {
-      Button(action: requestClose) {
-        Image(systemName: "xmark")
-          .font(.system(size: 20))
-          .foregroundStyle(Color.studyCream)
-          .frame(width: 44, height: 44)
-          .contentShape(.rect)
-      }
-      .buttonStyle(StudyPressStyle())
-      .accessibilityLabel("sair do foco")
+      IconButton(title: "sair do foco", systemImage: "xmark", size: 20, action: requestClose)
+        .tint(Color.studyCream)
       Spacer(minLength: 0)
     }
   }
@@ -257,7 +250,7 @@ public struct FocusSessionScreen: View {
     case .ready(let list):
       StudyWrap(spacing: 8, lineSpacing: 8) {
         ForEach(list) { item in
-          FocusSessionCapsule(active: item.id == state.subjectId) {
+          FocusSessionCapsule(active: item.id == state.subjectId, leadingGlyph: true) {
             state.pick(subjectId: item.id == state.subjectId ? nil : item.id)
           } label: {
             HStack(spacing: 8) {
@@ -303,7 +296,7 @@ public struct FocusSessionScreen: View {
       .foregroundStyle(Color.studyCream50)
       .padding(.top, 10)
       StudyWrap(spacing: 8, lineSpacing: 8) {
-        FocusSessionCapsule {
+        FocusSessionCapsule(leadingGlyph: true) {
           if isPaused {
             state.resume(at: .now)
           } else {
@@ -606,6 +599,9 @@ private struct FocusSessionTicker<Content: View>: View {
 
 private struct FocusSessionCapsule<Label: View>: View {
   var active = false
+  /// Com ponto ou ícone na frente, o lado dele entra 2pt para o olho ver o
+  /// mesmo respiro dos dois lados.
+  var leadingGlyph = false
   let action: () -> Void
   @ViewBuilder let label: Label
 
@@ -615,7 +611,8 @@ private struct FocusSessionCapsule<Label: View>: View {
         .font(.subheadline.weight(.semibold))
         .foregroundStyle(active ? Color.studyBlack : Color.studyCream)
         .padding(.vertical, 10)
-        .padding(.horizontal, 20)
+        .padding(.leading, leadingGlyph ? 18 : 20)
+        .padding(.trailing, 20)
         .frame(minHeight: 44)
         .background(active ? Color.studyCream : .clear, in: .capsule)
         .overlay(Capsule().strokeBorder(Color.studyCream))
@@ -640,7 +637,8 @@ private struct FocusSessionGradientButton: View {
       .font(.subheadline.weight(.semibold))
       .foregroundStyle(Color.studyCream)
       .padding(.vertical, 10)
-      .padding(.horizontal, 20)
+      .padding(.leading, 18)
+      .padding(.trailing, 20)
       .frame(minHeight: 44)
       .overlay(Capsule().strokeBorder(focusSessionGreen, lineWidth: 1.5))
       .contentShape(.capsule)

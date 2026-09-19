@@ -116,8 +116,8 @@ public struct IdiomasRotinaScreen: View {
       if !sessionFinished {
         Button("concluir sessão") { Task { await finish() } }
           .buttonStyle(.glassProminent)
+          .controlSize(.large)
           .tint(.idiomasTeal)
-          .frame(minHeight: 44)
       }
     }
   }
@@ -150,8 +150,8 @@ public struct IdiomasRotinaScreen: View {
           reduce(.play, drill: drill, drills: drills)
         }
         .buttonStyle(.glass)
+        .controlSize(.large)
         .tint(.idiomasTeal)
-        .frame(minHeight: 44)
         if drill.kind.needsMic {
           micRow(drill: drill, drills: drills)
         }
@@ -162,8 +162,8 @@ public struct IdiomasRotinaScreen: View {
             Task { await completeAndAdvance(drill: drill, drills: drills, text: "", micUsed: micArmed) }
           }
           .buttonStyle(.glassProminent)
+          .controlSize(.large)
           .tint(.idiomasTeal)
-          .frame(minHeight: 44)
           .disabled(completingIds.contains(drill.id))
         }
         if store.conflictDrillIds.contains(drill.id) {
@@ -176,6 +176,7 @@ public struct IdiomasRotinaScreen: View {
             Task { await store.loadRoutine(force: true) }
           }
           .buttonStyle(.glass)
+          .controlSize(.large)
           .tint(Color.studyInk)
         } else if isFailed {
           StudyCallout(
@@ -210,6 +211,7 @@ public struct IdiomasRotinaScreen: View {
             if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
           }
           .buttonStyle(.glass)
+          .controlSize(.large)
           .tint(Color.studyInk)
         #endif
       } else {
@@ -246,8 +248,8 @@ public struct IdiomasRotinaScreen: View {
           }
         }
         .buttonStyle(.glassProminent)
+        .controlSize(.large)
         .tint(.idiomasTeal)
-        .frame(minHeight: 44)
         .disabled(completingIds.contains(drill.id))
       } else if store.pendingCorrectionIds.contains(drill.id) {
         StudyCallout(
@@ -258,8 +260,8 @@ public struct IdiomasRotinaScreen: View {
       } else {
         Button("corrigir") { Task { await correct(drill: drill, drills: drills) } }
           .buttonStyle(.glassProminent)
+          .controlSize(.large)
           .tint(.idiomasTeal)
-          .frame(minHeight: 44)
           .disabled((texts[drill.id] ?? "").isEmpty || gradingIds.contains(drill.id))
       }
     }

@@ -48,9 +48,8 @@ struct StudyAssignmentsCalendarCard: View {
       }
       .animation(reduceMotion ? nil : Motion.tap, value: month)
     }
-    .padding(16)
-    .background(.white, in: .rect(cornerRadius: StudyRadius.card))
-    .overlay(RoundedRectangle(cornerRadius: StudyRadius.card).strokeBorder(Color.studyLine))
+    .padding(Space.l)
+    .paperCard(radius: StudyRadius.card)
     .onChange(of: month) { rebuild() }
     .onChange(of: assignments) { rebuild() }
   }
@@ -126,10 +125,27 @@ private struct StudyMonthGrid: View {
               isSelected: cell.slot == selectedDay
             )
             .aspectRatio(1, contentMode: .fit).frame(maxWidth: .infinity)
-            .onTapGesture { onTap(cell) }
+            .modifier(StudyDayCellTap(enabled: cell.date != nil) { onTap(cell) })
           }
         }
       }
+    }
+  }
+}
+
+/// A célula vira botão para encolher sob o dedo. As vagas fora do mês ficam
+/// como estão, sem alvo.
+private struct StudyDayCellTap: ViewModifier {
+  let enabled: Bool
+  let action: () -> Void
+
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if enabled {
+      Button(action: action) { content.contentShape(.rect) }
+        .buttonStyle(StudyPressStyle())
+    } else {
+      content
     }
   }
 }
@@ -145,7 +161,7 @@ private struct StudyDayCell: View {
         .overlay { content }
         .overlay {
           if isToday {
-            RoundedRectangle(cornerRadius: 9.5)
+            RoundedRectangle(cornerRadius: Radius.concentric(StudyRadius.inner, padding: 3))
               .strokeBorder(Color.studyBlue, lineWidth: 1.5)
               .padding(-3)
           }
@@ -181,7 +197,7 @@ private struct StudyDayCell: View {
         .font(.system(size: 10, weight: .medium)).monospacedDigit()
       if let mark = cell.mark {
         Text("\(mark.pending > 0 ? mark.pending : mark.total)")
-          .font(.system(size: 8.5, weight: .semibold))
+          .font(.system(size: 8.5, weight: .semibold)).monospacedDigit()
           .lineLimit(1).minimumScaleFactor(0.7).padding(.horizontal, 2)
       }
     }

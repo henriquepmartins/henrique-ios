@@ -68,13 +68,13 @@ public struct StudyAssignmentsScreen: View {
         Button("limpar") { selectedDay = nil }
           .font(.footnote.weight(.medium))
           .foregroundStyle(Color.studyInk60)
-          .buttonStyle(StudyPressStyle())
+          .buttonStyle(StudyPressStyle(slop: 13))
         Spacer(minLength: 0)
       }
     }
 
     ScrollView(.horizontal) {
-      HStack(spacing: 6) {
+      HStack(spacing: Space.s) {
         ForEach(AssignmentFilter.allCases) { entry in
           StudyChip(
             label: entry.label, count: count(of: entry, in: groups, now: now),

@@ -168,6 +168,7 @@ public struct WriteScreen: View {
             title: "nota não salva")
           Button("tentar de novo") { Task { _ = await savePending() } }
             .buttonStyle(.glass)
+            .controlSize(.large)
             .tint(Color.studyInk)
             .disabled(saving)
         }
@@ -373,21 +374,13 @@ private struct WriteKeybar: ViewModifier {
           Button { insert(.wrap(before: "/", after: "")) } label: {
             Text("/")
               .font(.system(size: 13, weight: .semibold))
-              .padding(.horizontal, 12)
-              .frame(height: 44)
-              .overlay(Capsule().strokeBorder(Color.studyInk20))
+              .frame(minWidth: 44, minHeight: 44)
+              .elevated(Capsule())
           }
           .buttonStyle(StudyPressStyle())
           .accessibilityLabel("bloco")
           ForEach(WriteAction.all) { action in
-            Button { insert(action.insert) } label: {
-              Image(systemName: action.icon)
-                .font(.system(size: 20))
-                .frame(width: 44, height: 44)
-                .contentShape(.rect)
-            }
-            .buttonStyle(StudyPressStyle())
-            .accessibilityLabel(action.label)
+            IconButton(title: action.label, systemImage: action.icon, size: 20) { insert(action.insert) }
           }
           Spacer()
           KeyboardDoneButton()
