@@ -474,8 +474,8 @@ struct FocoTodayCard: View {
             Label(foco.isRunning ? "voltar ao foco" : "focar", systemImage: "timer")
           }
           .buttonStyle(.glassProminent)
+          .controlSize(.large)
           .tint(.studyBlue)
-          .font(.subheadline)
           .padding(.top, 4)
         }
       }

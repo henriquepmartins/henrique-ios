@@ -158,9 +158,9 @@ struct WorkoutSessionScreen: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
-    .background(.white, in: .rect(cornerRadius: 32))
-    .overlay(RoundedRectangle(cornerRadius: 32).strokeBorder(Color.ink.opacity(0.07)))
+    .padding(Space.xl)
+    // As linhas de série da sessão têm raio 20 a 20 de respiro.
+    .paperCard(radius: Radius.concentric(SetRowScale.session.radius, padding: Space.xl))
   }
 
   private func footer(last: Int) -> some View {

@@ -59,14 +59,13 @@ struct StudyAssignmentsCalendarCard: View {
       Text(title).font(.subheadline.weight(.medium)).foregroundStyle(Color.studyInk)
         .lineLimit(1).minimumScaleFactor(0.8)
       Spacer(minLength: 4)
-      Button("Mês anterior", systemImage: "chevron.left") {
+      IconButton(title: "Mês anterior", systemImage: "chevron.left", glass: true) {
         month = previousMonth(of: month)
       }
-      Button("Próximo mês", systemImage: "chevron.right") {
+      IconButton(title: "Próximo mês", systemImage: "chevron.right", glass: true) {
         month = nextMonth(of: month)
       }
     }
-    .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.small)
   }
 
   private var title: String {

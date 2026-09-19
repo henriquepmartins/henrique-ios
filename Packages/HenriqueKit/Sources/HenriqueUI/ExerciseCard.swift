@@ -55,7 +55,7 @@ struct ExerciseCard: View {
             Text(previous).font(.caption).foregroundStyle(Color.mutedInk)
               .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
           }
-        }.padding(14).background(.white, in: .rect(cornerRadius: 24)).padding(6)
+        }.padding(Space.s).background(.white, in: .rect(cornerRadius: Radius.concentric(SetRowScale.list.radius, padding: Space.s))).padding(6)
           .transition(.opacity)
       }
     }

@@ -95,9 +95,9 @@ struct StreakScreen: View {
             .padding(Space.xl)
             .paperCard()
         }
-        .padding(20)
-        .padding(.top, 8)
-        .padding(.bottom, 32)
+        .padding(Space.l)
+        .padding(.top, Space.s)
+        .padding(.bottom, Space.page)
         .frame(maxWidth: .infinity)
       }
       .background(Color.canvas.ignoresSafeArea())

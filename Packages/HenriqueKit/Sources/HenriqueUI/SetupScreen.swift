@@ -76,7 +76,7 @@ struct SetupScreen: View {
           }
           ProgressView(value: Double(step.rawValue + 1), total: 6).tint(accent.base)
             .accessibilityLabel("Etapa \(step.rawValue + 1) de 6")
-        }.padding(24).disabled(saving)
+        }.padding(Space.l).disabled(saving)
       }
       .background(Color.canvas.ignoresSafeArea())
       .navigationTitle("h&")

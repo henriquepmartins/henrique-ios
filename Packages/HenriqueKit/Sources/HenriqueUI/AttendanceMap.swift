@@ -73,8 +73,8 @@ private struct AttendanceHeader: View {
       Text(title).font(.subheadline).foregroundStyle(Color.ink)
         .lineLimit(1).minimumScaleFactor(0.8)
       Spacer(minLength: 4)
-      Button("Período anterior", systemImage: "chevron.left") { period = period.previous }
-      Button("Próximo período", systemImage: "chevron.right") { period = period.next }
+      IconButton(title: "Período anterior", systemImage: "chevron.left", glass: true) { period = period.previous }
+      IconButton(title: "Próximo período", systemImage: "chevron.right", glass: true) { period = period.next }
         .disabled(nextIsFuture)
       Picker("Escala", selection: scope) {
         Text("mês").tag(AttendanceScope.month)
@@ -82,7 +82,6 @@ private struct AttendanceHeader: View {
       }
       .pickerStyle(.segmented).labelsHidden().frame(width: 112)
     }
-    .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.small)
   }
 }
 

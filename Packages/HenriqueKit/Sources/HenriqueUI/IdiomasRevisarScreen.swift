@@ -172,8 +172,7 @@ public struct IdiomasRevisarScreen: View {
           .foregroundStyle(rating == .facil ? .white : Color.studyInk)
           .padding(6)
           .frame(maxWidth: .infinity, minHeight: 52)
-          .background(rating == .facil ? Color.idiomasTeal : .clear, in: .capsule)
-          .overlay(Capsule().strokeBorder(rating == .facil ? .clear : Color.studyInk20))
+          .modifier(StudyGradeSurface(fill: rating == .facil ? .idiomasTeal : nil))
           .contentShape(.capsule)
         }
         .buttonStyle(StudyPressStyle())

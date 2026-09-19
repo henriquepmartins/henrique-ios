@@ -54,9 +54,8 @@ public struct SubjectNotebookSection: View {
       }
       Spacer(minLength: 0)
       Button(newPageLabel, systemImage: "plus") { Task { await create() } }
-        .font(.footnote)
         .buttonStyle(.glass)
-        .controlSize(.small)
+        .controlSize(.large)
         .disabled(creating)
     }
 

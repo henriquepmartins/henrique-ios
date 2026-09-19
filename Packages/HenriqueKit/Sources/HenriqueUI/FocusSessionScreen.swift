@@ -213,7 +213,7 @@ public struct FocusSessionScreen: View {
     VStack(alignment: .leading, spacing: 0) {
       title("matéria")
       subjectPicker
-        .padding(.top, 28)
+        .padding(.top, Space.xxl)
       StudyWrap(spacing: 8, lineSpacing: 8) {
         ForEach([15, 25, 50], id: \.self) { minutes in
           FocusSessionCapsule(active: minutes == state.minutes) {
@@ -224,12 +224,12 @@ public struct FocusSessionScreen: View {
           .disabled(busy || startFailed)
         }
       }
-      .padding(.top, 28)
+      .padding(.top, Space.xxl)
       FocusSessionGradientButton(
         title: "começar", systemImage: "play.fill",
         action: { Task { await start() } })
         .disabled(busy)
-        .padding(.top, 28)
+        .padding(.top, Space.xxl)
       if startFailed {
         metaLine("não abriu, tente de novo")
           .padding(.top, 10)
@@ -282,7 +282,7 @@ public struct FocusSessionScreen: View {
         .tracking(-timerSize * 0.011)
         .lineLimit(1)
         .minimumScaleFactor(0.4)
-        .padding(.top, 28)
+        .padding(.top, Space.xxl)
         .accessibilityLabel("faltam \(StudyFormat.minutes(Int(remaining / 60)))")
       progressBar(fraction: state.progress(at: now))
         .padding(.top, 24)
@@ -313,7 +313,7 @@ public struct FocusSessionScreen: View {
           title: finishTitle, systemImage: "checkmark", action: { Task { await finish() } })
           .disabled(busy)
       }
-      .padding(.top, 28)
+      .padding(.top, Space.xxl)
       if finishFailed {
         metaLine("não salvou, tempo pausado")
           .padding(.top, 10)
@@ -335,7 +335,7 @@ public struct FocusSessionScreen: View {
         .tracking(-timerSize * 0.011)
         .lineLimit(1)
         .minimumScaleFactor(0.4)
-        .padding(.top, 28)
+        .padding(.top, Space.xxl)
       if let noteStatus {
         Text(noteStatus)
           .font(.system(size: metaSize))
@@ -345,7 +345,7 @@ public struct FocusSessionScreen: View {
       FocusSessionCapsule(action: { dismiss() }) {
         Text("voltar")
       }
-      .padding(.top, 28)
+      .padding(.top, Space.xxl)
     }
     .transition(.opacity)
   }
@@ -614,8 +614,8 @@ private struct FocusSessionCapsule<Label: View>: View {
         .padding(.leading, leadingGlyph ? 18 : 20)
         .padding(.trailing, 20)
         .frame(minHeight: 44)
-        .background(active ? Color.studyCream : .clear, in: .capsule)
-        .overlay(Capsule().strokeBorder(Color.studyCream))
+        .background(active ? Color.studyCream : Color.studyOffBlack, in: .capsule)
+        .overlay(Capsule().strokeBorder(active ? .clear : Color.white.opacity(0.08)))
         .contentShape(.capsule)
     }
     .buttonStyle(StudyPressStyle())

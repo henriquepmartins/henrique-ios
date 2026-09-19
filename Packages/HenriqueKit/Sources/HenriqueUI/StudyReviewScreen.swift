@@ -453,8 +453,7 @@ private struct StudyReviewGradeButton: View {
       .foregroundStyle(labelColor)
       .padding(6)
       .frame(maxWidth: .infinity, minHeight: 52)
-      .background(background, in: .capsule)
-      .overlay(Capsule().strokeBorder(border))
+      .modifier(StudyGradeSurface(fill: rating == .facil ? .studyBlue : nil))
       .contentShape(.capsule)
     }
     .buttonStyle(StudyPressStyle())
@@ -473,12 +472,18 @@ private struct StudyReviewGradeButton: View {
   private var hintColor: Color {
     rating == .facil ? .white.opacity(0.7) : .studyInk40
   }
+}
 
-  private var background: Color {
-    rating == .facil ? .studyBlue : .clear
-  }
+/// Botão de nota: com `fill` é a cápsula sólida; sem, o branco com anel.
+struct StudyGradeSurface: ViewModifier {
+  let fill: Color?
 
-  private var border: Color {
-    rating == .facil ? .clear : .studyInk20
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if let fill {
+      content.background(fill, in: .capsule)
+    } else {
+      content.elevated(Capsule())
+    }
   }
 }
