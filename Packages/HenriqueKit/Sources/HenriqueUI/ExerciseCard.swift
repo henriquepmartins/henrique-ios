@@ -30,7 +30,7 @@ struct ExerciseCard: View {
             .font(.caption).monospacedDigit().foregroundStyle(Color.mutedInk)
           Image(systemName: isOpen ? "chevron.up" : "chevron.down").font(.caption2)
         }.padding(16).frame(minHeight: 92).contentShape(.rect)
-      }.buttonStyle(.plain).accessibilityValue(isOpen ? "expandido" : "recolhido")
+      }.buttonStyle(StudyPressStyle()).accessibilityValue(isOpen ? "expandido" : "recolhido")
       if isOpen {
         VStack(spacing: 8) {
           HStack {
@@ -59,8 +59,7 @@ struct ExerciseCard: View {
           .transition(.opacity)
       }
     }
-    .background(Color.surfaceMuted, in: .rect(cornerRadius: 30))
-    .overlay(RoundedRectangle(cornerRadius: 30).strokeBorder(Color.ink.opacity(0.08)))
+    .paperCard(radius: Radius.concentric(24, padding: 6), fill: .surfaceMuted)
   }
 
   private var prescription: String {
@@ -90,6 +89,7 @@ enum SetRowScale {
   var check: CGFloat { self == .list ? 44 : 52 }
   var value: Font { self == .list ? .subheadline : .system(size: 22, weight: .medium) }
   var padding: CGFloat { self == .list ? 6 : 10 }
+  var radius: CGFloat { Radius.concentric(Radius.field, padding: padding) }
   /// A lista tem uma linha de cabeçalho dizendo qual coluna é qual. A sessão
   /// mostra um exercício só e não tem cabeçalho, então a unidade vai na linha.
   var showsUnits: Bool { self == .session }
@@ -140,7 +140,7 @@ struct TrainingSetRow: View {
             if let new, new.isFinite, !Limits.setWeightKg.contains(new) { weightDraft = new.clamped(to: Limits.setWeightKg) }
           }
         Text("kg").font(.caption2).foregroundStyle(Color.mutedInk)
-      }.padding(8).background(.white, in: .rect(cornerRadius: 10))
+      }.padding(8).background(.white, in: .rect(cornerRadius: Radius.field))
       HStack(spacing: 2) {
         TextField("0", value: $repsDraft, format: .number)
           #if os(iOS)
@@ -159,7 +159,7 @@ struct TrainingSetRow: View {
         } else if scale.showsUnits {
           Text("reps").font(.caption2).foregroundStyle(Color.mutedInk)
         }
-      }.padding(8).background(.white, in: .rect(cornerRadius: 10))
+      }.padding(8).background(.white, in: .rect(cornerRadius: Radius.field))
       Button {
         commit(completed: !currentDone)
         focused = nil
@@ -198,7 +198,7 @@ struct TrainingSetRow: View {
         .sensoryFeedback(currentDone ? .success : .impact(weight: .light), trigger: tapCount)
     }
     .font(.subheadline).monospacedDigit().multilineTextAlignment(.center)
-    .padding(scale.padding).background(kind == .prep ? Color.surfaceMuted : accent.pale.opacity(0.5), in: .rect(cornerRadius: 16))
+    .padding(scale.padding).background(kind == .prep ? Color.surfaceMuted : accent.pale.opacity(0.5), in: .rect(cornerRadius: scale.radius))
     .onChange(of: weight, initial: true) { if focused == nil { weightDraft = weight } }
     .onChange(of: repetitions, initial: true) { if focused == nil { repsDraft = repetitions } }
     .onChange(of: focused) { old, new in

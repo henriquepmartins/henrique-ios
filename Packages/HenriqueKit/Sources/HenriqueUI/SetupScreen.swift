@@ -51,14 +51,14 @@ struct SetupScreen: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(alignment: .leading, spacing: 28) {
+        VStack(alignment: .leading, spacing: Space.xxl) {
           PageHeading(title: step.title)
           fields
           if let error { Text(error).font(.subheadline).foregroundStyle(.red).accessibilityAddTraits(.updatesFrequently) }
           HStack {
             if step != .welcome {
               Button("voltar") { step = SetupStep(rawValue: step.rawValue - 1) ?? .welcome; error = nil }
-                .buttonStyle(.glass)
+                .buttonStyle(.glass).controlSize(.large)
             }
             Spacer()
             Button(saving ? "salvando" : step == .done ? "abrir treino" : "continuar") {
@@ -66,10 +66,13 @@ struct SetupScreen: View {
             }.buttonStyle(.glassProminent).controlSize(.large)
           }
           if step != .welcome && step != .done {
-            Button("pular") {
+            Button {
               step = step == .body ? .workout : step == .workout || step == .exercises ? .goal : .done
               error = nil
-            }.font(.subheadline).frame(maxWidth: .infinity)
+            } label: {
+              Text("pular").font(.subheadline).foregroundStyle(.tint)
+                .frame(maxWidth: .infinity, minHeight: 44).contentShape(.rect)
+            }.buttonStyle(StudyPressStyle())
           }
           ProgressView(value: Double(step.rawValue + 1), total: 6).tint(accent.base)
             .accessibilityLabel("Etapa \(step.rawValue + 1) de 6")
@@ -109,18 +112,18 @@ struct SetupScreen: View {
     switch step {
     case .welcome:
       Image(systemName: "dumbbell").font(.system(size: 56)).foregroundStyle(accent.deep)
-        .frame(maxWidth: .infinity, minHeight: 180).background(accent.acid, in: .rect(cornerRadius: 36))
+        .frame(maxWidth: .infinity, minHeight: 180).background(accent.acid, in: .rect(cornerRadius: Radius.card))
     case .body:
-      VStack(spacing: 18) {
+      VStack(spacing: Space.l) {
         measurement("peso", unit: "kg", value: $weight)
         measurement("gordura", unit: "%", value: $fat)
         measurement("cintura", unit: "cm", value: $waist)
         measurement("peito", unit: "cm", value: $chest)
         measurement("braço", unit: "cm", value: $arm)
         measurement("coxa", unit: "cm", value: $thigh)
-      }.padding(20).paperCard()
+      }.padding(Space.xl).paperCard()
     case .workout:
-      VStack(alignment: .leading, spacing: 18) {
+      VStack(alignment: .leading, spacing: Space.l) {
         Picker("dia", selection: $weekday) {
           ForEach(0..<7, id: \.self) { Text(days[$0]).tag($0) }
         }.onChange(of: weekday) { oldDay, _ in
@@ -136,31 +139,30 @@ struct SetupScreen: View {
           TextField("55", value: $minutes, format: .number).decimalInput().multilineTextAlignment(.trailing)
             .submitLabel(.done)
         }
-      }.padding(20).paperCard()
+      }.padding(Space.xl).paperCard()
     case .exercises:
-      VStack(spacing: 16) {
+      VStack(spacing: Space.l) {
         ForEach($exercises) { $exercise in
-          VStack(alignment: .leading) {
-            PlanExerciseRow(exercise: $exercise,
-              name: catalogItem(exercise.exerciseId)?.name ?? exercise.exerciseId,
-              subtitle: catalogItem(exercise.exerciseId).map {
-                "\($0.muscleGroup.lowercased()) · \($0.equipment.lowercased())"
-              },
-              imageUrl: catalogItem(exercise.exerciseId)?.imageUrl)
-            Button("remover", role: .destructive) { exercises.removeAll { $0.exerciseId == exercise.exerciseId } }
-              .font(.caption)
-          }.padding(18).paperCard()
+          PlanExerciseRow(exercise: $exercise,
+            name: catalogItem(exercise.exerciseId)?.name ?? exercise.exerciseId,
+            subtitle: catalogItem(exercise.exerciseId).map {
+              "\($0.muscleGroup.lowercased()) · \($0.equipment.lowercased())"
+            },
+            imageUrl: catalogItem(exercise.exerciseId)?.imageUrl,
+            onRemove: { exercises.removeAll { $0.exerciseId == exercise.exerciseId } })
+            .padding(Space.xl).paperCard()
         }
         Button("adicionar", systemImage: "plus") { picking = true }
-          .buttonStyle(.glass).disabled(exercises.count >= Limits.exerciseCount.upperBound)
+          .buttonStyle(.glass).controlSize(.large)
+          .disabled(exercises.count >= Limits.exerciseCount.upperBound)
       }
     case .goal:
-      VStack(alignment: .leading, spacing: 18) {
+      VStack(alignment: .leading, spacing: Space.l) {
         Picker("exercício", selection: $goalExercise) {
           ForEach(store.dashboard?.exerciseCatalog ?? []) { Text($0.name).tag($0.id) }
         }
         measurement("meta", unit: "kg", value: $target)
-      }.padding(20).paperCard()
+      }.padding(Space.xl).paperCard()
     case .done:
       VStack(alignment: .leading, spacing: 16) {
         if savedBody != nil { Label("medidas", systemImage: "checkmark.circle") }

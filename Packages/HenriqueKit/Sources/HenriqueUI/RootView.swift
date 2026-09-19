@@ -391,7 +391,7 @@ struct OverviewScreen: View {
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 24) {
+      VStack(alignment: .leading, spacing: Space.xxl) {
         AttendanceMap(attendance: store.attendance) { from, to in
           await store.loadAttendance(from: from, to: to)
         }
@@ -401,7 +401,7 @@ struct OverviewScreen: View {
             Text("constância, 4 semanas").font(.subheadline)
           }
           .foregroundStyle(.white).frame(maxWidth: .infinity, alignment: .leading)
-          .padding(22).background(accent.deep, in: .rect(cornerRadius: 28))
+          .padding(Space.xl).background(accent.deep, in: .rect(cornerRadius: Radius.card))
           .subtleEntrance()
           HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 10) {
@@ -413,10 +413,10 @@ struct OverviewScreen: View {
             Spacer(minLength: 0)
             Button("Abrir treino", systemImage: "arrow.right", action: onWorkout)
               .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
-          }.padding(22).paperCard(radius: 32)
+          }.padding(Space.xl).paperCard()
             .subtleEntrance()
         }
-      }.padding(16).padding(.bottom, 24)
+      }.padding(Space.l).padding(.bottom, Space.page)
     }
     .refreshable { await store.load() }
     .overlay { TodayPlaceholder(phase: store.phase, isEmpty: store.dashboard == nil) }

@@ -36,7 +36,8 @@ struct DayStrip: View {
         Button { moveTo(.today) } label: {
           Label(selected.date().formatted(.dateTime.month(.wide).year()), systemImage: "calendar")
             .font(.subheadline).foregroundStyle(Color.ink)
-        }.buttonStyle(.plain).accessibilityLabel("Ir para hoje")
+            .frame(minHeight: 44).contentShape(.rect)
+        }.buttonStyle(StudyPressStyle()).accessibilityLabel("Ir para hoje")
         Spacer()
         Button("Avançar uma semana", systemImage: "chevron.right") { move(7) }
           .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
@@ -130,7 +131,7 @@ struct DayChip: View {
             }
           }
       }.frame(maxWidth: .infinity).contentShape(.rect)
-    }.buttonStyle(.plain)
+    }.buttonStyle(StudyPressStyle())
       .accessibilityLabel(
         Text(day.date(), format: .dateTime.weekday(.wide).day().month(.wide))
           + Text(day == .today ? ", hoje" : ""))

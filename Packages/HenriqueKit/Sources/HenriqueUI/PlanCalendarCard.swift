@@ -47,7 +47,7 @@ struct PlanCalendarCard: View {
       .animation(reduceMotion ? nil : Motion.tap, value: period)
       PlanLegend()
     }
-    .padding(18).paperCard(radius: 28)
+    .padding(Space.xl).paperCard()
     .onChange(of: period) { rebuild() }
     .onChange(of: attendance, initial: true) { rebuild() }
     .onChange(of: weekPlan) { rebuild() }
@@ -139,7 +139,7 @@ private struct DayCell: View {
         .overlay { content }
         .overlay {
           if cell.isToday {
-            RoundedRectangle(cornerRadius: radius + 1.5)
+            RoundedRectangle(cornerRadius: Radius.concentric(radius, padding: 3))
               .strokeBorder(Color.ink, lineWidth: 1.5)
               .padding(-3)
           }

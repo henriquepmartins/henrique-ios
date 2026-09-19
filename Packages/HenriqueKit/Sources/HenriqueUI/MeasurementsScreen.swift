@@ -17,7 +17,7 @@ struct MeasurementsScreen: View {
         PageHeading(title: "medidas")
         Button("nova medida", systemImage: "plus") { isAdding = true }
           .buttonStyle(.glassProminent).controlSize(.large)
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: textSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.m), count: textSize.isAccessibilitySize ? 1 : 2), spacing: Space.m) {
           MeasurementMetric(title: "peso", value: measurements.first?.weightKg, unit: "kg", symbol: "scalemass")
             .staggeredEntrance(index: 0, columns: textSize.isAccessibilitySize ? 1 : 2, isReady: true)
           MeasurementMetric(title: "gordura", value: measurements.first?.bodyFatPercent, unit: "%", symbol: "figure")
@@ -34,7 +34,7 @@ struct MeasurementsScreen: View {
           } else {
             WeightChart(measurements: measurements.sorted { $0.date < $1.date }).frame(height: 220)
           }
-        }.padding(22).paperCard(radius: 32)
+        }.padding(Space.xl).paperCard()
           .staggeredEntrance(index: 2, isReady: true)
         VStack(alignment: .leading, spacing: 16) {
           Text("histórico").font(.title2.weight(.medium))
@@ -42,7 +42,7 @@ struct MeasurementsScreen: View {
             MeasurementRow(measurement: measurement)
             Divider()
           }
-        }.padding(22).paperCard(radius: 32)
+        }.padding(Space.xl).paperCard()
           .staggeredEntrance(index: 3, isReady: true)
       }.padding(16).padding(.bottom, 32)
     }
@@ -99,9 +99,9 @@ struct MeasurementsLink: View {
           .padding(.top, 4)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(22)
-      .paperCard(radius: 32)
-      .contentShape(.rect(cornerRadius: 32))
+      .padding(Space.xl)
+      .paperCard()
+      .contentShape(.rect(cornerRadius: Radius.card))
     }
     .buttonStyle(StudyPressStyle())
     .matchedTransitionSource(id: "medidas", in: cardSource)
@@ -133,7 +133,7 @@ struct MeasurementMetric: View {
           .font(.title2.weight(.medium)).monospacedDigit()
         if value != nil { Text(unit).font(.caption).foregroundStyle(Color.mutedInk) }
       }
-    }.frame(maxWidth: .infinity, minHeight: 110, alignment: .leading).padding(16).paperCard(radius: 26)
+    }.frame(maxWidth: .infinity, minHeight: 110, alignment: .leading).padding(Space.l).paperCard(radius: Radius.tile)
       .accessibilityElement(children: .combine)
   }
 }

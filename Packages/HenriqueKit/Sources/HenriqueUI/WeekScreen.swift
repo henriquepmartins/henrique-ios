@@ -312,13 +312,8 @@ struct PlanExerciseRow: View {
         }
         Spacer(minLength: 0)
         if !isOrganizing, let onRemove {
-          Button(role: .destructive, action: onRemove) {
-            Image(systemName: "trash")
-              .frame(width: 44, height: 44)
-              .contentShape(.rect)
-          }
-          .buttonStyle(.borderless)
-          .accessibilityLabel("Remover \(name) do treino")
+          IconButton(title: "Remover \(name) do treino", systemImage: "trash", size: 17, action: onRemove)
+            .tint(.red)
         }
       }
       .padding(.top, isOrganizing ? 0 : 6)
@@ -502,14 +497,8 @@ struct ExercisePicker: View {
                   .autocorrectionDisabled()
                   .accessibilityLabel("Buscar exercício")
                 if !search.isEmpty {
-                  Button { search = "" } label: {
-                    Image(systemName: "xmark.circle.fill")
-                      .foregroundStyle(Color.mutedInk)
-                      .frame(width: 40, height: 40)
-                      .contentShape(.rect)
-                  }
-                  .buttonStyle(.plain)
-                  .accessibilityLabel("Limpar busca")
+                  IconButton(title: "Limpar busca", systemImage: "xmark.circle.fill", size: 17) { search = "" }
+                    .tint(Color.mutedInk)
                 }
               }
               .padding(.horizontal, 12).padding(.vertical, 6)
@@ -603,9 +592,8 @@ private struct MuscleChip: View {
       Text(title)
         .font(.subheadline.weight(selected ? .semibold : .regular))
         .foregroundStyle(selected ? .white : Color.ink)
-        .padding(.horizontal, 16).padding(.vertical, 10)
-        .background(selected ? Color.ink : .white, in: .capsule)
-        .overlay(Capsule().strokeBorder(selected ? .clear : Color.ink.opacity(0.1)))
+        .padding(.horizontal, Space.l).frame(minHeight: 44)
+        .modifier(StudyChipSurface(isActive: selected))
         .contentShape(.capsule)
     }
     .buttonStyle(StudyPressStyle())

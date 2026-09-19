@@ -113,11 +113,12 @@ struct WorkoutEditor: View {
         Spacer()
         Button("concluir") { save() }
           .buttonStyle(.glassProminent)
+          .controlSize(.large)
           .tint(.blue)
           .disabled(!draft.canSave || isSaving)
       }
-      .padding(.horizontal, 16)
-      .padding(.top, 14)
+      .padding(.horizontal, Space.l)
+      .padding(.top, Space.m)
 
       WorkoutFolderCard(
         name: draft.name.isEmpty ? "novo treino" : draft.name,
@@ -327,15 +328,19 @@ private struct ExercisesStep: View {
         if !exercises.isEmpty || isOrganizing {
           HStack {
             Spacer()
-            Button(isOrganizing ? "ok" : "ordenar") {
+            Button {
               withAnimation(editAnimation) {
                 editMode = isOrganizing ? .inactive : .active
               }
+            } label: {
+              Text(isOrganizing ? "ok" : "ordenar")
+                .font(.subheadline.weight(.semibold))
+                .textCase(nil)
+                .foregroundStyle(.tint)
+                .frame(minHeight: 44)
+                .contentShape(.rect)
             }
-            .font(.subheadline.weight(.semibold))
-            .textCase(nil)
-            .frame(minHeight: 44)
-            .buttonStyle(.borderless)
+            .buttonStyle(StudyPressStyle())
             .accessibilityHint(isOrganizing
               ? "Voltar aos ajustes dos exercícios"
               : "Mostrar alças para arrastar os exercícios")
@@ -447,7 +452,7 @@ private struct WeekdayToggle: View {
         .frame(maxWidth: .infinity, minHeight: 44)
         .contentShape(.rect)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(StudyPressStyle())
     .accessibilityLabel(fullName)
     .accessibilityAddTraits(isOn ? .isSelected : [])
   }

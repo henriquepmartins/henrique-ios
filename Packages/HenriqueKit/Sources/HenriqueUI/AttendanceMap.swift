@@ -28,7 +28,7 @@ struct AttendanceMap: View {
         .opacity(grid.total > 0 ? 1 : 0)
         .animation(reduceMotion ? Motion.plain : Motion.crossfade, value: grid.total > 0)
     }
-    .padding(22).paperCard(radius: 32)
+    .padding(Space.xl).paperCard()
     .subtleEntrance()
     .onChange(of: period) { grid = AttendanceGrid(period: period, attendance: attendance) }
     .onChange(of: attendance, initial: true) { grid = AttendanceGrid(period: period, attendance: attendance) }
@@ -196,7 +196,7 @@ private struct DaySquare: View {
           .animation(reduceMotion ? nil : Motion.crossfade, value: cell.level)
           .overlay {
             if date == .today {
-              RoundedRectangle(cornerRadius: radius + 1.5)
+              RoundedRectangle(cornerRadius: Radius.concentric(radius, padding: 3))
                 .strokeBorder(accent.deep, lineWidth: 1.5)
                 .padding(-3)
             }

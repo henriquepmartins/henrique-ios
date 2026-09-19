@@ -40,10 +40,12 @@ struct ProgressScreen: View {
 
   var body: some View {
     ScrollView {
-      VStack(spacing: 20) {
-        NavigationLink("detalhes") { MetricDetailScreen(onWorkout: onWorkout) }
-          .frame(maxWidth: .infinity, alignment: .trailing).font(.subheadline)
-          .subtleEntrance()
+      VStack(spacing: Space.xxl) {
+        NavigationLink { MetricDetailScreen(onWorkout: onWorkout) } label: {
+          Text("detalhes").font(.subheadline).frame(minHeight: 44).contentShape(.rect)
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .subtleEntrance()
         if let dashboard = store.dashboard {
           let streakGoals = dashboard.streakGoals ?? []
           if let goal = dashboard.strengthGoal {
@@ -112,7 +114,7 @@ struct StreakGoalCard: View {
 
   var body: some View {
     Button(action: action) {
-      VStack(alignment: .leading, spacing: 10) {
+      VStack(alignment: .leading, spacing: Space.m) {
         Label(kind.face.label, systemImage: kind.face.systemImage).font(.headline)
         HStack(alignment: .firstTextBaseline, spacing: 6) {
           Text("\(current)")
@@ -131,9 +133,9 @@ struct StreakGoalCard: View {
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(20)
-      .background(accent.pale, in: .rect(cornerRadius: 32))
-      .contentShape(.rect(cornerRadius: 32))
+      .padding(Space.xl)
+      .background(accent.pale, in: .rect(cornerRadius: Radius.card))
+      .contentShape(.rect(cornerRadius: Radius.card))
     }
     .buttonStyle(StudyPressStyle())
     .foregroundStyle(Color.ink)
@@ -156,7 +158,7 @@ struct GoalCard: View {
   let projection: Projection?
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: Space.m) {
       Label(exerciseName, systemImage: "target").font(.headline)
       HStack(alignment: .firstTextBaseline, spacing: 6) {
         Text(weightLabel(projection?.current ?? 0))
@@ -176,8 +178,8 @@ struct GoalCard: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(20)
-    .background(accent.pale, in: .rect(cornerRadius: 32))
+    .padding(Space.xl)
+    .background(accent.pale, in: .rect(cornerRadius: Radius.card))
   }
 
   private func projectionSentence(_ projection: Projection) -> String? {
@@ -244,14 +246,14 @@ struct ChartCard<Content: View>: View {
   @ViewBuilder let content: Content
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: Space.m) {
       Text(title).font(.headline)
       content
         .frame(height: 220)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(18)
-    .paperCard(radius: 32)
+    .padding(Space.xl)
+    .paperCard()
   }
 }
 
@@ -406,12 +408,12 @@ struct MetricDetailScreen: View {
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 28) {
+      VStack(alignment: .leading, spacing: Space.xxl) {
         Picker("Métrica em foco", selection: $bodyTrack) {
           Text("força").tag(false)
           Text("corpo").tag(true)
         }.pickerStyle(.segmented)
-        VStack(spacing: 18) {
+        VStack(spacing: Space.l) {
           Text(bodyTrack ? "massa magra" : "força").font(.caption).foregroundStyle(Color.mutedInk)
           if let latest = window.last {
             Text(latest.date.date(), format: .dateTime.day().month(.wide).year()).font(.caption)
@@ -420,7 +422,7 @@ struct MetricDetailScreen: View {
             if let first = window.first, first.date != latest.date {
               let weeks = max(1, Int((latest.date.date().timeIntervalSince(first.date.date()) / 604800).rounded()))
               Text("\((latest.value - first.value).formatted(.number.sign(strategy: .always()).precision(.fractionLength(1)))) kg em \(weeks) sem")
-                .font(.subheadline).foregroundStyle(accent.base)
+                .font(.subheadline).monospacedDigit().foregroundStyle(accent.base)
             }
           } else {
             Text(bodyTrack ? "sem % de gordura" : "sem séries").font(.title2)
@@ -445,8 +447,9 @@ struct MetricDetailScreen: View {
               sessionValue("carga", value: weightLabel(last.weightKg))
               sessionValue("volume", value: weightLabel(last.volumeKg))
             }
-          }.padding(22).paperCard(radius: 28)
-            .padding(7).background(Color.surfaceMuted, in: .rect(cornerRadius: 34))
+          }.padding(Space.xl).paperCard(radius: 28)
+            .padding(Space.s)
+            .background(Color.surfaceMuted, in: .rect(cornerRadius: Radius.concentric(28, padding: Space.s)))
         }
       }.padding(16)
     }.background(Color.canvas.ignoresSafeArea())

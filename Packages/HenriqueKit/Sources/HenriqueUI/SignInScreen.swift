@@ -89,7 +89,7 @@ struct GlassField<Content: View>: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 14)
       .background(.white, in: .rect(cornerRadius: 16))
-      .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.ink.opacity(0.12)))
+      .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.ink.opacity(0.08)))
       .accessibilityLabel(placeholder)
   }
 }

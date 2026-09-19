@@ -20,8 +20,8 @@ public struct TodayScreen: View {
 
   public var body: some View {
     ScrollView {
-      VStack(spacing: 36) {
-        VStack(spacing: 12) {
+      VStack(spacing: Space.page) {
+        VStack(spacing: Space.m) {
           DayStrip(selected: store.selectedDate, notch: $notch)
             .staggeredEntrance(index: 0, isReady: hasData)
           WorkoutHero(workout: store.dashboard?.workout, notch: notch, sessionSource: sessionSource) {
@@ -47,7 +47,7 @@ public struct TodayScreen: View {
           .staggeredEntrance(index: 1, isReady: hasData)
         }
         if let data = store.dashboard, let workout = data.workout {
-          VStack(spacing: 14) {
+          VStack(spacing: Space.m) {
             HStack {
               Text("exercícios").font(.title2.weight(.medium)).tracking(-0.8)
               Spacer()
@@ -58,10 +58,10 @@ public struct TodayScreen: View {
               .onChange(of: compact) { openIds = defaultOpenIds() }
             }
             HStack {
-              Button("progresso", systemImage: "chart.xyaxis.line", action: onProgress)
+              IconButton(title: "progresso", systemImage: "chart.xyaxis.line", glass: true, action: onProgress)
               Spacer()
-              Button("editar plano", systemImage: "square.and.pencil", action: onPlan)
-            }.font(.caption).buttonStyle(.glass).labelStyle(.iconOnly)
+              IconButton(title: "editar plano", systemImage: "square.and.pencil", glass: true, action: onPlan)
+            }
             .firstEntrance(index: 2, settled: enteredDates.contains(data.date.iso))
             ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { index, exercise in
               ExerciseCard(exercise: exercise, date: data.date, templateId: workout.id, isOpen: openIds.contains(exercise.id)) {
@@ -82,8 +82,8 @@ public struct TodayScreen: View {
           VStack(alignment: .leading, spacing: 14) {
             Image(systemName: "dumbbell").font(.title2)
             Text("sem exercícios").font(.title2.weight(.medium))
-            Button("abrir plano", action: onPlan).buttonStyle(.glass)
-          }.frame(maxWidth: .infinity, alignment: .leading).padding(24).paperCard(radius: 32)
+            Button("abrir plano", action: onPlan).buttonStyle(.glass).controlSize(.large)
+          }.frame(maxWidth: .infinity, alignment: .leading).padding(Space.xl).paperCard()
         }
       }.padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 32)
     }
@@ -146,10 +146,11 @@ struct TodayPlaceholder: View {
 /// espaço do que vai entrar, então a troca é só opacidade.
 struct TodaySkeleton: View {
   var body: some View {
-    VStack(spacing: 14) {
-      RoundedRectangle(cornerRadius: 32).fill(Color.surfaceMuted).frame(height: 250)
+    // Os mesmos raios do hero e do ExerciseCard que vão ocupar o lugar.
+    VStack(spacing: Space.m) {
+      RoundedRectangle(cornerRadius: 40).fill(Color.surfaceMuted).frame(height: 250)
       ForEach(0..<3) { _ in
-        RoundedRectangle(cornerRadius: 24).fill(Color.surfaceMuted).frame(height: 92)
+        RoundedRectangle(cornerRadius: 30).fill(Color.surfaceMuted).frame(height: 92)
       }
     }
     .padding(.horizontal, 16).padding(.top, 12)
@@ -171,7 +172,7 @@ struct WorkoutHero: View {
     VStack(alignment: .leading, spacing: 14) {
       if let workout {
         Label("\(workout.estimatedMinutes) min", systemImage: "clock")
-          .font(.caption).foregroundStyle(accent.deep)
+          .font(.caption).monospacedDigit().foregroundStyle(accent.deep)
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
       Text(workout?.name.lowercased() ?? "descanso")
@@ -181,7 +182,7 @@ struct WorkoutHero: View {
         Text(workout.focus).font(.subheadline).foregroundStyle(accent.deep)
         VStack(alignment: .leading, spacing: 12) {
           Text("\(workout.exerciseCount) exercícios · \(workout.workSetCount) séries")
-            .font(.subheadline)
+            .font(.subheadline).monospacedDigit()
           if workout.completionPercent > 0 {
             VStack(alignment: .leading, spacing: 6) {
               Text("\(workout.completionPercent)% feito")

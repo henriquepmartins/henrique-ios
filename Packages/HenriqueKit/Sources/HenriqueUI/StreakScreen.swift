@@ -56,8 +56,10 @@ struct StreakCounter: View {
       .monospacedDigit()
       .animation(.smooth(duration: 0.2), value: isLit)
       .animation(.snappy(duration: 0.25), value: count)
+      .frame(minWidth: 44, minHeight: 44)
+      .contentShape(.rect)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(StudyPressStyle())
     .onChange(of: count) { old, new in
       if new > old, !reduceMotion { rises += 1 }
     }
@@ -80,17 +82,17 @@ struct StreakScreen: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 28) {
+        VStack(spacing: Space.xxl) {
           StreakRing(streak: streak, entered: entered, celebrating: celebrating)
           if let week = snapshot.week {
             StreakRibbon(days: week, entered: entered)
           }
           Text("\(streak.weeklyCompleted)/\(streak.weeklyPlanned) na semana")
-            .font(.subheadline).foregroundStyle(Color.mutedInk)
+            .font(.subheadline).monospacedDigit().foregroundStyle(Color.mutedInk)
           Text("até 5 dias entre treinos")
             .font(.subheadline).foregroundStyle(Color.mutedInk)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
+            .padding(Space.xl)
             .paperCard()
         }
         .padding(20)

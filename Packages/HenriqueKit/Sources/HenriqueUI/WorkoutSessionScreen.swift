@@ -93,7 +93,7 @@ struct WorkoutSessionScreen: View {
     VStack(spacing: 12) {
       HStack {
         Button("fechar", systemImage: "chevron.down") { dismiss() }
-          .labelStyle(.iconOnly).buttonStyle(.glass)
+          .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
           .accessibilityIdentifier("sessao.fechar")
         Spacer()
         VStack(spacing: 1) {
@@ -104,7 +104,7 @@ struct WorkoutSessionScreen: View {
         Spacer()
         // mesmo tamanho do botão de fechar, senão o título fica descentrado
         Button("fechar", systemImage: "chevron.down") {}
-          .labelStyle(.iconOnly).buttonStyle(.glass).hidden()
+          .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large).hidden()
       }
       VStack(spacing: 6) {
         HStack {
@@ -130,7 +130,7 @@ struct WorkoutSessionScreen: View {
         WorkoutSessionClock(timing: timing)
       }
     }
-    .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 14)
+    .padding(.horizontal, Space.l).padding(.top, Space.s).padding(.bottom, Space.m)
   }
 
   private func card(exercise: DashboardExercise, date: CalendarDate, templateId: String) -> some View {
@@ -190,7 +190,7 @@ struct WorkoutSessionScreen: View {
       Text("descansando")
     }
     .font(.subheadline.weight(.medium)).foregroundStyle(accent.deep)
-    .padding(.horizontal, 16).padding(.vertical, 10)
+    .padding(.leading, 14).padding(.trailing, 16).padding(.vertical, 10)
     .glassEffect(.regular.tint(accent.mint.opacity(0.55)), in: .capsule)
   }
 }
